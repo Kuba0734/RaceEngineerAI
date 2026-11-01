@@ -1,0 +1,110 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-fg: var(--text);
+  --color-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-data: var(--data);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-purple: var(--purple);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle grid backdrop, static (no animation cost). */
+.backdrop {
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(255, 90, 31, 0.08), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(34, 211, 238, 0.06), transparent 45%),
+    linear-gradient(rgba(38, 42, 53, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 42, 53, 0.35) 1px, transparent 1px);
+  background-size: auto, auto, 48px 48px, 48px 48px;
+  background-color: var(--bg);
+}
+
+/* Hover glow on cards: opacity of a pseudo element only (cheap). */
+.glow {
+  position: relative;
+  isolation: isolate;
+}
+.glow::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 1px rgba(255, 90, 31, 0.45), 0 0 28px rgba(255, 90, 31, 0.18);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+  z-index: -1;
+}
+.glow:hover::after {
+  opacity: 1;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+input,
+select,
+textarea {
+  user-select: text;
+}
+
+.overlay-body {
+  background: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
+}

@@ -126,10 +126,7 @@ pub fn run() {
             input::hotkeys::start_wheel_dispatch(core.clone(), btn_rx);
             input::hotkeys::register_all(app.handle(), &settings);
 
-            // Overlay: click-through, shown while a game or demo runs (see frontend).
-            if let Some(w) = app.get_webview_window("overlay") {
-                let _ = w.set_ignore_cursor_events(true);
-            }
+            // The overlay window is created on demand by the runtime when a session goes live.
             if settings.app.start_minimized || std::env::args().any(|a| a == "--minimized") {
                 if let Some(w) = app.get_webview_window("main") {
                     let _ = w.minimize();
@@ -163,6 +160,7 @@ pub fn run() {
             commands::start_replay,
             commands::ask,
             commands::subscribe_live,
+            commands::unsubscribe_live,
             commands::get_track_outline,
             commands::get_radio_log,
             commands::say_call,

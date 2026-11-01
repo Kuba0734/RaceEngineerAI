@@ -1,0 +1,23 @@
+/* Design tokens – "motorsport command post". Only these values, no ad-hoc colors. */
+:root {
+  --bg: #0a0b0e;
+  --surface: #12141a;
+  --surface-2: #1a1d25;
+  --border: #262a35;
+  --text: #f2f4f8;
+  --text-dim: #8a90a0;
+  --accent: #ff5a1f;
+  --accent-soft: rgba(255, 90, 31, 0.14);
+  --data: #22d3ee;
+  --data-soft: rgba(34, 211, 238, 0.12);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --purple: #a855f7;
+  --sector-green: #22c55e;
+  --sector-yellow: #eab308;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --font-ui: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+}

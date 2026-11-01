@@ -76,6 +76,7 @@ fn migrate(conn: &Connection) -> AppResult<()> {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct SessionRow {
+    #[ts(type = "number")]
     pub id: i64,
     pub game: String,
     pub track: String,

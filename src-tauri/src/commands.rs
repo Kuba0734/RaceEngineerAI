@@ -318,8 +318,16 @@ pub async fn ask(core: CoreState<'_>, text: String) -> AppResult<()> {
 }
 
 #[tauri::command]
-pub fn subscribe_live(core: CoreState, channel: Channel<LiveFrame>, hz: u32, heavy_every: u32) {
-    core.live_subs.lock().push(LiveSub { channel, hz: hz.clamp(1, 60), last: Instant::now(), heavy_every: heavy_every.max(1), count: 0 });
+pub fn subscribe_live(core: CoreState, channel: Channel<LiveFrame>, hz: u32, heavy_every: u32) -> u32 {
+    static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
+    let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    core.live_subs.lock().push(LiveSub { id, channel, hz: hz.clamp(1, 60), last: Instant::now(), heavy_every: heavy_every.max(1), count: 0 });
+    id
+}
+
+#[tauri::command]
+pub fn unsubscribe_live(core: CoreState, id: u32) {
+    core.live_subs.lock().retain(|s| s.id != id);
 }
 
 #[derive(Serialize, Deserialize, TS)]
@@ -396,7 +404,8 @@ pub fn save_overlay_layout(core: CoreState, game: Option<String>, layout: Vec<Wi
 
 #[tauri::command]
 pub fn show_overlay(core: CoreState, show: bool) {
-    if let Some(w) = core.app.get_webview_window("overlay") {
+    let win = if show { crate::input::hotkeys::ensure_overlay(&core.app) } else { core.app.get_webview_window("overlay") };
+    if let Some(w) = win {
         let _ = if show { w.show() } else { w.hide() };
     }
 }

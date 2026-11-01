@@ -24,20 +24,6 @@
         "transparent": false,
         "backgroundColor": "#0A0B0E",
         "center": true
-      },
-      {
-        "label": "overlay",
-        "title": "RaceEngineerAI Overlay",
-        "url": "overlay.html",
-        "visible": false,
-        "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "resizable": false,
-        "focus": false,
-        "shadow": false,
-        "maximized": true
       }
     ],
     "security": {
@@ -46,27 +32,45 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "createUpdaterArtifacts": true,
     "publisher": "Kuba0734",
     "category": "Game",
     "shortDescription": "Sim racing pit crew over radio",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
-    "resources": ["resources/**/*"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/**/*"
+    ],
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["German", "English"],
+        "languages": [
+          "German",
+          "English"
+        ],
         "displayLanguageSelector": true
       },
-      "webviewInstallMode": { "type": "downloadBootstrapper" }
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
     }
   },
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdBMTNBN0Y1MjM3QzBBMzkKUldRNUNud2o5YWNUZXBrRWhZWHZzbjZxcUZPaG9DZElaTGd6eEVkeTQrU0hUR2hPVFNlVEYvR1EK",
-      "endpoints": ["https://github.com/Kuba0734/RaceEngineerAI/releases/latest/download/latest.json"],
-      "windows": { "installMode": "passive" }
+      "endpoints": [
+        "https://github.com/Kuba0734/RaceEngineerAI/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

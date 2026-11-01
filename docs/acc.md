@@ -26,7 +26,7 @@ Spiegel der PDF: <https://github.com/rrennoir/PyAccSharedMemory/blob/main/ACCSha
 
 | Feld | PDF | Umsetzung | Begründung |
 |---|---|---|---|
-| `SPageFileStatic.trackConfiguration` | `wchar_t trackConfiguration` (ohne Länge) | `[u16; 33]` | Im AC-Header `SharedFileOut.h` ist das Feld `wchar_t trackConfiguration[33]`; die PDF lässt die Länge weg. Alle nachfolgenden Felder (Boxenfenster) hängen davon ab. **Live mit ACC prüfen** (Boxenfenster-Werte plausibel?). |
+| `SPageFileStatic.trackConfiguration` | `wchar_t trackConfiguration` (ohne Länge) | `[u16; 33]` | Im AC-Header `SharedFileOut.h` ist das Feld `wchar_t trackConfiguration[33]`; die PDF lässt die Länge weg. **Live verifiziert 2026-11-01** (ACC 1.10.4, smVersion 1.9): die nachfolgenden Felder lesen korrekt (`dryTyresName=DHE`, `wetTyresName=WH`, `maxFuel=120`, `isOnline=0`). |
 | `SPageFilePhysics.fuel` | „in kg“ | als Liter behandelt | `fuelXLap` ist laut PDF in Litern, ACC zeigt Liter; Kunos-Forum bestätigt Liter. **Live prüfen.** |
 | `SPageFileGraphic.carCoordinates[60][3]` | x, y, z | x, y, z (y = Höhe) | Für Spotter/Karte werden x und z genutzt. |
 | `SPageFilePhysics.heading` | Gierwinkel | Radiant | Für die Drehung ins Spieler-Koordinatensystem. |
@@ -50,6 +50,13 @@ Gegner-Fahrtrichtung liefert Shared Memory nicht – der Spotter nutzt nur die S
 Pfad: `Dokumente\Assetto Corsa Competizione\Config\broadcasting.json`, **UTF-16 LE** kodiert. Felder: `updListenerPort`, `connectionPassword`, `commandPassword`. Quelle: `sdk\broadcasting\Testclient\readme.txt` im Dedicated-Server-Ordner. RaceEngineerAI legt vorher ein Backup (`broadcasting.json.bak-<zeit>`) an, fragt den Nutzer und weist auf den ACC-Neustart hin.
 
 Hinweis: Auf diesem Rechner existiert der Ordner `Dokumente\Assetto Corsa Competizione` noch nicht (wird von ACC beim ersten Start angelegt).
+
+## Live-Prüfung
+
+`cargo test --test acc_live -- --ignored --nocapture` (ACC muss laufen) gibt Static/Graphics/Physics-Werte aus.
+Stand 2026-11-01: Static-Page verifiziert (Menü, status=0). Graphics/Physics in einer laufenden Session noch prüfen.
+Hinweis: Shared-Memory-Version des Spiels ist **1.9**, die Doku beschreibt 1.8.12 – das Layout der Static-Page ist unverändert.
+`PitWindowStart/End` = `0..-1000` außerhalb einer Session → negative Werte als „kein Fenster“ behandeln.
 
 ## Offene Punkte (live mit ACC prüfen)
 

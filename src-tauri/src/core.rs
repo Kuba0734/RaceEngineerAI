@@ -71,6 +71,17 @@ impl Core {
     /// Submits a call (on request) through the engine and speaks it.
     pub fn say(&self, mut req: CallRequest) {
         req.on_request = true;
+        // Command acknowledgement: spoken (default), beep or nothing.
+        if req.call_id == "crew.ack" {
+            match self.settings.read().commands.acknowledge {
+                crate::storage::settings::Acknowledge::Spoken => {}
+                crate::storage::settings::Acknowledge::Beep => {
+                    let _ = self.mixer.try_send(MixerCmd::Spotter(crate::audio::tts::tone_clip("ack", self.out_sr)));
+                    return;
+                }
+                crate::storage::settings::Acknowledge::None => return,
+            }
+        }
         let u = {
             let st = self.state.lock();
             let (t, lap, spline, kind) = (st.t_s(), st.frame.completed_laps, st.frame.spline, st.session.session_type.kind());

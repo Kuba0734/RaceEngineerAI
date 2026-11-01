@@ -74,6 +74,7 @@ pub struct LiveFrame {
 }
 
 pub struct LiveSub {
+    pub id: u32,
     pub channel: Channel<LiveFrame>,
     pub hz: u32,
     pub last: Instant,
@@ -227,6 +228,7 @@ fn run(core: Arc<Core>) {
     let mut mem = Memory::new();
     let mut sdb = SessionDb { id: None, pending: None, reference: None, pit_loss: None, saved_reference_ms: None, saved_pit_loss: None };
     let mut was_demo: Option<crate::core::DemoSource> = None;
+    let mut overlay_idle_since: Option<Instant> = None;
     let mut recorder: Option<crate::replay::Recorder> = None;
 
     loop {
@@ -377,6 +379,23 @@ fn run(core: Arc<Core>) {
             };
             if changed {
                 let _ = core.app.emit("status", &*core.status.read());
+            }
+            // Overlay window lives only while a session is live (or in edit mode).
+            let want_overlay = core.settings.read().overlay.enabled && (live || core.overlay_edit.load(Ordering::Relaxed));
+            let has_overlay = tauri::Manager::get_webview_window(&core.app, "overlay").is_some();
+            if want_overlay && !has_overlay {
+                let app = core.app.clone();
+                let _ = core.app.run_on_main_thread(move || {
+                    crate::input::hotkeys::ensure_overlay(&app);
+                });
+            } else if !want_overlay && has_overlay {
+                if overlay_idle_since.get_or_insert_with(Instant::now).elapsed() > Duration::from_secs(20) {
+                    overlay_idle_since = None;
+                    let app = core.app.clone();
+                    let _ = core.app.run_on_main_thread(move || crate::input::hotkeys::close_overlay(&app));
+                }
+            } else {
+                overlay_idle_since = None;
             }
         }
         // Keep CPU low: short sleep when nothing new arrived.

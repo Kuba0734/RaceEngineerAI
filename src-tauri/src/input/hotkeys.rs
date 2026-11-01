@@ -44,9 +44,45 @@ pub fn run_quick_command(core: &Core, id: &str) {
     }
 }
 
+/// Creates the overlay window on demand (saves a renderer + GPU memory while no session runs).
+pub fn ensure_overlay(app: &AppHandle) -> Option<tauri::WebviewWindow> {
+    if let Some(w) = app.get_webview_window("overlay") {
+        return Some(w);
+    }
+    let built = tauri::WebviewWindowBuilder::new(app, "overlay", tauri::WebviewUrl::App("overlay.html".into()))
+        .title("RaceEngineerAI Overlay")
+        .transparent(true)
+        .decorations(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .focused(false)
+        .shadow(false)
+        .visible(false)
+        .maximized(true)
+        .build();
+    match built {
+        Ok(w) => {
+            let _ = w.set_ignore_cursor_events(true);
+            Some(w)
+        }
+        Err(e) => {
+            tracing::error!("overlay window: {e}");
+            None
+        }
+    }
+}
+
+pub fn close_overlay(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.destroy();
+    }
+}
+
 pub fn set_overlay_edit(app: &AppHandle, core: &Core, edit: bool) {
     core.overlay_edit.store(edit, Ordering::Relaxed);
-    if let Some(w) = app.get_webview_window("overlay") {
+    let win = if edit { ensure_overlay(app) } else { app.get_webview_window("overlay") };
+    if let Some(w) = win {
         let _ = w.set_ignore_cursor_events(!edit);
         if edit {
             let _ = w.show();
