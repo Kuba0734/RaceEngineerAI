@@ -138,7 +138,8 @@ mod tests {
         s.session.track = "spa".into();
         let snap = snapshot(&s, &CrewState::new());
         assert!(snap.len() < 2048, "{}", snap.len());
-        let p = system_prompt(&Settings::default(), &s, &CrewState::new());
+        let settings = Settings { language: Language::De, ..Settings::default() };
+        let p = system_prompt(&settings, &s, &CrewState::new());
         assert!(p.contains("German"));
         assert!(p.contains("du"));
     }

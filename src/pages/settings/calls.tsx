@@ -47,7 +47,6 @@ function CallRow({ def, eff }: { def: CallDef; eff: EffectiveCall }) {
             <path d="M9 6l6 6-6 6" />
           </motion.svg>
           <span className="truncate text-sm">{t(`call.${def.id}`, { defaultValue: def.id })}</span>
-          <span className="num truncate text-[11px] text-dim">{def.id}</span>
           {unavailable && <Badge tone="warn">{t("calls.unavailable")}</Badge>}
         </button>
         <Badge tone={eff.priority === "critical" ? "danger" : eff.priority === "spotter" ? "purple" : eff.priority === "high" ? "accent" : "dim"}>{t(`priority.${eff.priority}`)}</Badge>

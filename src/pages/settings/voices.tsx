@@ -85,7 +85,7 @@ function VoiceCard({ role }: { role: "engineer" | "spotter" }) {
         <Select value={p.voice_en} onChange={(v) => set({ voice_en: v })} options={voicesFor("en")} />
       </Field>
       <Field label={t("voices.speaker")} hint={t("voices.speakerHint")}>
-        <NumberInput value={p.speaker_id} min={0} max={20} onChange={(v) => set({ speaker_id: v })} />
+        <NumberInput value={p.speaker_id} min={0} max={Math.max(0, (models.find((m) => m.id === (s.language === "de" ? p.voice_de : p.voice_en))?.speakers ?? 1) - 1)} onChange={(v) => set({ speaker_id: v })} />
       </Field>
       <Field label={t("voices.volume")}>
         <Slider value={p.volume} min={0} max={1.5} step={0.05} onChange={(v) => set({ volume: v })} format={(v) => `${Math.round(v * 100)} %`} />
@@ -119,6 +119,9 @@ export function VoicesSection() {
         </Field>
         <Field label={t("voices.master")}>
           <Slider value={s.voices.master_volume} min={0} max={1.5} step={0.05} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, master_volume: v } }))} format={(v) => `${Math.round(v * 100)} %`} />
+        </Field>
+        <Field label={t("voices.pause")} hint={t("voices.pauseHint")}>
+          <Slider value={s.voices.sentence_pause_ms} min={0} max={800} step={20} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, sentence_pause_ms: v } }))} format={(v) => `${v} ms`} />
         </Field>
         <p className="text-xs text-dim">{t("voices.deviceRestart")}</p>
       </Card>

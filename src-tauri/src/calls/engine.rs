@@ -78,6 +78,8 @@ pub struct CallEngine {
     spotter_name: String,
     phrasing: SpotterPhrasing,
     say_counter: u32,
+    /// After the chequered flag only result calls are said.
+    pub race_finished: bool,
 }
 
 impl CallEngine {
@@ -96,6 +98,7 @@ impl CallEngine {
             spotter_name: String::new(),
             phrasing: SpotterPhrasing::Normal,
             say_counter: 0,
+            race_finished: false,
         };
         e.refresh(settings);
         e
@@ -120,6 +123,7 @@ impl CallEngine {
     }
 
     pub fn reset_session(&mut self) {
+        self.race_finished = false;
         self.last_said.clear();
         self.crew.reset_session();
     }
@@ -183,6 +187,10 @@ impl CallEngine {
     /// Checks all rules and returns the utterance, if it should be said now.
     pub fn submit(&mut self, req: CallRequest, t: f64, lap: i32, spline: f32, kind: SessionKind) -> Option<Utterance> {
         let e = self.effective.get(req.call_id)?.clone();
+        const AFTER_FINISH: [&str; 3] = ["flag.checkered", "race.summary", "penalty.received"];
+        if self.race_finished && !req.on_request && !AFTER_FINISH.contains(&req.call_id) {
+            return None;
+        }
         if !req.on_request {
             if !e.enabled || !e.sessions.contains(&kind) || !self.capable(req.call_id) {
                 return None;
@@ -291,6 +299,16 @@ mod tests {
     }
 
     #[test]
+    fn silent_after_finish_except_result() {
+        let s = Settings::default();
+        let mut e = CallEngine::new(&s);
+        e.race_finished = true;
+        let k = SessionKind::Race;
+        assert!(e.submit(CallRequest::new("fuel.critical").p("laps", "1"), 0.0, 1, 0.0, k).is_none());
+        assert!(e.submit(CallRequest::new("flag.checkered").p("position", "3"), 0.0, 1, 0.0, k).is_some());
+    }
+
+    #[test]
     fn session_filter() {
         let s = Settings::default();
         let mut e = CallEngine::new(&s);
@@ -300,7 +318,7 @@ mod tests {
 
     #[test]
     fn spotter_phrases_follow_phrasing() {
-        let mut s = Settings::default();
+        let mut s = Settings { language: Language::De, ..Settings::default() };
         s.spotter.phrasing = SpotterPhrasing::Short;
         let e = CallEngine::new(&s);
         let p = e.spotter_phrases();

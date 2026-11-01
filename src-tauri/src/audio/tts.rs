@@ -54,6 +54,26 @@ impl TtsHandle {
 
 struct Synth {
     engines: HashMap<String, sherpa_onnx::OfflineTts>,
+    pause_ms: u32,
+}
+
+/// Splits after . ! ? (not inside numbers like 1.5).
+fn sentences(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let chars: Vec<char> = text.chars().collect();
+    for (i, c) in chars.iter().enumerate() {
+        cur.push(*c);
+        let end = matches!(c, '.' | '!' | '?') && chars.get(i + 1).is_none_or(|n| n.is_whitespace());
+        if end && cur.trim().chars().count() > 3 {
+            out.push(cur.trim().to_string());
+            cur.clear();
+        }
+    }
+    if !cur.trim().is_empty() {
+        out.push(cur.trim().to_string());
+    }
+    out
 }
 
 impl Synth {
@@ -93,11 +113,25 @@ impl Synth {
         };
         let text = speakable(text, lang);
         let text = text.as_str();
+        let pause_ms = self.pause_ms;
         let tts = self.engine(voice)?;
-        let cfg = sherpa_onnx::GenerationConfig { speed: p.speed.clamp(0.5, 2.0), sid: p.speaker_id, ..Default::default() };
-        let audio = tts.generate_with_config(text, &cfg, None::<fn(&[f32], f32) -> bool>)?;
-        let sr = audio.sample_rate() as u32;
-        let fx = radio_fx::apply(audio.samples(), sr, &p.radio_fx);
+        // Slightly longer pauses at commas, plus a short varied gap between sentences.
+        let cfg = sherpa_onnx::GenerationConfig { speed: p.speed.clamp(0.5, 2.0), sid: p.speaker_id, silence_scale: 0.35, ..Default::default() };
+        let mut samples: Vec<f32> = Vec::new();
+        let mut sr = 22_050u32;
+        for (i, s) in sentences(text).iter().enumerate() {
+            let audio = tts.generate_with_config(s, &cfg, None::<fn(&[f32], f32) -> bool>)?;
+            sr = audio.sample_rate() as u32;
+            if i > 0 && pause_ms > 0 {
+                let jitter = rand::random_range(0.8..1.25);
+                samples.extend(std::iter::repeat_n(0.0, (sr as f32 * pause_ms as f32 / 1000.0 * jitter) as usize));
+            }
+            samples.extend_from_slice(audio.samples());
+        }
+        if samples.is_empty() {
+            return None;
+        }
+        let fx = radio_fx::apply(&samples, sr, &p.radio_fx);
         let vol = p.volume.clamp(0.0, 1.5);
         let out: Vec<f32> = radio_fx::resample(&fx, sr, out_sr).into_iter().map(|s| (s * vol).clamp(-1.0, 1.0)).collect();
         Some(out.into())
@@ -173,8 +207,9 @@ pub fn start(settings: Arc<RwLock<Settings>>, mixer: Sender<MixerCmd>, out_sr: u
     let handle = TtsHandle { tx, spotter_clips: clips.clone(), next_id: Arc::new(AtomicU64::new(1)) };
     let next_id = handle.next_id.clone();
     let spawned = std::thread::Builder::new().name("tts".into()).spawn(move || {
-        let mut synth = Synth { engines: HashMap::new() };
+        let mut synth = Synth { engines: HashMap::new(), pause_ms: 260 };
         for job in rx {
+            synth.pause_ms = settings.read().voices.sentence_pause_ms;
             match job {
                 TtsJob::Speak(req) => {
                     if req.expires_at <= Instant::now() {
@@ -236,6 +271,11 @@ pub fn start(settings: Arc<RwLock<Settings>>, mixer: Sender<MixerCmd>, out_sr: u
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn splits_sentences_not_numbers() {
+        assert_eq!(sentences("Gap 1.4 behind. Fuel is fine! Ok"), vec!["Gap 1.4 behind.", "Fuel is fine!", "Ok"]);
+    }
 
     #[test]
     fn units_become_words() {

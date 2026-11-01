@@ -164,7 +164,8 @@ fn play_spotter(core: &Core, call: SpotterCall) {
     let t = core.state.lock().t_s();
     {
         let mut e = core.engine.lock();
-        if !e.enabled(id, kind) {
+        // After the flag the spotter is quiet too (cool-down lap).
+        if !e.enabled(id, kind) || e.race_finished {
             return;
         }
         let text = crate::calls::templates::render(e.lang(), id, &[e.spotter_style(), "normal"], &[]).unwrap_or_default();
@@ -222,6 +223,7 @@ fn run(core: Arc<Core>) {
     let mut race_events = Vec::with_capacity(16);
     let mut spotter_calls = Vec::with_capacity(4);
     let mut mem = Memory::new();
+    let mut deferred: Deferred = Vec::new();
     let mut sdb = SessionDb { id: None, pending: None, reference: None, pit_loss: None, saved_reference_ms: None, saved_pit_loss: None };
     let mut was_demo: Option<crate::core::DemoSource> = None;
     let mut overlay_idle_since: Option<Instant> = None;
@@ -349,14 +351,14 @@ fn run(core: Arc<Core>) {
                 play_spotter(&core, c);
             }
             if !race_events.is_empty() {
-                handle_race_events(&core, &mut mem, &mut sdb, &race_events);
+                handle_race_events(&core, &mut mem, &mut sdb, &mut deferred, &race_events);
             }
         }
 
         // ---- Triggers at 5 Hz ----
         if last_tick.elapsed() >= Duration::from_millis(200) {
             last_tick = Instant::now();
-            run_tick(&core, &mut mem);
+            run_tick(&core, &mut mem, &mut deferred);
             poll_db_replies(&core, &mut sdb);
         }
         push_live(&core);
@@ -415,7 +417,37 @@ fn speak_requests(core: &Core, reqs: Vec<CallRequest>) {
     }
 }
 
-fn run_tick(core: &Core, mem: &mut Memory) {
+/// Lap-end calls waiting for their slot on the next lap: (request, lap, spline target).
+pub type Deferred = Vec<(CallRequest, i32, f32)>;
+
+/// Non-urgent calls produced at the line are spread over the lap instead of all at once.
+const LAP_SLOTS: [f32; 6] = [0.04, 0.18, 0.32, 0.46, 0.60, 0.74];
+
+fn release_deferred(core: &Core, deferred: &mut Deferred) {
+    if deferred.is_empty() {
+        return;
+    }
+    let (lap, spline, pits) = {
+        let st = core.state.lock();
+        (st.frame.completed_laps, st.frame.spline, st.frame.in_pit_lane)
+    };
+    let mut due = Vec::new();
+    deferred.retain(|(r, l, target)| {
+        if lap > *l {
+            // A whole lap passed: the info is stale.
+            return false;
+        }
+        if spline >= *target && !pits {
+            due.push(r.clone());
+            return false;
+        }
+        true
+    });
+    speak_requests(core, due);
+}
+
+fn run_tick(core: &Core, mem: &mut Memory, deferred: &mut Deferred) {
+    release_deferred(core, deferred);
     let reqs = {
         let settings = core.settings.read();
         let st = core.state.lock();
@@ -436,11 +468,17 @@ fn run_tick(core: &Core, mem: &mut Memory) {
     }
 }
 
-fn handle_race_events(core: &Core, mem: &mut Memory, sdb: &mut SessionDb, events: &[RaceEvent]) {
+fn handle_race_events(core: &Core, mem: &mut Memory, sdb: &mut SessionDb, deferred: &mut Deferred, events: &[RaceEvent]) {
     let mut reqs = Vec::new();
     for ev in events {
+        let race = core.state.lock().session.session_type.kind() == crate::storage::settings::SessionKind::Race;
         match ev {
+            RaceEvent::FlagChanged { to: crate::games::provider::Flag::Checkered, .. } | RaceEvent::SessionPhaseChanged(crate::games::provider::SessionPhase::SessionOver | crate::games::provider::SessionPhase::PostSession | crate::games::provider::SessionPhase::Results) if race => {
+                core.engine.lock().race_finished = true;
+                deferred.clear();
+            }
             RaceEvent::NewSession => {
+                deferred.clear();
                 end_session(core, sdb);
                 core.engine.lock().reset_session();
                 core.conversation.lock().clear();
@@ -471,7 +509,21 @@ fn handle_race_events(core: &Core, mem: &mut Memory, sdb: &mut SessionDb, events
         let engine = core.engine.lock();
         let mut ctx = Ctx::new(&st, &settings, &engine);
         triggers::on_event(&mut ctx, mem, ev);
-        reqs.extend(ctx.out);
+        if let RaceEvent::LapCompleted(rec) = ev {
+            // Urgent calls now, the rest spread over the coming lap.
+            let mut slot = 0;
+            for r in ctx.out {
+                let urgent = engine.effective.get(r.call_id).is_none_or(|e| e.priority >= crate::storage::settings::Priority::High);
+                if urgent || slot >= LAP_SLOTS.len() {
+                    reqs.push(r);
+                } else {
+                    deferred.push((r, rec.lap, LAP_SLOTS[slot]));
+                    slot += 1;
+                }
+            }
+        } else {
+            reqs.extend(ctx.out);
+        }
     }
     speak_requests(core, reqs);
     let _ = core.app.emit("race-events", events.len());

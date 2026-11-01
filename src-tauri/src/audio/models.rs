@@ -132,6 +132,7 @@ pub struct ModelStatus {
     #[ts(type = "number")]
     pub size: u64,
     pub installed: bool,
+    pub speakers: i32,
 }
 
 pub fn status() -> Vec<ModelStatus> {
@@ -139,10 +140,10 @@ pub fn status() -> Vec<ModelStatus> {
     let mut v: Vec<ModelStatus> = c
         .voices
         .iter()
-        .map(|v| ModelStatus { id: v.id.clone(), kind: "voice".into(), name: v.name.clone(), lang: v.lang.clone(), license: v.license.clone(), size: v.size, installed: voice_installed(v) })
+        .map(|v| ModelStatus { id: v.id.clone(), kind: "voice".into(), name: v.name.clone(), lang: v.lang.clone(), license: v.license.clone(), size: v.size, installed: voice_installed(v), speakers: v.speakers })
         .collect();
-    v.push(ModelStatus { id: c.vad.id.clone(), kind: "vad".into(), name: "Silero VAD".into(), lang: String::new(), license: "MIT".into(), size: c.vad.size, installed: vad_path().is_file() });
-    v.push(ModelStatus { id: c.kws.id.clone(), kind: "kws".into(), name: "Keyword spotter (EN)".into(), lang: "en".into(), license: "Apache-2.0".into(), size: c.kws.size, installed: kws_installed() });
+    v.push(ModelStatus { id: c.vad.id.clone(), kind: "vad".into(), name: "Silero VAD".into(), lang: String::new(), license: "MIT".into(), size: c.vad.size, installed: vad_path().is_file(), speakers: 0 });
+    v.push(ModelStatus { id: c.kws.id.clone(), kind: "kws".into(), name: "Keyword spotter (EN)".into(), lang: "en".into(), license: "Apache-2.0".into(), size: c.kws.size, installed: kws_installed(), speakers: 0 });
     v
 }
 

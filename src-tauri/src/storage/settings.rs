@@ -17,8 +17,8 @@ pub const SETTINGS_VERSION: u32 = 2;
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
 pub enum Language {
-    #[default]
     De,
+    #[default]
     En,
 }
 
@@ -59,7 +59,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             version: SETTINGS_VERSION,
-            language: Language::De,
+            language: Language::En,
             groq: GroqSettings::default(),
             listening: ListeningSettings::default(),
             voices: VoiceSettings::default(),
@@ -145,15 +145,15 @@ impl Default for ListeningSettings {
     fn default() -> Self {
         Self {
             vad_always: false,
-            wake_word: true,
+            wake_word: false,
             push_to_talk: true,
             wake_words: vec!["RADIO".into(), "HEY CREW".into(), "BOX".into()],
             wake_window_s: 6.0,
             wake_sensitivity: 0.5,
             input_device: None,
-            noise_gate_db: -50.0,
+            noise_gate_db: -39.0,
             vad_threshold: 0.5,
-            min_speech_s: 0.4,
+            min_speech_s: 0.3,
             max_speech_s: 15.0,
             allow_interrupt: false,
             only_when_game_running: true,
@@ -161,7 +161,7 @@ impl Default for ListeningSettings {
             // Follows Settings → General → language; Auto/DE/EN only as an exception.
             stt_language: SttLanguage::App,
             end_silence_s: 0.8,
-            min_words: 2,
+            min_words: 1,
         }
     }
 }
@@ -206,6 +206,8 @@ pub struct VoiceSettings {
     pub spotter: VoiceProfile,
     pub output_device: Option<String>,
     pub master_volume: f32,
+    /// Short pause between sentences so the crew sounds less rushed (ms).
+    pub sentence_pause_ms: u32,
 }
 
 impl Default for VoiceSettings {
@@ -216,19 +218,20 @@ impl Default for VoiceSettings {
                 voice_en: "en_GB-northern_english_male-medium".into(),
                 speaker_id: 0,
                 volume: 1.0,
-                speed: 1.05,
+                speed: 1.0,
                 radio_fx: RadioFx::default(),
             },
             spotter: VoiceProfile {
                 voice_de: "de_DE-kerstin-low".into(),
-                voice_en: "en_US-joe-medium".into(),
+                voice_en: "en_GB-cori-medium".into(),
                 speaker_id: 0,
                 volume: 1.1,
-                speed: 1.2,
+                speed: 1.1,
                 radio_fx: RadioFx { strength: 0.4, ..RadioFx::default() },
             },
             output_device: None,
             master_volume: 1.0,
+            sentence_pause_ms: 260,
         }
     }
 }
@@ -277,7 +280,7 @@ impl Default for SpotterSettings {
         Self {
             enabled: true,
             name: "Jonas".into(),
-            phrasing: SpotterPhrasing::Normal,
+            phrasing: SpotterPhrasing::Short,
             lateral_min_m: 1.0,
             lateral_max_m: 6.0,
             car_length_m: 4.8,
@@ -322,13 +325,13 @@ impl Default for ConversationSettings {
     fn default() -> Self {
         Self {
             fast_path: true,
-            fast_path_threshold: 0.86,
+            fast_path_threshold: 0.95,
             always_ai: false,
             max_sentences: 2,
             memory_turns: 8,
             filler_enabled: true,
             filler_after_ms: 1200,
-            topic_scope: TopicScope::RaceOnly,
+            topic_scope: TopicScope::General,
             max_tool_rounds: 3,
         }
     }
@@ -430,7 +433,7 @@ impl Default for PersonalitySettings {
             driver_name: String::new(),
             driver_name_pronunciation: String::new(),
             formal_address: false,
-            name_frequency: Level3::Rare,
+            name_frequency: Level3::Often,
             praise: Level3::Rare,
             after_mistake: AfterMistake::Reassure,
             exact_numbers: false,
@@ -559,7 +562,7 @@ impl Default for SessionStartSettings {
             radio_check: RadioCheckWhen::EverySession,
             await_reply: true,
             greeting: true,
-            greeting_scope: GreetingScope::WithWeather,
+            greeting_scope: GreetingScope::Short,
             spotter_intro: true,
         }
     }
@@ -636,7 +639,7 @@ pub struct CallSettings {
 
 impl Default for CallSettings {
     fn default() -> Self {
-        Self { preset: "standard".into(), overrides: BTreeMap::new(), custom_presets: BTreeMap::new() }
+        Self { preset: "full".into(), overrides: BTreeMap::new(), custom_presets: BTreeMap::new() }
     }
 }
 
@@ -691,12 +694,12 @@ impl Default for WidgetLayout {
 pub fn default_layout() -> Vec<WidgetLayout> {
     let w = |id: &str, x: f32, y: f32| WidgetLayout { id: id.into(), x, y, ..WidgetLayout::default() };
     vec![
-        w("map", 24.0, 24.0),
-        w("standings", 24.0, 360.0),
-        w("radar", 860.0, 560.0),
-        w("fuel", 1500.0, 24.0),
-        w("delta", 860.0, 24.0),
-        w("radio", 1500.0, 900.0),
+        w("map", 987.0, 290.0),
+        w("standings", 1013.0, 753.0),
+        w("radar", 1879.0, 315.0),
+        w("fuel", 754.0, 864.0),
+        w("delta", 1383.0, 26.0),
+        w("radio", 1444.0, 1003.0),
     ]
 }
 
@@ -860,9 +863,9 @@ mod tests {
 
     #[test]
     fn partial_file_gets_defaults() {
-        let v = serde_json::json!({"version": 1, "language": "en", "spotter": {"name": "Sam"}});
+        let v = serde_json::json!({"version": 1, "language": "de", "spotter": {"name": "Sam"}});
         let s: Settings = serde_json::from_value(migrate(v)).unwrap();
-        assert_eq!(s.language, Language::En);
+        assert_eq!(s.language, Language::De);
         assert_eq!(s.spotter.name, "Sam");
         assert!(s.spotter.say_clear);
     }

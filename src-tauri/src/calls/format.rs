@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn german_numbers() {
-        let f = Fmt::new(&Settings::default());
+        let f = Fmt::new(&Settings { language: Language::De, ..Settings::default() });
         assert_eq!(f.gap(1.46), "1,5");
         assert_eq!(f.gap(0.42), "4 Zehntel");
         assert_eq!(f.laptime(107_912), "1:47,9");
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn opponent_naming() {
-        let mut s = Settings::default();
+        let mut s = Settings { language: Language::De, ..Settings::default() };
         let c = CarState { position: 3, race_number: 88, car_brand: "Porsche".into(), driver: "Müller".into(), ..Default::default() };
         assert_eq!(Fmt::new(&s).car(&c), "P3, der Porsche");
         s.personality.opponent_naming = vec![OpponentNaming::Number];

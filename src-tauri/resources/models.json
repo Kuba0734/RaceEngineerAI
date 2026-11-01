@@ -85,6 +85,54 @@
       "sha256": "d90362cfa48e429d3096f644785184446145b6e38216f2eaf4c0601b8aad5a36",
       "size": 67249181,
       "speakers": 1
+    },
+    {
+      "id": "de_DE-thorsten-high",
+      "lang": "de",
+      "name": "Thorsten (high)",
+      "gender": "m",
+      "license": "CC0",
+      "tag": "tts-models",
+      "archive": "vits-piper-de_DE-thorsten-high.tar.bz2",
+      "sha256": "dd4ed1b0d42c30a1a4862fc2b243e8044d52b8889c9ff3d1e99e92028888bc4a",
+      "size": 115591546,
+      "speakers": 1
+    },
+    {
+      "id": "en_GB-vctk-medium",
+      "lang": "en",
+      "name": "VCTK (109 British voices)",
+      "gender": "m/f",
+      "license": "CC-BY 4.0 (VCTK)",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_GB-vctk-medium.tar.bz2",
+      "sha256": "abafd35bdab0a72a3c6b947228ae3cccdf3624db83313c77d1abb5cbc75e1f64",
+      "size": 80488085,
+      "speakers": 109
+    },
+    {
+      "id": "en_GB-aru-medium",
+      "lang": "en",
+      "name": "Aru (12 British voices)",
+      "gender": "m/f",
+      "license": "CC-BY 4.0",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_GB-aru-medium.tar.bz2",
+      "sha256": "15b6e7a545d899167a688a054b95730ec8cdfd35d27d00bab1dc5234c4a451a0",
+      "size": 80309222,
+      "speakers": 12
+    },
+    {
+      "id": "en_GB-alba-medium",
+      "lang": "en",
+      "name": "Alba (Scottish)",
+      "gender": "f",
+      "license": "CC-BY 4.0",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_GB-alba-medium.tar.bz2",
+      "sha256": "fcd45962906933eec4431d3688f7d74aaac8713c87c6717f91fd3b23463aa1a1",
+      "size": 67212349,
+      "speakers": 1
     }
   ],
   "vad": {

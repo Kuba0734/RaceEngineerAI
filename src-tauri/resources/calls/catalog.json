@@ -156,7 +156,7 @@
     "qualifying",
     "race"
    ],
-   "enabled": true,
+   "enabled": false,
    "requires": "hasCarCoordinates"
   },
   {
@@ -432,7 +432,7 @@
    "enabled": true,
    "thresholds": {
     "min_change_s": {
-     "default": 0.3,
+     "default": 0.5,
      "min": 0.0,
      "max": 3.0,
      "step": 0.1,
@@ -460,7 +460,7 @@
    "enabled": true,
    "thresholds": {
     "min_change_s": {
-     "default": 0.3,
+     "default": 0.8,
      "min": 0.0,
      "max": 3.0,
      "step": 0.1,
@@ -485,7 +485,7 @@
    "enabled": true,
    "thresholds": {
     "tenths_per_lap": {
-     "default": 3,
+     "default": 4,
      "min": 1,
      "max": 20,
      "step": 1,
@@ -542,7 +542,7 @@
    "enabled": true,
    "thresholds": {
     "tenths": {
-     "default": 2,
+     "default": 3,
      "min": 1,
      "max": 10,
      "step": 1,
