@@ -1,0 +1,1532 @@
+{
+ "_comment": "Default definitions of every radio call. Users override per call in Settings; presets in resources/presets.",
+ "calls": [
+  {
+   "id": "session.radio_check",
+   "group": "session",
+   "priority": "high",
+   "cooldownS": 0,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "session.radio_check_reply",
+   "group": "session",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "session.greeting",
+   "group": "session",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "session.spotter_intro",
+   "group": "session",
+   "priority": "info",
+   "cooldownS": 0,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "spotter",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "spotter.left",
+   "group": "spotter",
+   "priority": "spotter",
+   "cooldownS": 0,
+   "expiryS": 1,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "spotter",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasCarCoordinates"
+  },
+  {
+   "id": "spotter.right",
+   "group": "spotter",
+   "priority": "spotter",
+   "cooldownS": 0,
+   "expiryS": 1,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "spotter",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasCarCoordinates"
+  },
+  {
+   "id": "spotter.three_wide",
+   "group": "spotter",
+   "priority": "spotter",
+   "cooldownS": 0,
+   "expiryS": 1,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "spotter",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasCarCoordinates"
+  },
+  {
+   "id": "spotter.clear",
+   "group": "spotter",
+   "priority": "spotter",
+   "cooldownS": 0,
+   "expiryS": 1,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "spotter",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasCarCoordinates"
+  },
+  {
+   "id": "spotter.closing_fast",
+   "group": "spotter",
+   "priority": "spotter",
+   "cooldownS": 10,
+   "expiryS": 2,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "spotter",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasCarCoordinates"
+  },
+  {
+   "id": "spotter.still_there",
+   "group": "spotter",
+   "priority": "spotter",
+   "cooldownS": 3,
+   "expiryS": 1,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "spotter",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasCarCoordinates"
+  },
+  {
+   "id": "flag.blue_leader",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 30,
+   "expiryS": 8,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "seconds": {
+     "default": 2.0,
+     "min": 0.5,
+     "max": 6.0,
+     "step": 0.5,
+     "unit": "s"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "flag.yellow_ahead",
+   "group": "flags",
+   "priority": "critical",
+   "cooldownS": 8,
+   "expiryS": 6,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "warn_seconds": {
+     "default": 10,
+     "min": 3,
+     "max": 30,
+     "step": 1,
+     "unit": "s"
+    }
+   }
+  },
+  {
+   "id": "flag.fcy",
+   "group": "flags",
+   "priority": "critical",
+   "cooldownS": 30,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "flag.green",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 30,
+   "expiryS": 5,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "flag.white",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 60,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "flag.checkered",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 0,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "penalty.track_limits",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 10,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "warn_from": {
+     "default": 2,
+     "min": 1,
+     "max": 6,
+     "step": 1,
+     "unit": ""
+    },
+    "penalty_at": {
+     "default": 0,
+     "min": 0,
+     "max": 10,
+     "step": 1,
+     "unit": "0 = unknown"
+    }
+   },
+   "requires": "hasTrackLimits"
+  },
+  {
+   "id": "penalty.received",
+   "group": "flags",
+   "priority": "critical",
+   "cooldownS": 5,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "penalty.reminder",
+   "group": "flags",
+   "priority": "critical",
+   "cooldownS": 60,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "remind_after_laps": {
+     "default": 1,
+     "min": 1,
+     "max": 3,
+     "step": 1,
+     "unit": "laps"
+    }
+   }
+  },
+  {
+   "id": "race.time_left",
+   "group": "race",
+   "priority": "normal",
+   "cooldownS": 60,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "mark1_min": {
+     "default": 30,
+     "min": 0,
+     "max": 120,
+     "step": 5,
+     "unit": "min"
+    },
+    "mark2_min": {
+     "default": 10,
+     "min": 0,
+     "max": 60,
+     "step": 1,
+     "unit": "min"
+    },
+    "mark3_min": {
+     "default": 5,
+     "min": 0,
+     "max": 30,
+     "step": 1,
+     "unit": "min"
+    }
+   }
+  },
+  {
+   "id": "gap.ahead",
+   "group": "race",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "every_n_laps",
+    "n": 2
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "min_change_s": {
+     "default": 0.3,
+     "min": 0.0,
+     "max": 3.0,
+     "step": 0.1,
+     "unit": "s"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "gap.behind",
+   "group": "race",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "every_n_laps",
+    "n": 2
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "min_change_s": {
+     "default": 0.3,
+     "min": 0.0,
+     "max": 3.0,
+     "step": 0.1,
+     "unit": "s"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "gap.trend_rival",
+   "group": "race",
+   "priority": "normal",
+   "cooldownS": 120,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "tenths_per_lap": {
+     "default": 3,
+     "min": 1,
+     "max": 20,
+     "step": 1,
+     "unit": "tenths"
+    },
+    "cars_around": {
+     "default": 2,
+     "min": 1,
+     "max": 5,
+     "step": 1,
+     "unit": ""
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "gap.catch_prediction",
+   "group": "race",
+   "priority": "info",
+   "cooldownS": 300,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "min_laps_left": {
+     "default": 3,
+     "min": 1,
+     "max": 20,
+     "step": 1,
+     "unit": "laps"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "rival.sector_strength",
+   "group": "race",
+   "priority": "info",
+   "cooldownS": 300,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "tenths": {
+     "default": 2,
+     "min": 1,
+     "max": 10,
+     "step": 1,
+     "unit": "tenths"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "rival.attack_hint",
+   "group": "race",
+   "priority": "info",
+   "cooldownS": 300,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "tenths": {
+     "default": 2,
+     "min": 1,
+     "max": 10,
+     "step": 1,
+     "unit": "tenths"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "rival.info",
+   "group": "race",
+   "priority": "info",
+   "cooldownS": 180,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": false,
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "fuel.status",
+   "group": "fuel_pit",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "every_n_laps",
+    "n": 5
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "fuel.critical",
+   "group": "fuel_pit",
+   "priority": "critical",
+   "cooldownS": 90,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "laps": {
+     "default": 2,
+     "min": 1,
+     "max": 5,
+     "step": 1,
+     "unit": "laps"
+    }
+   }
+  },
+  {
+   "id": "fuel.save_target",
+   "group": "fuel_pit",
+   "priority": "high",
+   "cooldownS": 600,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "pit.window",
+   "group": "fuel_pit",
+   "priority": "high",
+   "cooldownS": 60,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasPitWindow"
+  },
+  {
+   "id": "pit.fuel_amount",
+   "group": "fuel_pit",
+   "priority": "high",
+   "cooldownS": 60,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "pit.exit_position",
+   "group": "fuel_pit",
+   "priority": "high",
+   "cooldownS": 60,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "pit.rival_pitting",
+   "group": "fuel_pit",
+   "priority": "normal",
+   "cooldownS": 20,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "positions": {
+     "default": 2,
+     "min": 1,
+     "max": 10,
+     "step": 1,
+     "unit": "pos"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "pit.undercut",
+   "group": "fuel_pit",
+   "priority": "high",
+   "cooldownS": 60,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "pit.plan",
+   "group": "fuel_pit",
+   "priority": "high",
+   "cooldownS": 0,
+   "expiryS": 60,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "remind_laps_before": {
+     "default": 1,
+     "min": 0,
+     "max": 5,
+     "step": 1,
+     "unit": "laps"
+    }
+   }
+  },
+  {
+   "id": "prerace.start_fuel",
+   "group": "prepost",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 60,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "tyre.cold",
+   "group": "car",
+   "priority": "high",
+   "cooldownS": 120,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "margin_c": {
+     "default": 0,
+     "min": -20,
+     "max": 20,
+     "step": 1,
+     "unit": "°C"
+    }
+   },
+   "requires": "hasTyreCoreTemps"
+  },
+  {
+   "id": "tyre.overheat",
+   "group": "car",
+   "priority": "high",
+   "cooldownS": 120,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "margin_c": {
+     "default": 0,
+     "min": -20,
+     "max": 20,
+     "step": 1,
+     "unit": "°C"
+    }
+   },
+   "requires": "hasTyreCoreTemps"
+  },
+  {
+   "id": "tyre.pressure_live",
+   "group": "car",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "every_n_laps",
+    "n": 5
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "tolerance_psi": {
+     "default": 0.2,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.1,
+     "unit": "psi"
+    }
+   }
+  },
+  {
+   "id": "tyre.pressure_next_stint",
+   "group": "car",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 40,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "min_delta_psi": {
+     "default": 0.2,
+     "min": 0.1,
+     "max": 1.0,
+     "step": 0.1,
+     "unit": "psi"
+    }
+   }
+  },
+  {
+   "id": "tyre.wet_switch",
+   "group": "car",
+   "priority": "high",
+   "cooldownS": 300,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "aggressiveness": {
+     "default": 1,
+     "min": 0,
+     "max": 2,
+     "step": 1,
+     "unit": "early/normal/late"
+    }
+   },
+   "requires": "hasWeatherForecast"
+  },
+  {
+   "id": "brake.wear",
+   "group": "car",
+   "priority": "normal",
+   "cooldownS": 900,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "min_pad_mm": {
+     "default": 10,
+     "min": 3,
+     "max": 20,
+     "step": 1,
+     "unit": "mm"
+    }
+   },
+   "requires": "hasBrakeWear"
+  },
+  {
+   "id": "brake.temp",
+   "group": "car",
+   "priority": "normal",
+   "cooldownS": 180,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "margin_c": {
+     "default": 0,
+     "min": -200,
+     "max": 200,
+     "step": 10,
+     "unit": "°C"
+    }
+   }
+  },
+  {
+   "id": "damage.report",
+   "group": "car",
+   "priority": "critical",
+   "cooldownS": 60,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "repair_estimate_s": {
+     "default": 30,
+     "min": 5,
+     "max": 120,
+     "step": 5,
+     "unit": "s"
+    }
+   }
+  },
+  {
+   "id": "assist.tc",
+   "group": "car",
+   "priority": "info",
+   "cooldownS": 600,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "share_pct": {
+     "default": 30,
+     "min": 5,
+     "max": 90,
+     "step": 5,
+     "unit": "%"
+    }
+   }
+  },
+  {
+   "id": "assist.lockup",
+   "group": "car",
+   "priority": "info",
+   "cooldownS": 600,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "per_lap": {
+     "default": 3,
+     "min": 1,
+     "max": 20,
+     "step": 1,
+     "unit": ""
+    }
+   }
+  },
+  {
+   "id": "car.lights",
+   "group": "car",
+   "priority": "normal",
+   "cooldownS": 600,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "car.wipers",
+   "group": "car",
+   "priority": "normal",
+   "cooldownS": 600,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "car.stint_time",
+   "group": "car",
+   "priority": "high",
+   "cooldownS": 60,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "mark1_min": {
+     "default": 10,
+     "min": 0,
+     "max": 60,
+     "step": 1,
+     "unit": "min"
+    },
+    "mark2_min": {
+     "default": 3,
+     "min": 0,
+     "max": 30,
+     "step": 1,
+     "unit": "min"
+    }
+   }
+  },
+  {
+   "id": "weather.forecast",
+   "group": "weather",
+   "priority": "high",
+   "cooldownS": 120,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasWeatherForecast"
+  },
+  {
+   "id": "track.grip",
+   "group": "weather",
+   "priority": "info",
+   "cooldownS": 300,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "track.temp",
+   "group": "weather",
+   "priority": "info",
+   "cooldownS": 900,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "c_per_10min": {
+     "default": 3,
+     "min": 1,
+     "max": 15,
+     "step": 1,
+     "unit": "°C"
+    }
+   }
+  },
+  {
+   "id": "lap.corner_feedback",
+   "group": "performance",
+   "priority": "info",
+   "cooldownS": 0,
+   "expiryS": 25,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "max_points": {
+     "default": 2,
+     "min": 1,
+     "max": 3,
+     "step": 1,
+     "unit": ""
+    },
+    "min_loss_s": {
+     "default": 0.1,
+     "min": 0.02,
+     "max": 1.0,
+     "step": 0.02,
+     "unit": "s"
+    }
+   }
+  },
+  {
+   "id": "lap.biggest_loss",
+   "group": "performance",
+   "priority": "info",
+   "cooldownS": 0,
+   "expiryS": 25,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": false,
+   "thresholds": {
+    "min_loss_s": {
+     "default": 0.1,
+     "min": 0.02,
+     "max": 1.0,
+     "step": 0.02,
+     "unit": "s"
+    }
+   }
+  },
+  {
+   "id": "lap.praise_sector",
+   "group": "performance",
+   "priority": "info",
+   "cooldownS": 60,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "lap.personal_best",
+   "group": "performance",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "lap.consistency",
+   "group": "performance",
+   "priority": "info",
+   "cooldownS": 600,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "window_laps": {
+     "default": 5,
+     "min": 3,
+     "max": 10,
+     "step": 1,
+     "unit": "laps"
+    },
+    "spread_s": {
+     "default": 0.2,
+     "min": 0.1,
+     "max": 1.0,
+     "step": 0.1,
+     "unit": "s"
+    }
+   }
+  },
+  {
+   "id": "setup.handling",
+   "group": "performance",
+   "priority": "info",
+   "cooldownS": 900,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "driver.after_mistake",
+   "group": "performance",
+   "priority": "normal",
+   "cooldownS": 30,
+   "expiryS": 8,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "quali.position",
+   "group": "quali",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "qualifying"
+   ],
+   "enabled": true,
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "quali.traffic_gap",
+   "group": "quali",
+   "priority": "high",
+   "cooldownS": 30,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "qualifying"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "desired_gap_s": {
+     "default": 8,
+     "min": 3,
+     "max": 20,
+     "step": 1,
+     "unit": "s"
+    }
+   },
+   "requires": "hasBroadcastTiming"
+  },
+  {
+   "id": "quali.push_now",
+   "group": "quali",
+   "priority": "high",
+   "cooldownS": 60,
+   "expiryS": 8,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "qualifying"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "quali.time_for_lap",
+   "group": "quali",
+   "priority": "high",
+   "cooldownS": 0,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "qualifying"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "prerace.briefing",
+   "group": "prepost",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 120,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "prerace.formation",
+   "group": "prepost",
+   "priority": "high",
+   "cooldownS": 0,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "stint.summary",
+   "group": "prepost",
+   "priority": "info",
+   "cooldownS": 0,
+   "expiryS": 60,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "race.summary",
+   "group": "prepost",
+   "priority": "normal",
+   "cooldownS": 0,
+   "expiryS": 120,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "crew.ack",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 10,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "crew.reminder",
+   "group": "commands",
+   "priority": "high",
+   "cooldownS": 0,
+   "expiryS": 60,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "crew.ai_unavailable",
+   "group": "commands",
+   "priority": "normal",
+   "cooldownS": 600,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "crew.filler",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 3,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  }
+ ]
+}

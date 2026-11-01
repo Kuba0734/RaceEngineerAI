@@ -1,0 +1,22 @@
+{
+  "_comment": "Built-in presets. Applied on top of catalog defaults; user overrides apply on top of the preset. onlyGroups = everything else off.",
+  "presets": [
+    { "id": "spotter_only", "name": { "de": "Nur Spotter", "en": "Spotter only" },
+      "onlyGroups": ["spotter", "session"], "enable": ["fuel.critical", "flag.yellow_ahead", "penalty.received"], "disable": ["session.greeting"], "overrides": {} },
+    { "id": "minimal", "name": { "de": "Minimal", "en": "Minimal" },
+      "onlyGroups": ["spotter", "flags", "session"],
+      "enable": ["fuel.critical", "pit.window", "pit.fuel_amount", "damage.report", "weather.forecast", "tyre.wet_switch", "race.time_left"],
+      "disable": ["session.greeting", "flag.green"], "overrides": {} },
+    { "id": "standard", "name": { "de": "Standard", "en": "Standard" },
+      "onlyGroups": [], "enable": [], "disable": ["lap.biggest_loss", "rival.info", "assist.tc", "assist.lockup"], "overrides": {} },
+    { "id": "full", "name": { "de": "Voller Renningenieur", "en": "Full race engineer" },
+      "onlyGroups": [], "enable": ["lap.biggest_loss", "rival.info", "assist.tc", "assist.lockup"], "disable": [],
+      "overrides": { "gap.ahead": { "frequency": { "kind": "every_n_laps", "n": 1 } }, "gap.behind": { "frequency": { "kind": "every_n_laps", "n": 1 } }, "fuel.status": { "frequency": { "kind": "every_n_laps", "n": 3 } } } },
+    { "id": "endurance", "name": { "de": "Endurance", "en": "Endurance" },
+      "onlyGroups": [], "enable": ["rival.info"], "disable": ["lap.corner_feedback", "lap.consistency", "lap.praise_sector"],
+      "overrides": { "fuel.status": { "frequency": { "kind": "every_n_laps", "n": 3 } }, "gap.ahead": { "frequency": { "kind": "every_n_laps", "n": 3 } }, "gap.behind": { "frequency": { "kind": "every_n_laps", "n": 3 } } } },
+    { "id": "qualifying", "name": { "de": "Qualifying", "en": "Qualifying" },
+      "onlyGroups": ["spotter", "flags", "quali", "performance", "session", "car"],
+      "enable": ["lap.biggest_loss"], "disable": ["lap.consistency", "assist.tc", "assist.lockup", "brake.wear"], "overrides": {} }
+  ]
+}

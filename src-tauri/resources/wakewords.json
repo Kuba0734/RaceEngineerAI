@@ -1,0 +1,94 @@
+{
+ "_comment": "Tokenized with SentencePiece bpe.model of sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01",
+ "model": "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01",
+ "words": {
+  "RADIO": [
+   "▁RA",
+   "DI",
+   "O"
+  ],
+  "HEY CREW": [
+   "▁HE",
+   "Y",
+   "▁C",
+   "RE",
+   "W"
+  ],
+  "BOX": [
+   "▁BO",
+   "X"
+  ],
+  "RADIO CHECK": [
+   "▁RA",
+   "DI",
+   "O",
+   "▁C",
+   "HE",
+   "CK"
+  ],
+  "PIT CREW": [
+   "▁PI",
+   "T",
+   "▁C",
+   "RE",
+   "W"
+  ],
+  "HEY ENGINEER": [
+   "▁HE",
+   "Y",
+   "▁E",
+   "NG",
+   "IN",
+   "E",
+   "ER"
+  ],
+  "ENGINEER": [
+   "▁E",
+   "NG",
+   "IN",
+   "E",
+   "ER"
+  ],
+  "CREW": [
+   "▁C",
+   "RE",
+   "W"
+  ],
+  "HEY RADIO": [
+   "▁HE",
+   "Y",
+   "▁RA",
+   "DI",
+   "O"
+  ],
+  "HEY BOX": [
+   "▁HE",
+   "Y",
+   "▁BO",
+   "X"
+  ],
+  "HEY PIT": [
+   "▁HE",
+   "Y",
+   "▁PI",
+   "T"
+  ],
+  "PIT WALL": [
+   "▁PI",
+   "T",
+   "▁WA",
+   "LL"
+  ],
+  "HEY TEAM": [
+   "▁HE",
+   "Y",
+   "▁TEA",
+   "M"
+  ],
+  "COPY": [
+   "▁CO",
+   "P",
+   "Y"
+  ]
+ }
+}

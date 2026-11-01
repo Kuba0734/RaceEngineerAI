@@ -1,0 +1,109 @@
+{
+  "_comment": "Downloads from the official k2-fsa/sherpa-onnx GitHub releases. sha256 from the GitHub release asset digests (KWS archive hashed locally on 2026-11-01). Only voices with free licenses. fp32 archives: the fp16 ones fail to load with the onnxruntime bundled in sherpa-onnx 1.13.8.",
+  "base": "https://github.com/k2-fsa/sherpa-onnx/releases/download",
+  "voices": [
+    {
+      "id": "de_DE-thorsten-medium",
+      "lang": "de",
+      "name": "Thorsten",
+      "gender": "m",
+      "license": "CC0",
+      "tag": "tts-models",
+      "archive": "vits-piper-de_DE-thorsten-medium.tar.bz2",
+      "sha256": "50487d9c95fdf2191f31d2588569381063ba1591dcd4c7d4bdd30f12b2191714",
+      "size": 67214254,
+      "speakers": 1
+    },
+    {
+      "id": "de_DE-thorsten_emotional-medium",
+      "lang": "de",
+      "name": "Thorsten (emotional)",
+      "gender": "m",
+      "license": "CC0",
+      "tag": "tts-models",
+      "archive": "vits-piper-de_DE-thorsten_emotional-medium.tar.bz2",
+      "sha256": "4e55e6c7ba21700b6fb71e9544e1615bb348f74114799d23395826fdb33ee6f7",
+      "size": 80215792,
+      "speakers": 8
+    },
+    {
+      "id": "de_DE-kerstin-low",
+      "lang": "de",
+      "name": "Kerstin",
+      "gender": "f",
+      "license": "CC0",
+      "tag": "tts-models",
+      "archive": "vits-piper-de_DE-kerstin-low.tar.bz2",
+      "sha256": "4bfe121d5f690a3b87acecd7ae1e70b48f4589ce6ae9f45a1809e6eb19fad97b",
+      "size": 67107768,
+      "speakers": 1
+    },
+    {
+      "id": "en_GB-northern_english_male-medium",
+      "lang": "en",
+      "name": "Northern English (male)",
+      "gender": "m",
+      "license": "CC-BY-SA 4.0 (OpenSLR 83)",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_GB-northern_english_male-medium.tar.bz2",
+      "sha256": "2bb2c1e709f58c11f17c693b3b38f500e110e7f54f2651774ec48b8d41f12c55",
+      "size": 67210490,
+      "speakers": 1
+    },
+    {
+      "id": "en_GB-cori-medium",
+      "lang": "en",
+      "name": "Cori",
+      "gender": "f",
+      "license": "Public domain (LibriVox)",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_GB-cori-medium.tar.bz2",
+      "sha256": "49c9a5361bbdd95d7ca9687c4de11e5908481f65e7c7c368960df79949fdac2b",
+      "size": 67257412,
+      "speakers": 1
+    },
+    {
+      "id": "en_US-joe-medium",
+      "lang": "en",
+      "name": "Joe",
+      "gender": "m",
+      "license": "CC0",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_US-joe-medium.tar.bz2",
+      "sha256": "261b903a1fb2ce621e2b5b14233cd41223c3b9f9590f896c11daee4df22d9bd3",
+      "size": 67169394,
+      "speakers": 1
+    },
+    {
+      "id": "en_US-john-medium",
+      "lang": "en",
+      "name": "John",
+      "gender": "m",
+      "license": "Public domain (LibriVox)",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_US-john-medium.tar.bz2",
+      "sha256": "d90362cfa48e429d3096f644785184446145b6e38216f2eaf4c0601b8aad5a36",
+      "size": 67249181,
+      "speakers": 1
+    }
+  ],
+  "vad": {
+    "id": "silero_vad",
+    "tag": "asr-models",
+    "file": "silero_vad.onnx",
+    "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+    "size": 643854,
+    "license": "MIT"
+  },
+  "kws": {
+    "id": "kws-gigaspeech",
+    "tag": "kws-models",
+    "archive": "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2",
+    "sha256": "f170013b4716e41b62b9bfd809687c207cef798ef9bc6534d524e17af9b6561a",
+    "size": 17626723,
+    "license": "Apache-2.0",
+    "encoder": "encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx",
+    "decoder": "decoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx",
+    "joiner": "joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx"
+  }
+}

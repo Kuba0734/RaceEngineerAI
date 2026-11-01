@@ -190,15 +190,15 @@ impl Default for VoiceSettings {
         Self {
             engineer: VoiceProfile {
                 voice_de: "de_DE-thorsten-medium".into(),
-                voice_en: "en_GB-alan-medium".into(),
+                voice_en: "en_GB-northern_english_male-medium".into(),
                 speaker_id: 0,
                 volume: 1.0,
                 speed: 1.05,
                 radio_fx: RadioFx::default(),
             },
             spotter: VoiceProfile {
-                voice_de: "de_DE-thorsten-medium".into(),
-                voice_en: "en_US-ryan-medium".into(),
+                voice_de: "de_DE-kerstin-low".into(),
+                voice_en: "en_US-joe-medium".into(),
                 speaker_id: 0,
                 volume: 1.1,
                 speed: 1.2,
@@ -476,6 +476,10 @@ pub struct StrategySettings {
     pub undercut_threshold_s: f32,
     pub default_pit_loss_s: f32,
     pub clean_laps_window: u32,
+    /// Largest fuel saving per lap (fraction of consumption) still suggested instead of a stop.
+    pub max_save_fraction: f32,
+    /// Duration of the next race for the start fuel calculation.
+    pub next_race_minutes: f32,
 }
 
 impl Default for StrategySettings {
@@ -487,6 +491,8 @@ impl Default for StrategySettings {
             undercut_threshold_s: 3.0,
             default_pit_loss_s: 25.0,
             clean_laps_window: 5,
+            max_save_fraction: 0.1,
+            next_race_minutes: 60.0,
         }
     }
 }
@@ -533,7 +539,7 @@ impl Default for SessionStartSettings {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
 pub enum Priority {

@@ -8,7 +8,8 @@ rust-version = "1.85"
 
 [lib]
 name = "race_engineer_ai_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# Windows desktop only: no mobile cdylib/staticlib needed.
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.7.4", features = [] }
@@ -48,7 +49,8 @@ sysinfo = { version = "0.40.1", default-features = false, features = ["system"] 
 gilrs = "0.11.2"
 # Audio, speech
 cpal = "0.18.2"
-sherpa-onnx = "2.0.1"
+# 1.13.x: last line with built-in espeak-ng phonemization for Piper voices (removed in 2.0).
+sherpa-onnx = "=1.13.8"
 hound = "3.5.1"
 rand = "0.10.3"
 # Model downloads (sherpa-onnx release archives are .tar.bz2)

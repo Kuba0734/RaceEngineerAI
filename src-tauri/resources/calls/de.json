@@ -1,0 +1,542 @@
+{
+ "session.radio_check": {
+  "default": [
+   "Radio Check{driver_comma} hier ist {engineer}. Hörst du mich?",
+   "Funkcheck{driver_comma} {engineer} hier. Wie ist der Empfang?"
+  ],
+  "formal": [
+   "Funkcheck{driver_comma} hier ist {engineer}. Hören Sie mich?"
+  ],
+  "british": [
+   "Funkcheck{driver_comma} {engineer} hier. Empfang, nehme ich an?"
+  ]
+ },
+ "session.radio_check_reply": [
+  "Copy, laut und klar. Viel Erfolg.",
+  "Perfekt, ich hör dich. Los geht's."
+ ],
+ "session.greeting": {
+  "default": [
+   "Willkommen in {track}. {session}{minutes_part}.{weather_part}",
+   "{track}, {session}{minutes_part}.{weather_part}"
+  ],
+  "motivating": [
+   "Willkommen in {track}! {session}{minutes_part}.{weather_part} Lass uns das rocken."
+  ],
+  "british": [
+   "Nun denn, {track}. {session}{minutes_part}.{weather_part} Bringen wir es hinter uns."
+  ]
+ },
+ "session.spotter_intro": [
+  "{spotter} hier, ich pass auf die Seiten auf.",
+  "Spotter ist da. Ich hab deine Spiegel."
+ ],
+ "spotter.left": {
+  "short": [
+   "Links!"
+  ],
+  "normal": [
+   "Auto links",
+   "Links neben dir"
+  ],
+  "double": [
+   "Auto links, links"
+  ]
+ },
+ "spotter.right": {
+  "short": [
+   "Rechts!"
+  ],
+  "normal": [
+   "Auto rechts",
+   "Rechts neben dir"
+  ],
+  "double": [
+   "Auto rechts, rechts"
+  ]
+ },
+ "spotter.three_wide": {
+  "short": [
+   "Drei breit!"
+  ],
+  "normal": [
+   "Drei breit",
+   "Du bist in der Mitte"
+  ],
+  "double": [
+   "Drei breit, drei breit"
+  ]
+ },
+ "spotter.clear": {
+  "short": [
+   "Frei"
+  ],
+  "normal": [
+   "Frei",
+   "Alles frei"
+  ],
+  "double": [
+   "Frei, frei"
+  ]
+ },
+ "spotter.closing_fast": [
+  "Kommt schnell von hinten",
+  "Achtung, schnelles Auto hinter dir"
+ ],
+ "spotter.still_there": [
+  "Immer noch da",
+  "Er ist noch da"
+ ],
+ "flag.blue_leader": [
+  "Blaue Flagge, {car} kommt, {gap} hinter dir.",
+  "{car} überrundet dich gleich, {gap} dahinter. Lass ihn sauber vorbei."
+ ],
+ "flag.yellow_ahead": [
+  "Gelb in Sektor {sector}{extra}.",
+  "Achtung, gelbe Flagge im {sector}. Sektor{extra}."
+ ],
+ "flag.fcy": [
+  "FCY! Full Course Yellow.{advice}",
+  "Full Course Yellow, runter auf Tempo.{advice}"
+ ],
+ "flag.fcy:advice_pit": [
+  " Box diese Runde, der Stopp ist jetzt billig."
+ ],
+ "flag.green": [
+  "Grün, grün, grün!",
+  "Grüne Flagge, Gas!"
+ ],
+ "flag.white": [
+  "Letzte Runde.",
+  "Das ist die letzte Runde, bring's heim."
+ ],
+ "flag.checkered": {
+  "default": [
+   "Zielflagge. P{position}.",
+   "Das ist die Zielflagge, P{position}."
+  ],
+  "motivating": [
+   "Zielflagge! P{position}, richtig stark gefahren!"
+  ],
+  "british": [
+   "Zielflagge. P{position}. Durchaus annehmbar."
+  ]
+ },
+ "penalty.track_limits": [
+  "Track Limit Nummer {count}.",
+  "Das war Track Limit {count}, pass auf die Linien auf."
+ ],
+ "penalty.track_limits:last_warning": [
+  "Track Limit Nummer {count}, beim nächsten gibt's eine Strafe."
+ ],
+ "penalty.received": [
+  "Strafe: {penalty}.{advice}",
+  "Wir haben eine Strafe bekommen, {penalty}.{advice}"
+ ],
+ "penalty.reminder": [
+  "Strafe noch offen: {penalty}. Diese Runde rein.",
+  "Denk an die Strafe, {penalty}, diese Runde absitzen."
+ ],
+ "race.time_left": [
+  "Noch {minutes} Minuten, etwa {laps} Runden.",
+  "{minutes} Minuten übrig, rund {laps} Runden."
+ ],
+ "gap.ahead": [
+  "Abstand nach vorne {gap}{trend_part}.",
+  "Nach vorne {gap}{trend_part}."
+ ],
+ "gap.behind": [
+  "Abstand nach hinten {gap}{trend_part}.",
+  "Hinter dir {gap}{trend_part}."
+ ],
+ "gap.trend_part:gaining": [
+  ", du holst {tenths}"
+ ],
+ "gap.trend_part:losing": [
+  ", du verlierst {tenths}"
+ ],
+ "gap.trend_part:closing": [
+  ", er kommt {tenths} pro Runde näher"
+ ],
+ "gap.trend_part:dropping": [
+  ", er fällt {tenths} pro Runde zurück"
+ ],
+ "gap.trend_rival:closing": [
+  "{car} holt auf, {tenths} pro Runde.",
+  "{car} kommt näher, {tenths} schneller pro Runde."
+ ],
+ "gap.trend_rival:dropping": [
+  "{car} fällt zurück, {tenths} pro Runde.",
+  "{car} verliert {tenths} pro Runde auf dich."
+ ],
+ "gap.trend_rival:pulling_away": [
+  "{car} zieht weg, {tenths} pro Runde."
+ ],
+ "gap.trend_rival:catching": [
+  "Du holst auf {car} auf, {tenths} pro Runde."
+ ],
+ "gap.catch_prediction": [
+  "Bei der Pace bist du in {laps} Runden an {car} dran.",
+  "Mit {pace} bist du in etwa {laps} Runden an {car} dran."
+ ],
+ "rival.sector_strength": [
+  "{car} ist in Sektor {sector} schneller, verteidige dort.",
+  "Der hinter dir ist im {sector_word} Sektor stärker. Mach da zu."
+ ],
+ "rival.attack_hint": [
+  "In Sektor {sector} bist du schneller als {car}, greif dort an.",
+  "Im {sector_word} Sektor hast du Vorteile auf {car}. Da geht was."
+ ],
+ "rival.info": [
+  "{car}: Reifen {tyre_age} Runden alt, {stops} Stopps.",
+  "Info zu {car}: {stops} Stopps, Reifen {tyre_age} Runden."
+ ],
+ "fuel.status:enough": [
+  "Sprit reicht für {laps_possible} Runden, brauchst {laps_needed}.",
+  "Sprit passt. {laps_possible} Runden drin, {laps_needed} nötig."
+ ],
+ "fuel.status:short": [
+  "Sprit reicht für {laps_possible} Runden, brauchst {laps_needed}. Wir müssen nachtanken.",
+  "Sprit für {laps_possible} Runden, das reicht nicht ohne Stopp."
+ ],
+ "fuel.critical": [
+  "Sprit wird knapp, noch {laps} Runden.",
+  "Achtung Sprit! Nur noch {laps} Runden drin."
+ ],
+ "fuel.save_target": [
+  "Spar {save} Liter pro Runde, dann kommen wir ohne Stopp durch.{lift_part}",
+  "Spritsparen: {save} pro Runde.{lift_part}"
+ ],
+ "fuel.lift_part": [
+  " Lift and Coast vor Kurve {corners}."
+ ],
+ "pit.window:open": [
+  "Boxenfenster ist offen.",
+  "Das Boxenfenster ist jetzt offen."
+ ],
+ "pit.window:mandatory_pending": [
+  "Pflichtstopp noch nicht erledigt.",
+  "Denk an den Pflichtstopp, der ist noch offen."
+ ],
+ "pit.window:closing": [
+  "Boxenfenster schließt bald, Pflichtstopp noch offen!"
+ ],
+ "pit.fuel_amount": [
+  "Nachtanken: {fuel}.",
+  "Wir brauchen {fuel}."
+ ],
+ "pit.exit_position": [
+  "Nach dem Stopp kommst du als P{position} raus{behind_part}.",
+  "Rauskomm-Position P{position}{behind_part}."
+ ],
+ "pit.behind_part": [
+  ", hinter {car}"
+ ],
+ "pit.rival_pitting": [
+  "{car} fährt an die Box.",
+  "{car} ist in der Box."
+ ],
+ "pit.undercut": [
+  "Undercut-Gefahr: {car} ist rein.",
+  "{car} ist an der Box, Achtung Undercut."
+ ],
+ "pit.plan:reminder": [
+  "Plan: Box in Runde {lap}. Nächste Runde rein.",
+  "Erinnerung, Box in Runde {lap}."
+ ],
+ "pit.plan:now": [
+  "Box, Box, diese Runde.",
+  "Box diese Runde, Box Box."
+ ],
+ "prerace.start_fuel": [
+  "Startsprit fürs Rennen über {minutes} Minuten: {fuel}.",
+  "Fürs Rennen mit {minutes} Minuten brauchst du {fuel}."
+ ],
+ "tyre.cold": [
+  "Reifen noch kalt, vorsichtig in den ersten Kurven.",
+  "Die Reifen sind noch kalt, nimm's ruhig."
+ ],
+ "tyre.overheat": [
+  "{wheel} überhitzt, schon die Reifen.",
+  "Reifen {wheel} wird zu heiß."
+ ],
+ "tyre.pressure_live:high": [
+  "Drücke {where} zu hoch, {pressure}.",
+  "Druck {where} liegt bei {pressure}, zu hoch."
+ ],
+ "tyre.pressure_live:low": [
+  "Drücke {where} zu niedrig, {pressure}.",
+  "Druck {where} nur {pressure}, zu niedrig."
+ ],
+ "tyre.pressure_next_stint": [
+  "Nächster Stint: {deltas}.",
+  "Druck-Empfehlung für den nächsten Satz: {deltas}."
+ ],
+ "tyre.wet_switch:to_wet_soon": [
+  "Regen kommt in {minutes} Minuten, Regenreifen beim nächsten Stopp.",
+  "In {minutes} Minuten kommt Regen. Wir planen Regenreifen."
+ ],
+ "tyre.wet_switch:to_wet_now": [
+  "Strecke ist nass, Regenreifen jetzt! Box diese Runde.",
+  "Es ist zu nass für Slicks, komm rein für Regenreifen."
+ ],
+ "tyre.wet_switch:to_dry": [
+  "Strecke trocknet, Zeit für Slicks.",
+  "Trockenreifen wären jetzt schneller."
+ ],
+ "brake.wear": [
+  "Bremsbeläge reichen noch etwa {laps} Runden.",
+  "Beläge halten noch rund {laps} Runden."
+ ],
+ "brake.temp": [
+  "Bremsen {axle} sehr heiß.",
+  "Die Bremsen {axle} werden zu heiß, ein bisschen früher lösen."
+ ],
+ "damage.report:worth": [
+  "Schaden kostet etwa {loss} pro Runde. Reparatur lohnt sich.",
+  "Der Schaden kostet {loss} pro Runde, wir sollten reparieren."
+ ],
+ "damage.report:not_worth": [
+  "Schaden kostet etwa {loss} pro Runde, Reparatur lohnt sich nicht.",
+  "Kleiner Schaden, {loss} pro Runde. Weiterfahren."
+ ],
+ "damage.report:unknown": [
+  "Wir haben Schaden {where}. Ich schau mir die Pace an.",
+  "Schaden {where}, ich melde mich mit Zahlen."
+ ],
+ "assist.tc": [
+  "TC greift viel in Kurve {corner}, probier TC eins runter.",
+  "Viel Traktionskontrolle in Kurve {corner}."
+ ],
+ "assist.lockup": [
+  "Du blockierst {axle} beim Anbremsen.{advice}",
+  "Blockierer {axle}.{advice}"
+ ],
+ "assist.lockup:advice_front": [
+  " Bremsbalance einen Klick nach hinten."
+ ],
+ "assist.lockup:advice_rear": [
+  " Bremsbalance einen Klick nach vorne."
+ ],
+ "car.lights": [
+  "Wird dunkel, Licht an.",
+  "Licht einschalten, es wird dunkel."
+ ],
+ "car.wipers": [
+  "Regen, Scheibenwischer an.",
+  "Wischer an, es regnet."
+ ],
+ "car.stint_time": [
+  "Noch {minutes} Minuten Fahrzeit in diesem Stint.",
+  "{minutes} Minuten Stint-Zeit übrig."
+ ],
+ "weather.forecast:rain_coming": [
+  "{intensity} in {minutes} Minuten.",
+  "Regen im Anmarsch: {intensity} in etwa {minutes} Minuten."
+ ],
+ "weather.forecast:rain_stopping": [
+  "Der Regen hört bald auf.",
+  "Prognose: Regen lässt nach."
+ ],
+ "weather.forecast:rain_now": [
+  "Es fängt an zu regnen, {intensity}.",
+  "Regen setzt ein, {intensity}."
+ ],
+ "track.grip:faster": [
+  "Strecke wird schneller.",
+  "Mehr Grip, die Strecke kommt."
+ ],
+ "track.grip:drying": [
+  "Strecke trocknet ab.",
+  "Die Linie wird trocken."
+ ],
+ "track.grip:wetter": [
+  "Strecke wird nasser, weniger Grip.",
+  "Grip lässt nach, es wird nass."
+ ],
+ "track.temp:falling": [
+  "Streckentemperatur fällt, {delta} in zehn Minuten. Drücke im Auge behalten."
+ ],
+ "track.temp:rising": [
+  "Streckentemperatur steigt, {delta} in zehn Minuten."
+ ],
+ "lap.corner_feedback:braked_early": [
+  "Kurve {corner}: zu früh gebremst, etwa {meters}.",
+  "In Kurve {corner} bremst du {meters} zu früh."
+ ],
+ "lap.corner_feedback:braked_late": [
+  "Kurve {corner}: zu spät gebremst, du verlierst den Scheitel.",
+  "Kurve {corner} überbremst, später einlenken."
+ ],
+ "lap.corner_feedback:slow_apex": [
+  "Kurve {corner}: zu langsam im Scheitel, {kmh} km/h fehlen.",
+  "Mehr Speed durch Kurve {corner}, {kmh} km/h im Scheitel."
+ ],
+ "lap.corner_feedback:late_throttle": [
+  "Kurve {corner}: zu spät am Gas, etwa {meters}.",
+  "Früher aufs Gas aus Kurve {corner}, {meters}."
+ ],
+ "lap.corner_feedback:unknown": [
+  "Kurve {corner} kostet {loss}.",
+  "In Kurve {corner} liegen {loss}."
+ ],
+ "lap.biggest_loss": [
+  "Meiste Zeit in Kurve {corner}, {loss} zur Bestzeit.",
+  "Kurve {corner} kostet am meisten, {loss}."
+ ],
+ "lap.praise_sector": {
+  "default": [
+   "Lila im {sector_word} Sektor.",
+   "Schnellster {sector_word} Sektor."
+  ],
+  "motivating": [
+   "Lila im {sector_word} Sektor, stark!",
+   "Wahnsinn, lila im {sector_word} Sektor!"
+  ],
+  "british": [
+   "Lila im {sector_word} Sektor. Nicht übel."
+  ]
+ },
+ "lap.personal_best": {
+  "default": [
+   "Persönliche Bestzeit, {laptime}.",
+   "Neue Bestzeit, {laptime}."
+  ],
+  "motivating": [
+   "Bestzeit! {laptime}, genau so weiter!"
+  ],
+  "british": [
+   "Persönliche Bestzeit, {laptime}. Hervorragend, wirklich."
+  ]
+ },
+ "lap.consistency": [
+  "Letzte {laps} Runden innerhalb {spread}. Sehr konstant.",
+  "Super konstant, {laps} Runden in {spread}."
+ ],
+ "setup.handling:understeer_entry": [
+  "Untersteuern im Kurveneingang, besonders in langsamen Kurven.",
+  "Das Auto schiebt beim Einlenken."
+ ],
+ "setup.handling:oversteer_exit": [
+  "Übersteuern am Kurvenausgang, vorsichtig mit dem Gas.",
+  "Das Heck kommt am Ausgang."
+ ],
+ "driver.after_mistake:reassure": [
+  "Abhaken, die Pace ist gut.",
+  "Kein Problem, weiter geht's.",
+  "Passiert. Konzentrier dich auf die nächste Kurve."
+ ],
+ "driver.after_mistake:factual": [
+  "Fehler notiert, ruhig weiter.",
+  "Ausritt. Reifen checken und weiter."
+ ],
+ "quali.position": [
+  "P{position}{gap_part}.",
+  "Du bist P{position}{gap_part}."
+ ],
+ "quali.gap_part": [
+  ", Pole ist {gap} schneller"
+ ],
+ "quali.traffic_gap": [
+  "Verkehr vorne, lass dir {gap} Sekunden Platz.",
+  "Auto vor dir, mach eine Lücke von {gap} Sekunden."
+ ],
+ "quali.push_now": [
+  "Lücke frei, Reifen auf Temperatur, jetzt pushen.",
+  "Alles frei, jetzt Gas!"
+ ],
+ "quali.time_for_lap:one": [
+  "Noch {minutes} Minuten, reicht für genau eine Runde.",
+  "{minutes} Minuten, eine Runde geht noch."
+ ],
+ "quali.time_for_lap:two": [
+  "Noch {minutes} Minuten, reicht für zwei Runden."
+ ],
+ "quali.time_for_lap:none": [
+  "Die Zeit reicht nicht mehr für eine weitere Runde."
+ ],
+ "prerace.briefing": [
+  "Briefing: Startsprit {fuel}.{weather_part}{pressure_part}",
+  "Kurzes Briefing. Wir starten mit {fuel}.{weather_part}{pressure_part}"
+ ],
+ "prerace.formation": [
+  "Formationsrunde, Reifen anwärmen.",
+  "Formationsrunde. Reifen und Bremsen auf Temperatur bringen."
+ ],
+ "stint.summary": [
+  "Stint-Schnitt {avg}, Verbrauch {fuel}.{deg_part}",
+  "Stint vorbei: Schnitt {avg}, {fuel} pro Runde.{deg_part}"
+ ],
+ "stint.deg_low": [
+  " Reifenabbau gering."
+ ],
+ "stint.deg_high": [
+  " Die Reifen bauen deutlich ab."
+ ],
+ "race.summary": {
+  "default": [
+   "P{position}{gained_part}. Beste Runde {best}.{loss_part}"
+  ],
+  "motivating": [
+   "P{position}{gained_part}! Beste Runde {best}.{loss_part} Starkes Rennen!"
+  ],
+  "british": [
+   "P{position}{gained_part}. Beste Runde {best}.{loss_part} Ordentliche Arbeit."
+  ]
+ },
+ "race.gained_part:gained": [
+  ", {n} Plätze gewonnen"
+ ],
+ "race.gained_part:lost": [
+  ", {n} Plätze verloren"
+ ],
+ "race.loss_part": [
+  " Meiste Zeit in Kurve {corner}."
+ ],
+ "crew.ack:generic": [
+  "Verstanden.",
+  "Copy.",
+  "Alles klar."
+ ],
+ "crew.ack:quiet": [
+  "Verstanden, ich bin ruhig.",
+  "Copy, Funkstille."
+ ],
+ "crew.ack:preset": [
+  "Verstanden, {preset}.",
+  "Copy, Modus {preset}."
+ ],
+ "crew.ack:recurring": [
+  "Verstanden, mach ich ab jetzt.",
+  "Copy, kommt jede Runde."
+ ],
+ "crew.ack:reminder": [
+  "Verstanden, ich erinnere dich.",
+  "Copy, ich sag Bescheid."
+ ],
+ "crew.ack:plan": [
+  "Verstanden, Box in Runde {lap}.",
+  "Copy, Plan Runde {lap}."
+ ],
+ "crew.ack:volume": [
+  "Verstanden.",
+  "So besser?"
+ ],
+ "crew.reminder": [
+  "Erinnerung: {text}.",
+  "Du wolltest erinnert werden: {text}."
+ ],
+ "crew.ai_unavailable": [
+  "Freie Fragen gehen gerade nicht, die Standard-Meldungen laufen weiter.",
+  "Ich kann gerade keine freien Fragen beantworten."
+ ],
+ "crew.filler": [
+  "Moment …",
+  "Copy, check ich.",
+  "Sekunde."
+ ],
+ "crew.no_data": [
+  "Dazu hab ich keine Daten.",
+  "Das liefert das Spiel leider nicht."
+ ]
+}
