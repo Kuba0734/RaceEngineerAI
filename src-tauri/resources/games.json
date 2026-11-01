@@ -1,0 +1,74 @@
+[
+  {
+    "id": "acc",
+    "name": "Assetto Corsa Competizione",
+    "shortName": "ACC",
+    "processNames": ["AC2-Win64-Shipping.exe"],
+    "provider": "acc",
+    "support": "supported",
+    "accent": "#FF5A1F",
+    "capabilities": {
+      "hasNativeSpotter": false,
+      "hasWeatherForecast": true,
+      "hasBroadcastTiming": true,
+      "hasTyreCoreTemps": true,
+      "hasBrakeWear": true,
+      "hasPitWindow": true,
+      "hasTrackLimits": true,
+      "hasCarCoordinates": true
+    },
+    "setupHintsDe": [
+      "Broadcasting-API aktivieren: RaceEngineerAI kann broadcasting.json automatisch einrichten (Backup wird angelegt). Danach ACC neu starten.",
+      "Für das Overlay ACC im Modus „Randloses Fenster“ oder „Fenster“ betreiben – im exklusiven Vollbild ist kein Overlay möglich."
+    ],
+    "setupHintsEn": [
+      "Enable the broadcasting API: RaceEngineerAI can set up broadcasting.json automatically (a backup is made). Restart ACC afterwards.",
+      "Run ACC in borderless or windowed mode for the overlay – exclusive fullscreen cannot show overlays."
+    ]
+  },
+  {
+    "id": "lmu",
+    "name": "Le Mans Ultimate",
+    "shortName": "LMU",
+    "processNames": ["Le Mans Ultimate.exe"],
+    "provider": "none",
+    "support": "planned",
+    "accent": "#22D3EE",
+    "capabilities": {
+      "hasNativeSpotter": false, "hasWeatherForecast": false, "hasBroadcastTiming": false, "hasTyreCoreTemps": false,
+      "hasBrakeWear": false, "hasPitWindow": false, "hasTrackLimits": false, "hasCarCoordinates": false
+    },
+    "setupHintsDe": ["Unterstützung folgt. Schnittstelle (eingebautes Shared Memory) wird vor der Umsetzung recherchiert."],
+    "setupHintsEn": ["Support coming. The interface (built-in shared memory) will be researched before implementation."]
+  },
+  {
+    "id": "iracing",
+    "name": "iRacing",
+    "shortName": "iRacing",
+    "processNames": ["iRacingSim64DX11.exe"],
+    "provider": "none",
+    "support": "planned",
+    "accent": "#3B82F6",
+    "capabilities": {
+      "hasNativeSpotter": false, "hasWeatherForecast": false, "hasBroadcastTiming": false, "hasTyreCoreTemps": false,
+      "hasBrakeWear": false, "hasPitWindow": false, "hasTrackLimits": false, "hasCarCoordinates": false
+    },
+    "setupHintsDe": ["Unterstützung folgt (iRacing SDK). Prozessname ist noch nicht auf einem Rechner verifiziert."],
+    "setupHintsEn": ["Support coming (iRacing SDK). Process name not yet verified on a machine."]
+  },
+  {
+    "id": "ace",
+    "name": "Assetto Corsa EVO",
+    "shortName": "AC EVO",
+    "processNames": ["AssettoCorsaEVO.exe"],
+    "provider": "none",
+    "support": "planned",
+    "accent": "#A855F7",
+    "capabilities": {
+      "hasNativeSpotter": false, "hasWeatherForecast": false, "hasBroadcastTiming": false, "hasTyreCoreTemps": false,
+      "hasBrakeWear": false, "hasPitWindow": false, "hasTrackLimits": false, "hasCarCoordinates": false
+    },
+    "setupHintsDe": ["Unterstützung folgt. Schnittstelle wird vor der Umsetzung recherchiert."],
+    "setupHintsEn": ["Support coming. The interface will be researched before implementation."]
+  }
+]

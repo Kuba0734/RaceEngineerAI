@@ -1,0 +1,5 @@
+{
+  "_comment": "Defaults per track. pitLossS is overwritten by measured values. Keys = ACC track names from shared memory.",
+  "default": { "pitLossS": 25.0 },
+  "tracks": {}
+}
