@@ -158,7 +158,8 @@ impl Default for ListeningSettings {
             allow_interrupt: false,
             only_when_game_running: true,
             ptt_sound: true,
-            stt_language: SttLanguage::App,
+            // Auto: the driver may speak another language than the app (DE/EN mixed).
+            stt_language: SttLanguage::Auto,
             end_silence_s: 0.8,
             min_words: 2,
         }
