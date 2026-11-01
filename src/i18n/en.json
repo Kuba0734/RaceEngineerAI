@@ -443,7 +443,7 @@
  "settings.listening.sttApp": "Like app",
  "settings.listening.sttAuto": "Automatic",
  "settings.listening.sttLanguage": "Speech recognition language",
- "settings.listening.sttLanguageHint": "Must match the language you speak",
+ "settings.listening.sttLanguageHint": "Default: same as the app language (General). Change only if you speak another language",
  "settings.listening.vad": "Voice detection always on",
  "settings.listening.vadHint": "Every detected sentence goes to the crew (uses Groq quota)",
  "settings.listening.vadThreshold": "Speech threshold (VAD)",

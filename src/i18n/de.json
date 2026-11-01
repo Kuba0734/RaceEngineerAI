@@ -443,7 +443,7 @@
  "settings.listening.sttApp": "Wie App",
  "settings.listening.sttAuto": "Automatisch",
  "settings.listening.sttLanguage": "Sprache der Spracherkennung",
- "settings.listening.sttLanguageHint": "Muss zu der Sprache passen, in der du sprichst",
+ "settings.listening.sttLanguageHint": "Standard: wie die App-Sprache (Allgemein). Nur ändern, wenn du in einer anderen Sprache sprichst",
  "settings.listening.vad": "Spracherkennung dauerhaft",
  "settings.listening.vadHint": "Jeder erkannte Satz geht an die Crew (verbraucht Groq-Kontingent)",
  "settings.listening.vadThreshold": "Sprach-Schwelle (VAD)",
