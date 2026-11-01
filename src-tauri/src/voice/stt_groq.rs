@@ -17,6 +17,11 @@ pub async fn transcribe(groq: &Groq, key: &str, settings: &Settings, samples: &[
 /// Whisper sometimes "hears" stock phrases in noise. Drop those.
 pub fn filter_hallucination(t: &str) -> String {
     let n = t.trim().to_lowercase();
+    // Whole-utterance hallucinations on near-silence.
+    const EXACT: [&str; 8] = ["thank you", "thank you.", "thanks.", "you", "bye.", "danke.", "vielen dank.", "tschüss."];
+    if EXACT.contains(&n.as_str()) {
+        return String::new();
+    }
     const JUNK: [&str; 8] = ["untertitel", "vielen dank fürs zuschauen", "thanks for watching", "thank you for watching", "copyright", "amara.org", "subtitles by", "♪"];
     if n.chars().filter(|c| c.is_alphanumeric()).count() < 2 || JUNK.iter().any(|j| n.contains(j)) {
         String::new()
@@ -31,5 +36,6 @@ mod tests {
     fn drops_junk() {
         assert_eq!(super::filter_hallucination("Untertitel im Auftrag des ZDF"), "");
         assert_eq!(super::filter_hallucination(" Reicht der Sprit? "), "Reicht der Sprit?");
+        assert_eq!(super::filter_hallucination("Thank you."), "");
     }
 }

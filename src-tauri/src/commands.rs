@@ -210,7 +210,10 @@ pub async fn api_key_test(core: CoreState<'_>) -> AppResult<KeyTest> {
     let Some(key) = secrets::get_api_key() else { return Ok(KeyTest { ok: false, error: Some("no key".into()), limits: RateLimits::default(), models: Vec::new() }) };
     let groq = core.groq.clone();
     match groq.models(&key).await {
-        Ok(models) => Ok(KeyTest { ok: true, error: None, limits: groq.limits.read().clone(), models }),
+        Ok(models) => {
+            crate::ai::router::ensure_models(&core, &key).await;
+            Ok(KeyTest { ok: true, error: None, limits: groq.limits.read().clone(), models })
+        }
         Err(e) => Ok(KeyTest { ok: false, error: Some(e.to_string()), limits: groq.limits.read().clone(), models: Vec::new() }),
     }
 }

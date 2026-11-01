@@ -215,13 +215,14 @@ impl CallEngine {
         params.extend(req.params);
         let keys: Vec<&str> = if e.voice == VoiceRole::Spotter { vec![self.spotter_style(), "normal"] } else { self.style_keys.clone() };
         let mut text = templates::render(self.lang, &key, &keys, &params)?;
-        text = self.maybe_add_name(text, e.priority);
+        text = self.maybe_add_name(text, e.priority, req.call_id);
         self.record(t, req.call_id, &text, e.voice, e.priority);
         Some(Utterance { text, role: e.voice, priority: e.priority, expires_at: Instant::now() + Duration::from_secs_f32(e.expiry_s.max(1.0)), call_id: req.call_id.to_string() })
     }
 
-    fn maybe_add_name(&mut self, text: String, prio: Priority) -> String {
-        if self.driver_name.is_empty() || prio == Priority::Spotter || text.contains(&self.driver_name) {
+    fn maybe_add_name(&mut self, text: String, prio: Priority, call_id: &str) -> String {
+        // Never on spotter calls, fillers, acknowledgements or answers.
+        if self.driver_name.is_empty() || prio >= Priority::Answer || call_id.starts_with("crew.") || call_id.starts_with("answer.") || text.contains(&self.driver_name) {
             return text;
         }
         self.say_counter = self.say_counter.wrapping_add(1);

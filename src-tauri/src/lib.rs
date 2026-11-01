@@ -132,6 +132,13 @@ pub fn run() {
                     let _ = w.minimize();
                 }
             }
+            // Validate the configured Groq models against the live list once.
+            if let Some(key) = secrets::get_api_key() {
+                let c = core.clone();
+                tauri::async_runtime::spawn(async move {
+                    ai::router::ensure_models(&c, &key).await;
+                });
+            }
             runtime::start(core);
             Ok(())
         })

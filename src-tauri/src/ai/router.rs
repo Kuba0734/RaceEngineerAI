@@ -75,11 +75,18 @@ pub async fn handle_text(core: Arc<Core>, text: String) {
         tracing::info!("AI busy, dropping: {text}");
         return;
     }
-    let result = run_ai(core.clone(), &key, text.clone()).await;
+    let mut result = run_ai(core.clone(), &key, text.clone()).await;
+    // Model gone or not available for this key: pick one from the live list and retry once.
+    if let Err(GroqError::ModelNotFound(msg)) = &result {
+        tracing::warn!("model not available ({msg}), choosing another one");
+        if ensure_models(&core, &key).await {
+            result = run_ai(core.clone(), &key, text.clone()).await;
+        }
+    }
     core.ai_busy.store(false, Ordering::SeqCst);
     if let Err(e) = result {
         tracing::warn!("ai: {e}");
-        if matches!(e, GroqError::RateLimited(_) | GroqError::Offline(_) | GroqError::Unauthorized | GroqError::Api(_)) && !try_fast_path(&core, &text, 0.7) {
+        if !try_fast_path(&core, &text, 0.7) {
             core.say(CallRequest::new("crew.ai_unavailable"));
         }
     }
@@ -113,6 +120,48 @@ fn try_fast_path(core: &Arc<Core>, text: &str, threshold: f32) -> bool {
     }
 }
 
+/// Loads the live model list and replaces unavailable STT/LLM models. Returns true if usable.
+pub async fn ensure_models(core: &Arc<Core>, key: &str) -> bool {
+    let models = match core.groq.models(key).await {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::warn!("model list: {e}");
+            return false;
+        }
+    };
+    let (llm, stt) = {
+        let s = core.settings.read();
+        (super::groq::pick_llm(&models, &s.groq.llm_model), super::groq::pick_stt(&models, &s.groq.stt_model))
+    };
+    let mut changed = false;
+    {
+        let mut s = core.settings.write();
+        if let Some(l) = llm.as_ref().filter(|l| **l != s.groq.llm_model) {
+            tracing::info!("LLM model: {} -> {l}", s.groq.llm_model);
+            s.groq.llm_model = l.clone();
+            changed = true;
+        }
+        if let Some(t) = stt.as_ref().filter(|t| **t != s.groq.stt_model) {
+            tracing::info!("STT model: {} -> {t}", s.groq.stt_model);
+            s.groq.stt_model = t.clone();
+            changed = true;
+        }
+    }
+    if changed {
+        core.save_settings();
+    }
+    llm.is_some()
+}
+
+/// Marks the request as finished on every exit path so the filler never fires afterwards.
+struct Done(Arc<AtomicBool>);
+
+impl Drop for Done {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+}
+
 async fn run_ai(core: Arc<Core>, key: &str, text: String) -> Result<(), GroqError> {
     let settings = core.settings.read().clone();
     let conv = settings.conversation.clone();
@@ -127,6 +176,7 @@ async fn run_ai(core: Arc<Core>, key: &str, text: String) -> Result<(), GroqErro
 
     // "Moment…" filler if nothing was said after ~1.2 s.
     let spoken = Arc::new(AtomicBool::new(false));
+    let _done = Done(spoken.clone());
     if conv.filler_enabled {
         let (c, sp) = (core.clone(), spoken.clone());
         let after = conv.filler_after_ms;
@@ -152,6 +202,7 @@ async fn run_ai(core: Arc<Core>, key: &str, text: String) -> Result<(), GroqErro
             body["tools"] = tools::openai_tools();
             body["tool_choice"] = json!("auto");
         }
+        super::groq::model_extras(&settings.groq.llm_model, &mut body);
         let splitter = Arc::new(parking_lot::Mutex::new(SentenceSplitter::default()));
         let (c, sp, sc, spl) = (core.clone(), spoken.clone(), sentences.clone(), splitter.clone());
         let mut on_text = move |t: &str| {

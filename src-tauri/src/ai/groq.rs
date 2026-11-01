@@ -20,6 +20,8 @@ pub enum GroqError {
     RateLimited(Option<u64>),
     #[error("unauthorized")]
     Unauthorized,
+    #[error("model not available: {0}")]
+    ModelNotFound(String),
     #[error("offline: {0}")]
     Offline(String),
     #[error("api: {0}")]
@@ -115,6 +117,9 @@ impl Groq {
             429 => Err(GroqError::RateLimited(header_u64(resp.headers(), "retry-after"))),
             code => {
                 let body = resp.text().await.unwrap_or_default();
+                if code == 404 && body.contains("model_not_found") {
+                    return Err(GroqError::ModelNotFound(body.chars().take(200).collect()));
+                }
                 Err(GroqError::Api(format!("{code}: {}", body.chars().take(300).collect::<String>())))
             }
         }
@@ -212,6 +217,36 @@ impl Groq {
     }
 }
 
+/// Preferred chat models with reliable tool calling, best first. The live list decides.
+const LLM_PREFERENCE: [&str; 5] = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "llama-3.1-8b-instant"];
+
+/// Keeps `current` if available, else picks the best available chat model.
+pub fn pick_llm(models: &[ModelInfo], current: &str) -> Option<String> {
+    let llms: Vec<&ModelInfo> = models.iter().filter(|m| m.kind == "llm").collect();
+    if llms.iter().any(|m| m.id == current) {
+        return Some(current.to_string());
+    }
+    LLM_PREFERENCE.iter().find(|p| llms.iter().any(|m| m.id == **p)).map(|p| p.to_string()).or_else(|| llms.first().map(|m| m.id.clone()))
+}
+
+/// Same for speech-to-text.
+pub fn pick_stt(models: &[ModelInfo], current: &str) -> Option<String> {
+    let stt: Vec<&ModelInfo> = models.iter().filter(|m| m.kind == "stt").collect();
+    if stt.iter().any(|m| m.id == current) {
+        return Some(current.to_string());
+    }
+    ["whisper-large-v3-turbo", "whisper-large-v3"].iter().find(|p| stt.iter().any(|m| m.id == **p)).map(|p| p.to_string()).or_else(|| stt.first().map(|m| m.id.clone()))
+}
+
+/// Reasoning models (gpt-oss, qwen3) get low effort so the first sentence comes fast.
+pub fn model_extras(model: &str, body: &mut Value) {
+    if model.contains("gpt-oss") {
+        body["reasoning_effort"] = json!("low");
+    } else if model.contains("qwen3") {
+        body["reasoning_format"] = json!("hidden");
+    }
+}
+
 /// 16 kHz mono f32 → WAV (16-bit PCM) bytes.
 pub fn wav_bytes(samples: &[f32]) -> Vec<u8> {
     let spec = hound::WavSpec { channels: 1, sample_rate: 16_000, bits_per_sample: 16, sample_format: hound::SampleFormat::Int };
@@ -277,6 +312,15 @@ mod tests {
         }
         assert_eq!(out, vec!["Sprit reicht für 12 Runden.", "Abstand 1.4 nach vorne!"]);
         assert_eq!(s.finish().unwrap(), "Gut");
+    }
+
+    #[test]
+    fn picks_available_model() {
+        let m = |id: &str, kind: &str| ModelInfo { id: id.into(), owned_by: String::new(), context_window: None, kind: kind.into() };
+        let list = vec![m("openai/gpt-oss-20b", "llm"), m("openai/gpt-oss-120b", "llm"), m("whisper-large-v3", "stt")];
+        assert_eq!(pick_llm(&list, "llama-3.3-70b-versatile").unwrap(), "openai/gpt-oss-120b");
+        assert_eq!(pick_llm(&list, "openai/gpt-oss-20b").unwrap(), "openai/gpt-oss-20b");
+        assert_eq!(pick_stt(&list, "whisper-large-v3-turbo").unwrap(), "whisper-large-v3");
     }
 
     #[test]
