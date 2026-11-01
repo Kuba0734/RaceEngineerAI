@@ -10,6 +10,9 @@ mod race;
 mod session;
 mod weather;
 
+pub use car::next_stint_deltas;
+pub use session::{briefing, race_summary};
+
 use super::engine::{CallEngine, CallRequest};
 use super::format::Fmt;
 use crate::games::provider::{RainIntensity, TrackGrip};

@@ -10,14 +10,14 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
     let now = (w.rain_now, w.rain_10min, w.rain_30min);
     if let Some((n0, t10, _t30)) = mem.last_rain {
         if w.rain_now > RainIntensity::None && n0 == RainIntensity::None {
-            ctx.push(CallRequest::new("weather.forecast").sub("rain_now").p("intensity", rain_word(ctx, w.rain_now).to_lowercase()));
+            ctx.push(CallRequest::new("weather.forecast").variant("rain_now").p("intensity", rain_word(ctx, w.rain_now).to_lowercase()));
         } else if w.rain_10min > t10 && w.rain_10min > w.rain_now {
-            ctx.push(CallRequest::new("weather.forecast").sub("rain_coming").p("intensity", rain_word(ctx, w.rain_10min)).p("minutes", "10"));
+            ctx.push(CallRequest::new("weather.forecast").variant("rain_coming").p("intensity", rain_word(ctx, w.rain_10min)).p("minutes", "10"));
         } else if w.rain_now > RainIntensity::None && w.rain_10min == RainIntensity::None && t10 > RainIntensity::None {
-            ctx.push(CallRequest::new("weather.forecast").sub("rain_stopping"));
+            ctx.push(CallRequest::new("weather.forecast").variant("rain_stopping"));
         }
     } else if w.rain_10min > w.rain_now {
-        ctx.push(CallRequest::new("weather.forecast").sub("rain_coming").p("intensity", rain_word(ctx, w.rain_10min)).p("minutes", "10"));
+        ctx.push(CallRequest::new("weather.forecast").variant("rain_coming").p("intensity", rain_word(ctx, w.rain_10min)).p("minutes", "10"));
     }
     mem.last_rain = Some(now);
 
@@ -35,7 +35,7 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
                 ""
             };
             if !sub.is_empty() {
-                ctx.push(CallRequest::new("track.grip").sub(sub));
+                ctx.push(CallRequest::new("track.grip").variant(sub));
             }
         }
     }
@@ -45,7 +45,7 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
         let th = ctx.th("track.temp", "c_per_10min") as f32;
         if trend.abs() >= th {
             let sub = if trend < 0.0 { "falling" } else { "rising" };
-            ctx.push(CallRequest::new("track.temp").sub(sub).p("delta", ctx.fmt.temp(trend.abs())));
+            ctx.push(CallRequest::new("track.temp").variant(sub).p("delta", ctx.fmt.temp(trend.abs())));
         }
     }
 }

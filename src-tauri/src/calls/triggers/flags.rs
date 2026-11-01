@@ -75,7 +75,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
                 let sub = if penalty_at > 0 && *count + 1 == penalty_at { Some("last_warning") } else { None };
                 let mut r = CallRequest::new("penalty.track_limits").p("count", count.to_string());
                 if let Some(s) = sub {
-                    r = r.sub(s);
+                    r = r.variant(s);
                 }
                 ctx.push(r);
             }
@@ -133,7 +133,7 @@ fn yellow(ctx: &mut Ctx, y: &[bool; 3]) {
         let extra = match stopped {
             Some(c) => {
                 let m = c.spline * s.track_m();
-                let corner = s.corners.iter().filter(|x| x.apex_m <= m).last().map(|x| x.number);
+                let corner = s.corners.iter().rev().find(|x| x.apex_m <= m).map(|x| x.number);
                 let de = ctx.fmt.lang == Language::De;
                 match (corner, de) {
                     (Some(n), true) => format!(", Auto steht nach Kurve {n}"),

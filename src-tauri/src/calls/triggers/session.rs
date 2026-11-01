@@ -69,11 +69,9 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
             mem.formation_done = true;
             ctx.push(CallRequest::new("prerace.formation"));
         }
-        RaceEvent::FlagChanged { to: crate::games::provider::Flag::Checkered, .. } | RaceEvent::SessionPhaseChanged(SessionPhase::SessionOver) => {
-            if ctx.kind == SessionKind::Race && !mem.summary_done {
-                mem.summary_done = true;
-                race_summary(ctx);
-            }
+        RaceEvent::FlagChanged { to: crate::games::provider::Flag::Checkered, .. } | RaceEvent::SessionPhaseChanged(SessionPhase::SessionOver) if ctx.kind == SessionKind::Race && !mem.summary_done => {
+            mem.summary_done = true;
+            race_summary(ctx);
         }
         _ => {}
     }

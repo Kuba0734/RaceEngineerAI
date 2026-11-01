@@ -54,7 +54,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
                         None
                     };
                     if let Some(sub) = sub {
-                        ctx.push(CallRequest::new("tyre.pressure_live").sub(sub).p("where", ctx.fmt.axle(front).to_string()).p("pressure", ctx.fmt.pressure(p)).key(front.to_string()));
+                        ctx.push(CallRequest::new("tyre.pressure_live").variant(sub).p("where", ctx.fmt.axle(front).to_string()).p("pressure", ctx.fmt.pressure(p)).key(front.to_string()));
                         break;
                     }
                 }
@@ -87,7 +87,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
                     let sub = if loss * left > repair { "worth" } else { "not_worth" };
                     mem.damage_lap = None;
                     if loss > 0.1 {
-                        ctx.push(CallRequest::new("damage.report").sub(sub).p("loss", ctx.fmt.tenths(loss)).p("repair", format!("{}", repair as i32)).key("pace"));
+                        ctx.push(CallRequest::new("damage.report").variant(sub).p("loss", ctx.fmt.tenths(loss)).p("repair", format!("{}", repair as i32)).key("pace"));
                     }
                 }
             }
@@ -183,7 +183,7 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
         };
         mem.damage_lap = Some(ctx.lap());
         mem.pace_before_damage_ms = Some(s.avg_lap_ms(5)).filter(|p| *p > 0);
-        ctx.push(CallRequest::new("damage.report").sub("unknown").p("where", where_.to_string()));
+        ctx.push(CallRequest::new("damage.report").variant("unknown").p("where", where_.to_string()));
     }
     mem.damage_sum = dmg;
     // Wet switch.
@@ -205,7 +205,7 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
         mem.wet_state_said = state;
         if let Some(sub) = state {
             let minutes = if aggr == 0 && w.rain_10min < soon_threshold { "30" } else { "10" };
-            ctx.push(CallRequest::new("tyre.wet_switch").sub(sub).p("minutes", minutes));
+            ctx.push(CallRequest::new("tyre.wet_switch").variant(sub).p("minutes", minutes));
         }
     } else if state.is_none() {
         mem.wet_state_said = None;

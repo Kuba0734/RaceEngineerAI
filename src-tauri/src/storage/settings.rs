@@ -678,19 +678,13 @@ impl Default for OverlaySettings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 #[serde(default)]
 #[ts(export)]
 pub struct ButtonBinding {
     /// "wheel:<device>:<button>" or "key:<accelerator>".
     pub binding: String,
     pub label: String,
-}
-
-impl Default for ButtonBinding {
-    fn default() -> Self {
-        Self { binding: String::new(), label: String::new() }
-    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
@@ -741,7 +735,7 @@ impl Default for AppSettings {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(default)]
 #[ts(export)]
 pub struct GameSettings {
@@ -752,6 +746,12 @@ pub struct GameSettings {
     pub overlay_layout: Option<Vec<WidgetLayout>>,
     pub broadcasting_port: u16,
     pub broadcasting_password: String,
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        Self { enabled: true, default_preset: None, overlay_layout: None, broadcasting_port: 0, broadcasting_password: String::new() }
+    }
 }
 
 /// Migrates raw JSON from older versions to the current schema.

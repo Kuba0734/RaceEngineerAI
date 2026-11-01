@@ -1,0 +1,17 @@
+{
+  "fuel": ["is the fuel ok", "do we have enough fuel", "how is the fuel", "can i make it without stopping", "do i need to refuel", "fuel status", "how much fuel do i have", "will the fuel last"],
+  "gap_ahead": ["gap ahead", "gap to the car ahead", "how far is the car in front", "how far ahead is he", "what is the gap in front"],
+  "gap_behind": ["gap behind", "gap to the car behind", "how close is the car behind", "how far back is he", "what is the gap behind"],
+  "time_left": ["how long to go", "how much time is left", "how many laps to go", "time remaining", "how many laps left"],
+  "position": ["what position am i", "where am i", "what position are we", "which place am i"],
+  "best_lap": ["what is my best lap", "my best lap time", "fastest lap", "what is my fastest lap"],
+  "last_lap": ["what was my last lap", "last lap time", "how fast was that lap", "time of the last lap"],
+  "track_limits": ["how many track limits do i have", "how many track limits", "track limit count"],
+  "penalty": ["do i have a penalty", "have i got a penalty", "any penalties", "is there a penalty"],
+  "repeat": ["repeat that", "say again", "say that again", "what was the last message", "come again"],
+  "quiet": ["quiet", "be quiet", "radio silence", "shut up", "quiet for two laps", "be quiet for a lap", "silence please"],
+  "spotter_only": ["spotter only", "only the spotter", "just the spotter"],
+  "normal": ["back to normal", "normal again", "go back to normal"],
+  "louder": ["louder", "louder please", "volume up"],
+  "quieter": ["quieter", "quieter please", "volume down"]
+}

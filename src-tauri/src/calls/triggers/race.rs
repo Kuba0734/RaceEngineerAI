@@ -69,7 +69,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
             (false, true) => "dropping",
         };
         let name = ctx.fmt.car(c);
-        ctx.push(CallRequest::new("gap.trend_rival").sub(sub).p("car", name).p("tenths", ctx.fmt.tenths(tr)).key(c.id.to_string()));
+        ctx.push(CallRequest::new("gap.trend_rival").variant(sub).p("car", name).p("tenths", ctx.fmt.tenths(tr)).key(c.id.to_string()));
     }
 
     // Catch prediction for the car ahead.

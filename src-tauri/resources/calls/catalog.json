@@ -1527,6 +1527,142 @@
     "race"
    ],
    "enabled": true
+  },
+  {
+   "id": "answer.position",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "answer.best_lap",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "answer.last_lap",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "answer.track_limits",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "answer.no_penalty",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "answer.penalty",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "answer.no_live",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "crew.no_data",
+   "group": "commands",
+   "priority": "answer",
+   "cooldownS": 0,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
   }
  ]
 }

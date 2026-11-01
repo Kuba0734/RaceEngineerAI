@@ -239,3 +239,77 @@ mod tests {
         assert_eq!(load_reference_lap(&c, "acc", "spa", "car").unwrap().unwrap().1, vec![3]);
     }
 }
+
+/// Jobs for the database thread. Replies go through crossbeam channels.
+pub enum DbJob {
+    StartSession { game: String, track: String, car: String, session_type: String, reply: crossbeam_channel::Sender<i64> },
+    Lap { session_id: i64, lap: LapRow },
+    EndSession { session_id: i64, summary_json: String },
+    SaveReference { game: String, track: String, car: String, time_ms: u32, trace: Vec<u8> },
+    LoadReference { game: String, track: String, car: String, reply: crossbeam_channel::Sender<Option<(u32, Vec<u8>)>> },
+    SavePitLoss { game: String, track: String, loss: f32 },
+    LoadPitLoss { game: String, track: String, reply: crossbeam_channel::Sender<Option<f32>> },
+    ListSessions { reply: crossbeam_channel::Sender<Vec<SessionRow>> },
+    SessionLaps { session_id: i64, reply: crossbeam_channel::Sender<Vec<LapRow>> },
+    DeleteSession { session_id: i64 },
+    Prune { days: u32 },
+}
+
+#[derive(Clone)]
+pub struct DbHandle {
+    tx: crossbeam_channel::Sender<DbJob>,
+}
+
+impl DbHandle {
+    pub fn start(path: std::path::PathBuf) -> Self {
+        let (tx, rx) = crossbeam_channel::unbounded::<DbJob>();
+        let spawned = std::thread::Builder::new().name("db".into()).spawn(move || {
+            let conn = match open(&path) {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("database unavailable: {e}");
+                    match open_memory() {
+                        Ok(c) => c,
+                        Err(_) => return,
+                    }
+                }
+            };
+            for job in rx {
+                let r = match job {
+                    DbJob::StartSession { game, track, car, session_type, reply } => insert_session(&conn, &game, &track, &car, &session_type).map(|id| {
+                        let _ = reply.send(id);
+                    }),
+                    DbJob::Lap { session_id, lap } => insert_lap(&conn, session_id, &lap),
+                    DbJob::EndSession { session_id, summary_json } => end_session(&conn, session_id, &summary_json),
+                    DbJob::SaveReference { game, track, car, time_ms, trace } => save_reference_lap(&conn, &game, &track, &car, time_ms, &trace),
+                    DbJob::LoadReference { game, track, car, reply } => load_reference_lap(&conn, &game, &track, &car).map(|r| {
+                        let _ = reply.send(r);
+                    }),
+                    DbJob::SavePitLoss { game, track, loss } => save_pit_loss(&conn, &game, &track, loss),
+                    DbJob::LoadPitLoss { game, track, reply } => load_pit_loss(&conn, &game, &track).map(|r| {
+                        let _ = reply.send(r);
+                    }),
+                    DbJob::ListSessions { reply } => list_sessions(&conn, 200).map(|r| {
+                        let _ = reply.send(r);
+                    }),
+                    DbJob::SessionLaps { session_id, reply } => session_laps(&conn, session_id).map(|r| {
+                        let _ = reply.send(r);
+                    }),
+                    DbJob::DeleteSession { session_id } => delete_session(&conn, session_id),
+                    DbJob::Prune { days } => prune(&conn, days).map(|_| ()),
+                };
+                if let Err(e) = r {
+                    tracing::error!("db job failed: {e}");
+                }
+            }
+        });
+        if let Err(e) = spawned {
+            tracing::error!("db thread: {e}");
+        }
+        Self { tx }
+    }
+
+    pub fn send(&self, job: DbJob) {
+        let _ = self.tx.send(job);
+    }
+}

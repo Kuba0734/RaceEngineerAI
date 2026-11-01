@@ -538,5 +538,33 @@
  "crew.no_data": [
   "Dazu hab ich keine Daten.",
   "Das liefert das Spiel leider nicht."
+ ],
+ "answer.position": [
+  "Du bist P{position}.",
+  "P{position}."
+ ],
+ "answer.best_lap": [
+  "Deine Bestzeit ist {laptime}.",
+  "Bestzeit {laptime}."
+ ],
+ "answer.last_lap": [
+  "Letzte Runde {laptime}.",
+  "Die letzte Runde war {laptime}."
+ ],
+ "answer.track_limits": [
+  "{count} Track Limits bisher.",
+  "Du hast {count} Track Limits."
+ ],
+ "answer.no_penalty": [
+  "Keine Strafe, alles sauber.",
+  "Nein, keine Strafe."
+ ],
+ "answer.penalty": [
+  "Ja, {penalty}.",
+  "Strafe offen: {penalty}."
+ ],
+ "answer.no_live": [
+  "Ich hab gerade keine Live-Daten.",
+  "Kein Spiel aktiv, keine Daten."
  ]
 }

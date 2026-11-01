@@ -102,8 +102,8 @@ fn read_lap(r: &mut Reader) -> Result<LapInfo, Short> {
     let mut splits = [None; 3];
     for i in 0..split_count {
         let v = r.i32()?;
-        if i < 3 {
-            splits[i] = opt(v);
+        if let Some(slot) = splits.get_mut(i) {
+            *slot = opt(v);
         }
     }
     let is_invalid = r.u8()? > 0;
@@ -397,12 +397,8 @@ impl BroadcastClient {
             self.last_register = Some(Instant::now());
             self.send(&register_packet("RaceEngineerAI", &self.password, 100, ""));
         }
-        loop {
-            let n = match self.socket.as_ref().map(|s| s.recv(&mut self.buf)) {
-                Some(Ok(n)) => n,
-                // WouldBlock = nothing pending; ConnectionReset = ACC not listening (Windows ICMP).
-                _ => break,
-            };
+        // Stops on WouldBlock (nothing pending) or ConnectionReset (ACC not listening, Windows ICMP).
+        while let Some(Ok(n)) = self.socket.as_ref().map(|s| s.recv(&mut self.buf)) {
             let Ok(msg) = parse(&self.buf[..n]) else { continue };
             self.last_message = Instant::now();
             self.apply(&msg);

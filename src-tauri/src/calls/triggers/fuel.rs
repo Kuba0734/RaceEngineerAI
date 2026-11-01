@@ -18,7 +18,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
             let race = ctx.kind == SessionKind::Race;
             if race {
                 let sub = if fs.enough { "enough" } else { "short" };
-                ctx.push(CallRequest::new("fuel.status").sub(sub).p("laps_possible", ctx.fmt.laps(fs.laps_possible)).p("laps_needed", ctx.fmt.laps(fs.laps_to_go.ceil())));
+                ctx.push(CallRequest::new("fuel.status").variant(sub).p("laps_possible", ctx.fmt.laps(fs.laps_possible)).p("laps_needed", ctx.fmt.laps(fs.laps_to_go.ceil())));
                 if let (Some(save), false) = (fs.save_per_lap_l, mem.save_said) {
                     mem.save_said = true;
                     let lift = lift_corners(ctx);
@@ -32,11 +32,11 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
                 let next_lap = ctx.lap() + 1;
                 if before > 0 && plan - next_lap == before - 1 && mem.plan_reminded_for != Some(plan) && plan > next_lap {
                     mem.plan_reminded_for = Some(plan);
-                    ctx.push(CallRequest::new("pit.plan").sub("reminder").p("lap", plan.to_string()));
+                    ctx.push(CallRequest::new("pit.plan").variant("reminder").p("lap", plan.to_string()));
                 }
                 if next_lap == plan && mem.plan_now_for != Some(plan) {
                     mem.plan_now_for = Some(plan);
-                    ctx.push(CallRequest::new("pit.plan").sub("now").p("lap", plan.to_string()));
+                    ctx.push(CallRequest::new("pit.plan").variant("now").p("lap", plan.to_string()));
                 }
             }
             // Start fuel for the next race after a few clean laps in practice/quali.
@@ -132,11 +132,11 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
             let (st, en) = (f64::from(start), f64::from(end));
             if elapsed >= st && elapsed < en && !mem.pit_window_open_said {
                 mem.pit_window_open_said = true;
-                ctx.push(CallRequest::new("pit.window").sub("open"));
+                ctx.push(CallRequest::new("pit.window").variant("open"));
             }
             if f.missing_mandatory_pits > 0 && !f.mandatory_pit_done && elapsed >= en - 300_000.0 && elapsed < en && !mem.mandatory_warned {
                 mem.mandatory_warned = true;
-                ctx.push(CallRequest::new("pit.window").sub("closing"));
+                ctx.push(CallRequest::new("pit.window").variant("closing"));
             }
         }
     }

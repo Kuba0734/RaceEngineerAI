@@ -29,7 +29,7 @@ impl CallRequest {
     pub fn new(call_id: &'static str) -> Self {
         Self { call_id, sub: None, params: Vec::new(), key: None, on_request: false }
     }
-    pub fn sub(mut self, sub: &'static str) -> Self {
+    pub fn variant(mut self, sub: &'static str) -> Self {
         self.sub = Some(sub);
         self
     }
@@ -273,7 +273,7 @@ mod tests {
         assert!(e.submit(req(), 10.0, 5, 0.2, k).is_none(), "cooldown 90 s");
         assert!(e.submit(req(), 100.0, 6, 0.2, k).is_some());
         // fuel.status: every 5 laps
-        let fs = || CallRequest::new("fuel.status").sub("enough").p("laps_possible", "9").p("laps_needed", "8");
+        let fs = || CallRequest::new("fuel.status").variant("enough").p("laps_possible", "9").p("laps_needed", "8");
         assert!(e.submit(fs(), 0.0, 1, 0.0, k).is_some());
         assert!(e.submit(fs(), 200.0, 3, 0.0, k).is_none());
         assert!(e.submit(fs(), 400.0, 6, 0.0, k).is_some());

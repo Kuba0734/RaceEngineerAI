@@ -1,0 +1,17 @@
+{
+  "fuel": ["reicht der sprit", "reicht das benzin", "wie sieht es mit sprit aus", "wie siehts mit benzin aus", "komme ich ohne stopp durch", "muss ich noch tanken", "sprit status", "wie viel sprit hab ich noch", "reicht der sprit bis zum ende"],
+  "gap_ahead": ["abstand nach vorne", "wie weit ist der vor mir weg", "wie gross ist der abstand nach vorne", "abstand zum vordermann", "wie weit vorne ist der naechste"],
+  "gap_behind": ["abstand nach hinten", "wie weit ist der hinter mir", "wie nah ist der hinter mir", "abstand zum hintermann", "wie viel luft hab ich nach hinten"],
+  "time_left": ["wie lange noch", "wie viel zeit ist noch", "wie viele runden noch", "restzeit", "wie lange geht das rennen noch"],
+  "position": ["welche position bin ich", "auf welchem platz bin ich", "wo liege ich", "welcher platz"],
+  "best_lap": ["was ist meine beste runde", "was ist meine bestzeit", "beste rundenzeit", "meine schnellste runde"],
+  "last_lap": ["was war meine letzte runde", "letzte rundenzeit", "wie schnell war die letzte runde", "zeit der letzten runde"],
+  "track_limits": ["wie viele track limits hab ich", "wie viele track limits", "track limits stand", "wie oft war ich drueber"],
+  "penalty": ["hab ich eine strafe", "habe ich eine strafe", "gibt es eine strafe", "strafe offen"],
+  "repeat": ["wiederhol das", "nochmal bitte", "was war die letzte meldung", "sag das nochmal", "wie bitte", "wiederholen"],
+  "quiet": ["ruhe", "sei mal still", "funkstille", "halt mal die klappe", "ruhe fuer zwei runden", "sei zwei runden still", "ruhe bitte"],
+  "spotter_only": ["nur noch spotter", "nur spotter", "nur noch den spotter"],
+  "normal": ["normal weiter", "wieder normal", "alles wieder normal", "zurueck zu normal"],
+  "louder": ["lauter", "lauter bitte", "mach lauter"],
+  "quieter": ["leiser", "leiser bitte", "mach leiser"]
+}

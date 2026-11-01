@@ -65,10 +65,10 @@ fn handling_lap(ctx: &mut Ctx, mem: &mut Memory) {
     // Report only when it shows on two laps in a row.
     if u >= 2 {
         mem.handling.laps_understeer = 0;
-        ctx.push(CallRequest::new("setup.handling").sub("understeer_entry"));
+        ctx.push(CallRequest::new("setup.handling").variant("understeer_entry"));
     } else if o >= 2 {
         mem.handling.laps_oversteer = 0;
-        ctx.push(CallRequest::new("setup.handling").sub("oversteer_exit"));
+        ctx.push(CallRequest::new("setup.handling").variant("oversteer_exit"));
     }
 }
 
@@ -90,11 +90,11 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
             for d in lapcompare::biggest_losses(&s.last_corner_deltas, max, min_loss) {
                 let corner = d.corner.to_string();
                 let r = match d.issue {
-                    CornerIssue::BrakedEarly => CallRequest::new("lap.corner_feedback").sub("braked_early").p("meters", ctx.fmt.meters(d.brake_point_delta_m.unwrap_or(0.0).abs())),
-                    CornerIssue::BrakedLate => CallRequest::new("lap.corner_feedback").sub("braked_late"),
-                    CornerIssue::SlowApex => CallRequest::new("lap.corner_feedback").sub("slow_apex").p("kmh", format!("{}", d.apex_speed_delta_kmh.abs().round() as i32)),
-                    CornerIssue::LateThrottle => CallRequest::new("lap.corner_feedback").sub("late_throttle").p("meters", ctx.fmt.meters(d.throttle_delta_m.unwrap_or(0.0).abs())),
-                    CornerIssue::Unknown => CallRequest::new("lap.corner_feedback").sub("unknown").p("loss", ctx.fmt.tenths(d.time_loss_s)),
+                    CornerIssue::BrakedEarly => CallRequest::new("lap.corner_feedback").variant("braked_early").p("meters", ctx.fmt.meters(d.brake_point_delta_m.unwrap_or(0.0).abs())),
+                    CornerIssue::BrakedLate => CallRequest::new("lap.corner_feedback").variant("braked_late"),
+                    CornerIssue::SlowApex => CallRequest::new("lap.corner_feedback").variant("slow_apex").p("kmh", format!("{}", d.apex_speed_delta_kmh.abs().round() as i32)),
+                    CornerIssue::LateThrottle => CallRequest::new("lap.corner_feedback").variant("late_throttle").p("meters", ctx.fmt.meters(d.throttle_delta_m.unwrap_or(0.0).abs())),
+                    CornerIssue::Unknown => CallRequest::new("lap.corner_feedback").variant("unknown").p("loss", ctx.fmt.tenths(d.time_loss_s)),
                 };
                 ctx.push(r.p("corner", corner.clone()).key(corner));
             }
@@ -152,7 +152,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
                 AfterMistake::Factual => "factual",
                 AfterMistake::Silent => return,
             };
-            ctx.push(CallRequest::new("driver.after_mistake").sub(sub));
+            ctx.push(CallRequest::new("driver.after_mistake").variant(sub));
         }
         _ => {}
     }

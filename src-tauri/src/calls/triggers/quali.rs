@@ -60,6 +60,6 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
             1 => "one",
             _ => "two",
         };
-        ctx.push(CallRequest::new("quali.time_for_lap").sub(sub).p("minutes", ctx.fmt.minutes(left)));
+        ctx.push(CallRequest::new("quali.time_for_lap").variant(sub).p("minutes", ctx.fmt.minutes(left)));
     }
 }
