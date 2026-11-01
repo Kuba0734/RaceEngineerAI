@@ -120,6 +120,14 @@ impl Core {
         let _ = self.app.emit("settings", &s);
     }
 
+    /// Push-to-talk state with a radio key-up / squelch sound on change.
+    pub fn set_ptt(&self, pressed: bool) {
+        let before = self.voice.ptt.swap(pressed, std::sync::atomic::Ordering::Relaxed);
+        if before != pressed && self.settings.read().listening.ptt_sound {
+            let _ = self.mixer.try_send(MixerCmd::Spotter(crate::audio::radio_fx::ptt_clip(pressed, self.out_sr).into()));
+        }
+    }
+
     pub fn demo_source(&self) -> Option<DemoSource> {
         self.demo.lock().clone()
     }

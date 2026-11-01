@@ -157,6 +157,7 @@ export function ListeningSection() {
         <Toggle checked={l.vad_always} onChange={(v) => set({ vad_always: v })} label={t("settings.listening.vad")} hint={t("settings.listening.vadHint")} />
         <Toggle checked={l.wake_word} onChange={(v) => set({ wake_word: v })} label={t("settings.listening.wake")} hint={t("settings.listening.wakeHint")} />
         <Toggle checked={l.push_to_talk} onChange={(v) => set({ push_to_talk: v })} label={t("settings.listening.ptt")} hint={t("settings.listening.pttHint")} />
+        <Toggle checked={l.ptt_sound} onChange={(v) => set({ ptt_sound: v })} label={t("settings.listening.pttSound")} hint={t("settings.listening.pttSoundHint")} />
         <Toggle checked={l.only_when_game_running} onChange={(v) => set({ only_when_game_running: v })} label={t("settings.listening.onlyGame")} />
         <Toggle checked={l.allow_interrupt} onChange={(v) => set({ allow_interrupt: v })} label={t("settings.listening.interrupt")} hint={t("settings.listening.interruptHint")} />
       </Card>

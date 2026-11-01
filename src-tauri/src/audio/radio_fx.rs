@@ -91,6 +91,39 @@ pub fn apply(input: &[f32], sr: u32, fx: &RadioFx) -> Vec<f32> {
     out
 }
 
+/// Push-to-talk feedback: press = short rising key-up chirp, release = squelch tail with click.
+pub fn ptt_clip(pressed: bool, sr: u32) -> Vec<f32> {
+    let srf = sr as f32;
+    let mut rng = Lcg(if pressed { 0xBEEF } else { 0xF00D });
+    let mut out = Vec::new();
+    if pressed {
+        // Two quick tones (classic "roger beep" in reverse), ~110 ms.
+        for (f0, f1, ms) in [(900.0f32, 1300.0f32, 45.0f32), (1500.0, 1600.0, 55.0)] {
+            let n = (srf * ms / 1000.0) as usize;
+            let mut phase = 0.0f32;
+            for i in 0..n {
+                let k = i as f32 / n as f32;
+                phase += (f0 + (f1 - f0) * k) * std::f32::consts::TAU / srf;
+                let env = (k * 12.0).min(1.0) * (1.0 - k).powf(0.6);
+                out.push(phase.sin() * 0.22 * env);
+            }
+            out.extend(std::iter::repeat_n(0.0, (srf * 0.012) as usize));
+        }
+    } else {
+        // Squelch: band-limited noise burst fading out, then a click.
+        let n = (srf * 0.16) as usize;
+        let mut lp = Biquad::new('l', 2600.0, srf, 0.7);
+        let mut hp = Biquad::new('h', 400.0, srf, 0.7);
+        for i in 0..n {
+            let k = i as f32 / n as f32;
+            let env = (1.0 - k).powi(2);
+            out.push(hp.run(lp.run(rng.next())) * 0.35 * env);
+        }
+        click(&mut out, srf, 0.3, &mut rng);
+    }
+    out
+}
+
 /// Linear resampling, good enough for speech.
 pub fn resample(input: &[f32], from: u32, to: u32) -> Vec<f32> {
     if from == to || input.is_empty() {
@@ -131,6 +164,15 @@ mod tests {
         let x = vec![0.1, -0.2, 0.3];
         let fx = RadioFx { enabled: false, ..RadioFx::default() };
         assert_eq!(apply(&x, 22_050, &fx), x);
+    }
+
+    #[test]
+    fn ptt_clips_are_short_and_bounded() {
+        for p in [true, false] {
+            let c = ptt_clip(p, 48_000);
+            assert!(!c.is_empty() && c.len() < 48_000 / 4);
+            assert!(c.iter().all(|x| x.abs() <= 1.0));
+        }
     }
 
     #[test]

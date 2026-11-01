@@ -7,7 +7,7 @@ use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
-use tauri::{Emitter, Manager, State};
+use tauri::{Emitter, State};
 use ts_rs::TS;
 
 use crate::ai::groq::{ModelInfo, RateLimits};
@@ -385,12 +385,13 @@ pub fn wheel_learn(core: CoreState) {
 
 #[tauri::command]
 pub fn ptt(core: CoreState, pressed: bool) {
-    core.voice.ptt.store(pressed, Ordering::Relaxed);
+    core.set_ptt(pressed);
 }
 
 #[tauri::command]
-pub fn set_overlay_edit(core: CoreState, edit: bool) {
+pub async fn set_overlay_edit(core: CoreState<'_>, edit: bool) -> AppResult<()> {
     crate::input::hotkeys::set_overlay_edit(&core.app, &core, edit);
+    Ok(())
 }
 
 #[tauri::command]
@@ -405,13 +406,6 @@ pub fn save_overlay_layout(core: CoreState, game: Option<String>, layout: Vec<Wi
     core.save_settings();
 }
 
-#[tauri::command]
-pub fn show_overlay(core: CoreState, show: bool) {
-    let win = if show { crate::input::hotkeys::ensure_overlay(&core.app) } else { core.app.get_webview_window("overlay") };
-    if let Some(w) = win {
-        let _ = if show { w.show() } else { w.hide() };
-    }
-}
 
 #[tauri::command]
 pub fn app_info() -> BTreeMap<String, String> {

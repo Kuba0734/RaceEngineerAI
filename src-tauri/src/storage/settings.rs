@@ -121,6 +121,8 @@ pub struct ListeningSettings {
     pub allow_interrupt: bool,
     /// Only listen while a supported game runs.
     pub only_when_game_running: bool,
+    /// Radio sound when the push-to-talk button is pressed and released.
+    pub ptt_sound: bool,
 }
 
 impl Default for ListeningSettings {
@@ -139,6 +141,7 @@ impl Default for ListeningSettings {
             max_speech_s: 15.0,
             allow_interrupt: false,
             only_when_game_running: true,
+            ptt_sound: true,
         }
     }
 }
@@ -643,6 +646,8 @@ pub struct OverlaySettings {
     pub animations: bool,
     pub edit_hotkey: String,
     pub monitor: Option<String>,
+    /// Show the spotter radar only while another car is nearby.
+    pub radar_auto_hide: bool,
     /// Default layout; per-game layouts live in `games.<id>.overlay_layout`.
     pub layout: Vec<WidgetLayout>,
 }
@@ -673,6 +678,7 @@ impl Default for OverlaySettings {
             animations: true,
             edit_hotkey: "Ctrl+Shift+O".into(),
             monitor: None,
+            radar_auto_hide: true,
             layout: default_layout(),
         }
     }

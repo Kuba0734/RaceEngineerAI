@@ -1,7 +1,7 @@
 //! Keyboard hotkeys (global shortcuts) and dispatch of wheel buttons:
 //! push-to-talk, overlay edit mode, quick commands.
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, Manager};
@@ -44,24 +44,31 @@ pub fn run_quick_command(core: &Core, id: &str) {
     }
 }
 
-/// Creates the overlay window on demand (saves a renderer + GPU memory while no session runs).
-pub fn ensure_overlay(app: &AppHandle) -> Option<tauri::WebviewWindow> {
-    if let Some(w) = app.get_webview_window("overlay") {
-        return Some(w);
-    }
-    let built = tauri::WebviewWindowBuilder::new(app, "overlay", tauri::WebviewUrl::App("overlay.html".into()))
+static OVERLAY_CREATING: AtomicBool = AtomicBool::new(false);
+
+/// Builds the transparent, click-through overlay covering the chosen monitor.
+fn build_overlay(app: &AppHandle) -> Option<tauri::WebviewWindow> {
+    let wanted = app.try_state::<Arc<Core>>().and_then(|c| c.settings.read().overlay.monitor.clone());
+    let monitor = wanted
+        .and_then(|name| app.available_monitors().ok()?.into_iter().find(|m| m.name().is_some_and(|n| *n == name)))
+        .or_else(|| app.primary_monitor().ok().flatten());
+    let mut b = tauri::WebviewWindowBuilder::new(app, "overlay", tauri::WebviewUrl::App("overlay.html".into()))
         .title("RaceEngineerAI Overlay")
         .transparent(true)
+        .background_color(tauri::window::Color(0, 0, 0, 0))
         .decorations(false)
         .always_on_top(true)
         .skip_taskbar(true)
         .resizable(false)
         .focused(false)
         .shadow(false)
-        .visible(false)
-        .maximized(true)
-        .build();
-    match built {
+        .visible(false);
+    if let Some(m) = monitor {
+        let sf = m.scale_factor();
+        let (p, sz) = (m.position(), m.size());
+        b = b.position(f64::from(p.x) / sf, f64::from(p.y) / sf).inner_size(f64::from(sz.width) / sf, f64::from(sz.height) / sf);
+    }
+    match b.build() {
         Ok(w) => {
             let _ = w.set_ignore_cursor_events(true);
             Some(w)
@@ -73,6 +80,29 @@ pub fn ensure_overlay(app: &AppHandle) -> Option<tauri::WebviewWindow> {
     }
 }
 
+/// Runs `f` with the overlay window, creating it first if needed. Creation always happens on a
+/// helper thread: on Windows, building a webview inside a sync command or event handler deadlocks.
+pub fn with_overlay(app: &AppHandle, f: impl FnOnce(tauri::WebviewWindow) + Send + 'static) {
+    if let Some(w) = app.get_webview_window("overlay") {
+        f(w);
+        return;
+    }
+    if OVERLAY_CREATING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let app = app.clone();
+    let spawned = std::thread::Builder::new().name("overlay-create".into()).spawn(move || {
+        let w = build_overlay(&app);
+        OVERLAY_CREATING.store(false, Ordering::SeqCst);
+        if let Some(w) = w {
+            f(w);
+        }
+    });
+    if spawned.is_err() {
+        OVERLAY_CREATING.store(false, Ordering::SeqCst);
+    }
+}
+
 pub fn close_overlay(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("overlay") {
         let _ = w.destroy();
@@ -81,15 +111,19 @@ pub fn close_overlay(app: &AppHandle) {
 
 pub fn set_overlay_edit(app: &AppHandle, core: &Core, edit: bool) {
     core.overlay_edit.store(edit, Ordering::Relaxed);
-    let win = if edit { ensure_overlay(app) } else { app.get_webview_window("overlay") };
-    if let Some(w) = win {
-        let _ = w.set_ignore_cursor_events(!edit);
-        if edit {
+    let _ = app.emit("overlay-edit", edit);
+    if edit {
+        let a = app.clone();
+        with_overlay(app, move |w| {
+            let _ = w.set_ignore_cursor_events(false);
             let _ = w.show();
             let _ = w.set_focus();
-        }
+            // Tell a freshly created window that it is in edit mode.
+            let _ = a.emit("overlay-edit", true);
+        });
+    } else if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.set_ignore_cursor_events(true);
     }
-    let _ = app.emit("overlay-edit", edit);
 }
 
 fn key_of(binding: &str) -> Option<&str> {
@@ -119,7 +153,7 @@ pub fn register_all(app: &AppHandle, s: &Settings) {
     if let Some(k) = key_of(&s.input.push_to_talk.binding) {
         let r = gs.on_shortcut(k, |app, _, ev| {
             if let Some(core) = app.try_state::<Arc<Core>>() {
-                core.voice.ptt.store(ev.state() == ShortcutState::Pressed, Ordering::Relaxed);
+                core.set_ptt(ev.state() == ShortcutState::Pressed);
             }
         });
         if let Err(e) = r {
@@ -156,7 +190,7 @@ pub fn start_wheel_dispatch(core: Arc<Core>, rx: crossbeam_channel::Receiver<sup
             }
             let s = core.settings.read().clone();
             if s.input.push_to_talk.binding == binding {
-                core.voice.ptt.store(pressed, Ordering::Relaxed);
+                core.set_ptt(pressed);
                 continue;
             }
             if pressed {

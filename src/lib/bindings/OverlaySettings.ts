@@ -3,6 +3,10 @@ import type { WidgetLayout } from "./WidgetLayout";
 
 export type OverlaySettings = { enabled: boolean, update_hz: number, animations: boolean, edit_hotkey: string, monitor: string | null, 
 /**
+ * Show the spotter radar only while another car is nearby.
+ */
+radar_auto_hide: boolean, 
+/**
  * Default layout; per-game layouts live in `games.<id>.overlay_layout`.
  */
 layout: Array<WidgetLayout>, };

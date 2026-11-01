@@ -16,4 +16,8 @@ allow_interrupt: boolean,
 /**
  * Only listen while a supported game runs.
  */
-only_when_game_running: boolean, };
+only_when_game_running: boolean, 
+/**
+ * Radio sound when the push-to-talk button is pressed and released.
+ */
+ptt_sound: boolean, };

@@ -12,7 +12,7 @@ import { Radar } from "./widgets/Radar";
 import { Standings } from "./widgets/Standings";
 import { Fuel } from "./widgets/Fuel";
 
-function Widget({ layout, edit, onChange, children, title }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string }) {
+function Widget({ layout, edit, onChange, children, title, hidden = false }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean }) {
   const x = useMotionValue(layout.x);
   const y = useMotionValue(layout.y);
   useEffect(() => {
@@ -25,7 +25,7 @@ function Widget({ layout, edit, onChange, children, title }: { layout: WidgetLay
       dragMomentum={false}
       onDragEnd={() => onChange({ ...layout, x: Math.round(x.get()), y: Math.round(y.get()) })}
       onWheel={(e) => edit && onChange({ ...layout, scale: Math.min(2.5, Math.max(0.4, layout.scale - Math.sign(e.deltaY) * 0.05)) })}
-      style={{ x, y, scale: layout.scale, opacity: layout.opacity, transformOrigin: "top left" }}
+      style={{ x, y, scale: layout.scale, opacity: hidden && !edit ? 0 : layout.opacity, transformOrigin: "top left" }}
       className={cx("absolute left-0 top-0 rounded-2xl border bg-[rgba(10,11,14,0.78)] p-3 text-fg", edit ? "cursor-move border-accent/80 ring-2 ring-accent/30" : "border-line/60")}
     >
       {edit && <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-accent">{title} · {Math.round(layout.scale * 100)} %</div>}
@@ -41,6 +41,7 @@ export default function Overlay() {
   const [game, setGame] = useState<string | null>(null);
   const [lastRadio, setLastRadio] = useState<RadioLogEntry | null>(null);
   // Optimistic local edits while dragging; the saved layout comes back via the settings event.
+  const [radarActive, setRadarActive] = useState(false);
   const [local, setLocal] = useState<{ game: string | null; layout: WidgetLayout[] } | null>(null);
   const hz = settings?.overlay.update_hz ?? 20;
   const { ref, frame } = useLive(hz, Math.max(2, Math.round(hz / 2)), 4);
@@ -69,6 +70,16 @@ export default function Overlay() {
   const saved = settings ? (game && settings.games[game]?.overlay_layout) || settings.overlay.layout : [];
   const layout = local && local.game === game ? local.layout : saved;
 
+  // Escape ends edit mode.
+  useEffect(() => {
+    if (!edit) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") void api.setOverlayEdit(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [edit]);
+
   // Show the window only while a session is live (or while editing).
   const shouldShow = !!settings?.overlay.enabled && (!!frame?.live || edit);
   useEffect(() => {
@@ -91,7 +102,7 @@ export default function Overlay() {
       case "map":
         return <TrackMap liveRef={ref} size={260} />;
       case "radar":
-        return <Radar liveRef={ref} size={180} />;
+        return <Radar liveRef={ref} size={180} onActive={setRadarActive} />;
       case "standings":
         return <div className="w-[360px]">{frame?.standings ? <Standings rows={frame.standings} compact max={9} animate={anim} /> : <span className="text-xs text-dim">{t("session.noStandings")}</span>}</div>;
       case "fuel":
@@ -122,9 +133,14 @@ export default function Overlay() {
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      {edit && <div className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 rounded-full border border-accent/60 bg-bg/90 px-4 py-1.5 text-sm text-accent">{t("ov.editBanner", { hotkey: settings.overlay.edit_hotkey })}</div>}
+      {edit && (
+        <div className="absolute left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-accent/60 bg-bg/95 py-1.5 pl-4 pr-1.5 text-sm text-accent">
+          <span>{t("ov.editBanner", { hotkey: settings.overlay.edit_hotkey })}</span>
+          <button onClick={() => void api.setOverlayEdit(false)} className="rounded-full bg-accent px-4 py-1 font-semibold text-white hover:brightness-110">{t("ov.done")}</button>
+        </div>
+      )}
       {layout.filter((l) => l.visible).map((l) => (
-        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)}>
+        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} hidden={l.id === "radar" && settings.overlay.radar_auto_hide && !radarActive}>
           {content(l.id)}
         </Widget>
       ))}

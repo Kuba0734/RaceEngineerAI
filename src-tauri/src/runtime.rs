@@ -384,15 +384,11 @@ fn run(core: Arc<Core>) {
             let want_overlay = core.settings.read().overlay.enabled && (live || core.overlay_edit.load(Ordering::Relaxed));
             let has_overlay = tauri::Manager::get_webview_window(&core.app, "overlay").is_some();
             if want_overlay && !has_overlay {
-                let app = core.app.clone();
-                let _ = core.app.run_on_main_thread(move || {
-                    crate::input::hotkeys::ensure_overlay(&app);
-                });
+                crate::input::hotkeys::with_overlay(&core.app, |_| {});
             } else if !want_overlay && has_overlay {
                 if overlay_idle_since.get_or_insert_with(Instant::now).elapsed() > Duration::from_secs(20) {
                     overlay_idle_since = None;
-                    let app = core.app.clone();
-                    let _ = core.app.run_on_main_thread(move || crate::input::hotkeys::close_overlay(&app));
+                    crate::input::hotkeys::close_overlay(&core.app);
                 }
             } else {
                 overlay_idle_since = None;

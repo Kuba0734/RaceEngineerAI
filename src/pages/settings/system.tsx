@@ -25,10 +25,10 @@ export function OverlaySection() {
         <Field label={t("ov.hotkey")} hint={t("ov.hotkeyHint")}>
           <TextInput value={o.edit_hotkey} onChange={(v) => set({ edit_hotkey: v })} className="w-40" />
         </Field>
-        <div className="mt-2 flex gap-2">
+        <Toggle checked={o.radar_auto_hide} onChange={(v) => set({ radar_auto_hide: v })} label={t("ov.radarAutoHide")} hint={t("ov.radarAutoHideHint")} />
+        <div className="mt-2 flex items-center gap-3">
           <Button variant="primary" onClick={() => { void api.setOverlayEdit(!editing); setEditing(!editing); }}>{editing ? t("ov.stopEdit") : t("ov.edit")}</Button>
-          <Button onClick={() => void api.showOverlay(true)}>{t("ov.show")}</Button>
-          <Button variant="ghost" onClick={() => void api.showOverlay(false)}>{t("ov.hide")}</Button>
+          <span className="text-xs text-dim">{t("ov.editHint")}</span>
         </div>
       </Card>
       <Card title={t("ov.widgets")}>

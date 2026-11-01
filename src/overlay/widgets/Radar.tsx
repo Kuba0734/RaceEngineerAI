@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { LiveFrame } from "@/lib/ipc";
 
 /** Spotter radar: player in the centre, cars within ±25 m, overlap highlighted. */
-export function Radar({ liveRef, size = 200 }: { liveRef: React.MutableRefObject<LiveFrame | null>; size?: number }) {
+export function Radar({ liveRef, size = 200, onActive }: { liveRef: React.MutableRefObject<LiveFrame | null>; size?: number; onActive?: (active: boolean) => void }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = canvas.current;
@@ -13,10 +13,20 @@ export function Radar({ liveRef, size = 200 }: { liveRef: React.MutableRefObject
     c.height = size * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     let raf = 0;
+    let active = false;
+    let lastSeen = 0;
     const range = 25;
     const s = size / 2 / range;
     const draw = () => {
       const f = liveRef.current;
+      // Visible while a car is around (plus a short tail so it does not flicker).
+      const now = performance.now();
+      if ((f?.radar.length ?? 0) > 0 || (f?.spotter ?? "clear") !== "clear") lastSeen = now;
+      const nowActive = now - lastSeen < 1500;
+      if (nowActive !== active) {
+        active = nowActive;
+        onActive?.(active);
+      }
       ctx.clearRect(0, 0, size, size);
       const mid = size / 2;
       const side = f?.spotter ?? "clear";
@@ -48,6 +58,6 @@ export function Radar({ liveRef, size = 200 }: { liveRef: React.MutableRefObject
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [liveRef, size]);
+  }, [liveRef, size, onActive]);
   return <canvas ref={canvas} style={{ width: size, height: size }} />;
 }
