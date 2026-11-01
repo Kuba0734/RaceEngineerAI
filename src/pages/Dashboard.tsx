@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, type KeyStatus, type ModelStatus } from "@/lib/ipc";
+import { api, type BroadcastingStatus, type KeyStatus, type ModelStatus } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
 import { useLive } from "@/hooks/useLive";
 import { Badge, Button, Card, RadioOrb, TextInput, Ticker, cx, useAsync } from "@/components/ui";
@@ -19,6 +19,7 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
   const [question, setQuestion] = useState("");
   const [key] = useAsync<KeyStatus>(() => api.apiKeyStatus(), []);
   const [models] = useAsync<ModelStatus[]>(() => api.modelsStatus(), []);
+  const [bc] = useAsync<BroadcastingStatus>(() => api.accBroadcastingStatus(), []);
 
   // Feed the orb from the live ref every animation frame (no React re-render).
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
     { ok: !!key?.set, label: t("dash.check.key"), page: "settings" as Page },
     { ok: voicesOk, label: t("dash.check.voices"), page: "settings" as Page },
     { ok: vadOk, label: t("dash.check.vad"), page: "settings" as Page },
-    { ok: !!status?.secondary_connected || !!status?.demo, label: t("dash.check.broadcast"), page: "games" as Page },
+    { ok: !!bc?.matches_app || !!status?.secondary_connected || !!status?.demo, label: t("dash.check.broadcast"), page: "games" as Page },
   ];
   const listening = frame?.listening ?? "off";
 

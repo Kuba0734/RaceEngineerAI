@@ -51,11 +51,28 @@ pub fn definitions() -> Vec<ToolDef> {
     ]
 }
 
+/// Optional parameters accept null: some models send `null` instead of leaving them out,
+/// which Groq would otherwise reject as a schema violation.
+fn nullable_optionals(mut params: Value) -> Value {
+    let required: Vec<String> = params.get("required").and_then(|r| r.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default();
+    if let Some(props) = params.get_mut("properties").and_then(|p| p.as_object_mut()) {
+        for (name, p) in props.iter_mut() {
+            if required.contains(name) {
+                continue;
+            }
+            if let Some(t) = p.get("type").and_then(|t| t.as_str()).map(String::from) {
+                p["type"] = json!([t, "null"]);
+            }
+        }
+    }
+    params
+}
+
 pub fn openai_tools() -> Value {
     Value::Array(
         definitions()
             .into_iter()
-            .map(|d| json!({ "type": "function", "function": { "name": d.name, "description": d.description, "parameters": d.parameters } }))
+            .map(|d| json!({ "type": "function", "function": { "name": d.name, "description": d.description, "parameters": nullable_optionals(d.parameters) } }))
             .collect(),
     )
 }
@@ -429,6 +446,15 @@ mod tests {
         for d in definitions() {
             assert_eq!(d.parameters["type"], "object");
         }
+    }
+
+    #[test]
+    fn optional_params_are_nullable() {
+        let t = openai_tools();
+        let fuel = t.as_array().unwrap().iter().find(|x| x["function"]["name"] == "get_fuel_strategy").unwrap();
+        assert_eq!(fuel["function"]["parameters"]["properties"]["race_minutes"]["type"], json!(["number", "null"]));
+        let car = t.as_array().unwrap().iter().find(|x| x["function"]["name"] == "get_car").unwrap();
+        assert_eq!(car["function"]["parameters"]["properties"]["query"]["type"], json!("string"));
     }
 
     #[test]

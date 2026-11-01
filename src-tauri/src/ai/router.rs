@@ -64,6 +64,12 @@ pub async fn handle_text(core: Arc<Core>, text: String) {
     if conv.fast_path && !conv.always_ai && try_fast_path(&core, &text, conv.fast_path_threshold) {
         return;
     }
+    // Noise filter: very short fragments that the fast path does not know never reach the AI.
+    let min_words = core.settings.read().listening.min_words as usize;
+    if text.split_whitespace().count() < min_words {
+        tracing::info!("ignored short utterance: {text}");
+        return;
+    }
     // 3. AI with tools.
     let Some(key) = secrets::get_api_key() else {
         if !try_fast_path(&core, &text, 0.7) {
@@ -76,6 +82,13 @@ pub async fn handle_text(core: Arc<Core>, text: String) {
         return;
     }
     let mut result = run_ai(core.clone(), &key, text.clone()).await;
+    // Malformed tool call from the model (e.g. null for an optional parameter): retry once.
+    if let Err(GroqError::Api(msg)) = &result {
+        if msg.contains("tool_use_failed") {
+            tracing::warn!("tool call rejected, retrying once");
+            result = run_ai(core.clone(), &key, text.clone()).await;
+        }
+    }
     // Model gone or not available for this key: pick one from the live list and retry once.
     if let Err(GroqError::ModelNotFound(msg)) = &result {
         tracing::warn!("model not available ({msg}), choosing another one");

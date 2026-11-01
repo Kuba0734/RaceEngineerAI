@@ -35,7 +35,7 @@ export function TrackMap({ liveRef, size = 300 }: { liveRef: React.MutableRefObj
           fit(outline);
         });
       }
-      if (f && outline.length === 0 && f.map.length > 0) {
+      if (f && outline.length < 2 && f.map.length > 0) {
         // No outline yet: frame the cars.
         fit(f.map.map((m) => [m.x, m.z]));
       }
@@ -53,12 +53,13 @@ export function TrackMap({ liveRef, size = 300 }: { liveRef: React.MutableRefObj
         ctx.beginPath();
         outline.forEach(([x, z], i) => (i === 0 ? ctx.moveTo(px(x), pz(z)) : ctx.lineTo(px(x), pz(z))));
         ctx.closePath();
-        ctx.strokeStyle = "rgba(242,244,248,0.18)";
-        ctx.lineWidth = 7;
         ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "rgba(242,244,248,0.28)";
+        ctx.lineWidth = 9;
         ctx.stroke();
-        ctx.strokeStyle = "rgba(38,42,53,1)";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(26,29,37,1)";
+        ctx.lineWidth = 5;
         ctx.stroke();
       }
       if (f) {

@@ -131,10 +131,12 @@ impl Groq {
 
     pub async fn transcribe(&self, key: &str, wav: Vec<u8>, model: &str, language: &str, prompt: &str) -> Result<String, GroqError> {
         let part = reqwest::multipart::Part::bytes(wav).file_name("speech.wav").mime_str("audio/wav").map_err(|e| GroqError::Api(e.to_string()))?;
-        let form = reqwest::multipart::Form::new()
-            .part("file", part)
-            .text("model", model.to_string())
-            .text("language", language.to_string())
+        let mut form = reqwest::multipart::Form::new().part("file", part).text("model", model.to_string());
+        // Empty language = automatic detection.
+        if !language.is_empty() {
+            form = form.text("language", language.to_string());
+        }
+        let form = form
             .text("prompt", prompt.to_string())
             .text("response_format", "json")
             .text("temperature", "0");

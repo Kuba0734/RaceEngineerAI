@@ -41,6 +41,8 @@ Rules:\n\
 - If the question is ambiguous (e.g. 'P3' vs 'number 3'), ask one short clarifying question.\n\
 - Driver commands (quiet, presets, reminders, plan, volume, repeat, every-lap info) → call the matching action tool, then confirm in a few words.\n\
 - {numbers} {units} Times as m:ss.t. Gaps in seconds or tenths.\n\
+- Your text is read aloud: write units as words (\"Grad\" / \"degrees\", never °C, km/h or psi symbols), no abbreviations.\n\
+- If the driver speaks another language than {lang}, still answer in {lang}.\n\
 - {naming}\n\
 - {scope}\n\
 - The driver's speech is transcribed and may contain recognition errors; interpret generously.\n\
@@ -94,9 +96,14 @@ pub fn snapshot(state: &RaceState, crew: &CrewState) -> String {
 
 /// Whisper prompt: racing vocabulary + names from the session (max ~800 chars ≈ 224 tokens).
 pub fn stt_prompt(s: &Settings, state: &RaceState) -> String {
-    let base = match s.language {
-        Language::De => "Funk mit dem Renningenieur. Sprit, Box, Boxenstopp, Abstand, Runde, Reifen, Reifendruck, Regenreifen, Slicks, Undercut, Track Limits, Strafe, Sektor, Kurve, Spotter, Ruhe, Ingenieur",
-        Language::En => "Team radio with the race engineer. Fuel, box, pit stop, gap, lap, tyres, tyre pressures, wets, slicks, undercut, track limits, penalty, sector, turn, spotter, quiet, engineer",
+    use crate::storage::settings::SttLanguage;
+    // The prompt biases Whisper towards its language, so it must match the spoken language.
+    let de = "Funk mit dem Renningenieur. Sprit, Box, Boxenstopp, Abstand, Runde, Reifen, Reifendruck, Regenreifen, Slicks, Undercut, Track Limits, Strafe, Sektor, Kurve, Spotter, Ruhe, Ingenieur";
+    let en = "Team radio with the race engineer. Fuel, box, pit stop, gap to the leader, gap ahead, gap behind, lap, tyres, tyre pressures, wets, slicks, undercut, track limits, penalty, sector, turn, spotter, quiet, engineer";
+    let base = match (s.listening.stt_language, s.language) {
+        (SttLanguage::De, _) | (SttLanguage::App, Language::De) => de,
+        (SttLanguage::En, _) | (SttLanguage::App, Language::En) => en,
+        (SttLanguage::Auto, _) => "Box, Undercut, Track Limits, Spotter",
     };
     let mut parts = vec![base.to_string()];
     if !state.session.track.is_empty() {

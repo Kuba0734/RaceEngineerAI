@@ -95,10 +95,6 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
     if map.is_empty() {
         // Without broadcasting: positions from shared memory.
         map = f.cars.iter().map(|c| MapCar { id: c.id, x: c.x, z: c.z, position: 0, me: c.id == me, pit: false }).collect();
-    } else if let Some(m) = map.iter_mut().find(|m| m.me) {
-        // High-rate position for the player.
-        m.x = f.pos[0];
-        m.z = f.pos[2];
     }
     let (quiet, preset) = {
         let e = core.engine.lock();

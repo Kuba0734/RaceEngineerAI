@@ -77,7 +77,7 @@ fn make_vad(s: &Settings) -> Option<sherpa_onnx::VoiceActivityDetector> {
         silero_vad: sherpa_onnx::SileroVadModelConfig {
             model: Some(path.to_string_lossy().into_owned()),
             threshold: l.vad_threshold.clamp(0.1, 0.95),
-            min_silence_duration: 0.45,
+            min_silence_duration: l.end_silence_s.clamp(0.3, 2.0),
             min_speech_duration: l.min_speech_s.max(0.1),
             window_size: 512,
             max_speech_duration: l.max_speech_s.clamp(1.0, 30.0),

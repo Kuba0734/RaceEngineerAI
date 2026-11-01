@@ -5,4 +5,8 @@ export type SpotterSettings = { enabled: boolean, name: string, phrasing: Spotte
 /**
  * 0..=1 how much other speech is lowered while the spotter talks.
  */
-ducking: number, in_practice: boolean, in_qualifying: boolean, in_race: boolean, };
+ducking: number, 
+/**
+ * Crew speech pauses while the spotter talks, so only one voice is heard at a time.
+ */
+pause_crew: boolean, in_practice: boolean, in_qualifying: boolean, in_race: boolean, };

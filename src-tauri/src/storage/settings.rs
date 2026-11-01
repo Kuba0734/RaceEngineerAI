@@ -123,6 +123,22 @@ pub struct ListeningSettings {
     pub only_when_game_running: bool,
     /// Radio sound when the push-to-talk button is pressed and released.
     pub ptt_sound: bool,
+    /// Language for speech recognition (may differ from the app language).
+    pub stt_language: SttLanguage,
+    /// Pause (s) that ends a sentence in always-on / wake word mode.
+    pub end_silence_s: f32,
+    /// Utterances with fewer words are ignored unless the fast path knows them (noise filter).
+    pub min_words: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum SttLanguage {
+    App,
+    Auto,
+    De,
+    En,
 }
 
 impl Default for ListeningSettings {
@@ -142,6 +158,9 @@ impl Default for ListeningSettings {
             allow_interrupt: false,
             only_when_game_running: true,
             ptt_sound: true,
+            stt_language: SttLanguage::App,
+            end_silence_s: 0.8,
+            min_words: 2,
         }
     }
 }
@@ -245,6 +264,8 @@ pub struct SpotterSettings {
     pub off_in_pits: bool,
     /// 0..=1 how much other speech is lowered while the spotter talks.
     pub ducking: f32,
+    /// Crew speech pauses while the spotter talks, so only one voice is heard at a time.
+    pub pause_crew: bool,
     pub in_practice: bool,
     pub in_qualifying: bool,
     pub in_race: bool,
@@ -265,6 +286,7 @@ impl Default for SpotterSettings {
             closing_fast_kmh: 40.0,
             off_in_pits: true,
             ducking: 0.75,
+            pause_crew: true,
             in_practice: true,
             in_qualifying: true,
             in_race: true,

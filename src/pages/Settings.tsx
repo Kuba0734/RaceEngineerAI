@@ -7,9 +7,9 @@ import { GeneralSection, AiSection, ListeningSection } from "./settings/basic";
 import { VoicesSection, SpotterSection } from "./settings/voices";
 import { CallsSection } from "./settings/calls";
 import { ConversationSection, CommandsSection, PersonalitySection, SessionStartSection, StrategySection } from "./settings/crew";
-import { OverlaySection, InputSection, AboutSection } from "./settings/system";
+import { InputSection, AboutSection } from "./settings/system";
 
-const TABS = ["general", "ai", "listening", "voices", "spotter", "calls", "conversation", "commands", "personality", "sessionStart", "strategy", "overlay", "input", "about"] as const;
+const TABS = ["general", "ai", "listening", "voices", "spotter", "calls", "conversation", "commands", "personality", "sessionStart", "strategy", "input", "about"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function SettingsPage() {
@@ -37,7 +37,6 @@ export default function SettingsPage() {
             {tab === "personality" && <PersonalitySection />}
             {tab === "sessionStart" && <SessionStartSection />}
             {tab === "strategy" && <StrategySection />}
-            {tab === "overlay" && <OverlaySection />}
             {tab === "input" && <InputSection />}
             {tab === "about" && <AboutSection />}
           </motion.div>

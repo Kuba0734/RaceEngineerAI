@@ -31,6 +31,9 @@ fn run_wgi(tx: &Sender<ButtonEvent>, learn: &Arc<Mutex<bool>>) -> windows::core:
     }
     let mut devs: Vec<Dev> = Vec::new();
     let mut last_enum = Instant::now() - Duration::from_secs(10);
+    // binding → last time seen pressed. Wheels often expose several HID collections with the
+    // same vendor/product id; a binding is held while ANY of them reports it pressed.
+    let mut held: std::collections::HashMap<String, Instant> = std::collections::HashMap::new();
     loop {
         if last_enum.elapsed() > Duration::from_secs(2) {
             last_enum = Instant::now();
@@ -48,22 +51,30 @@ fn run_wgi(tx: &Sender<ButtonEvent>, learn: &Arc<Mutex<bool>>) -> windows::core:
             }
             devs = next;
         }
+        let now = Instant::now();
         for d in &mut devs {
-            if d.c.GetCurrentReading(&mut d.buttons, &mut d.switches, &mut d.axes).is_err() {
-                continue;
-            }
-            for (i, (now, before)) in d.buttons.iter().zip(d.prev.iter()).enumerate() {
-                if now != before {
+            // On a failed read the previous state is kept (no false release).
+            let _ = d.c.GetCurrentReading(&mut d.buttons, &mut d.switches, &mut d.axes);
+            for (i, pressed) in d.buttons.iter().enumerate() {
+                if *pressed {
                     let b = binding(d.vid, d.pid, i);
-                    let ev = if *now { ButtonEvent::Pressed(b) } else { ButtonEvent::Released(b) };
-                    if *now {
+                    if !held.contains_key(&b) {
                         *learn.lock() = false;
+                        let _ = tx.try_send(ButtonEvent::Pressed(b.clone()));
                     }
-                    let _ = tx.try_send(ev);
+                    held.insert(b, now);
                 }
             }
             d.prev.clone_from(&d.buttons);
         }
+        // Release only after 60 ms without any device reporting the button (debounce).
+        held.retain(|b, seen| {
+            let keep = now.duration_since(*seen) < Duration::from_millis(60);
+            if !keep {
+                let _ = tx.try_send(ButtonEvent::Released(b.clone()));
+            }
+            keep
+        });
         std::thread::sleep(Duration::from_millis(10));
     }
 }

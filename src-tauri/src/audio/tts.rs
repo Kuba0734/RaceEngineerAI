@@ -91,6 +91,8 @@ impl Synth {
             Language::De => &p.voice_de,
             Language::En => &p.voice_en,
         };
+        let text = speakable(text, lang);
+        let text = text.as_str();
         let tts = self.engine(voice)?;
         let cfg = sherpa_onnx::GenerationConfig { speed: p.speed.clamp(0.5, 2.0), sid: p.speaker_id, ..Default::default() };
         let audio = tts.generate_with_config(text, &cfg, None::<fn(&[f32], f32) -> bool>)?;
@@ -100,6 +102,30 @@ impl Synth {
         let out: Vec<f32> = radio_fx::resample(&fx, sr, out_sr).into_iter().map(|s| (s * vol).clamp(-1.0, 1.0)).collect();
         Some(out.into())
     }
+}
+
+/// Turns symbols and abbreviations into words before synthesis ("29 °C" → "29 Grad").
+pub fn speakable(text: &str, lang: Language) -> String {
+    let de = lang == Language::De;
+    let pairs: [(&str, &str); 12] = [
+        ("°C", if de { " Grad" } else { " degrees" }),
+        ("° C", if de { " Grad" } else { " degrees" }),
+        ("°F", if de { " Grad Fahrenheit" } else { " degrees Fahrenheit" }),
+        ("°", if de { " Grad" } else { " degrees" }),
+        ("km/h", if de { " Kilometer pro Stunde" } else { " kilometres per hour" }),
+        ("mph", " miles per hour"),
+        (" psi", " P S I"),
+        (" s.", if de { " Sekunden." } else { " seconds." }),
+        ("%", if de { " Prozent" } else { " percent" }),
+        (" L/", if de { " Liter pro " } else { " litres per " }),
+        (" l/", if de { " Liter pro " } else { " litres per " }),
+        ("±", if de { "plus minus " } else { "plus or minus " }),
+    ];
+    let mut out = text.to_string();
+    for (a, b) in pairs {
+        out = out.replace(a, b);
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Fallback tones when no voice is installed: the spotter still works.
@@ -200,4 +226,15 @@ pub fn start(settings: Arc<RwLock<Settings>>, mixer: Sender<MixerCmd>, out_sr: u
         tracing::error!("tts thread: {e}");
     }
     handle
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn units_become_words() {
+        assert_eq!(speakable("Strecke 29 °C, Luft 21°C.", Language::De), "Strecke 29 Grad, Luft 21 Grad.");
+        assert_eq!(speakable("Track 29°C", Language::En), "Track 29 degrees");
+    }
 }

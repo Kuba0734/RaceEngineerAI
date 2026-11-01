@@ -103,6 +103,7 @@ pub fn run() {
             });
             let _ = core.mixer.try_send(audio::mixer::MixerCmd::SetMasterVolume(settings.voices.master_volume));
             let _ = core.mixer.try_send(audio::mixer::MixerCmd::SetDucking(settings.spotter.ducking));
+            let _ = core.mixer.try_send(audio::mixer::MixerCmd::SetPauseOnSpotter(settings.spotter.pause_crew));
             // Keep the output stream alive for the whole app lifetime.
             app.manage(Arc::new(Mutex::new(Some(audio))));
             app.manage(core.clone());

@@ -19,6 +19,8 @@ pub enum MixerCmd {
     StopSpeech,
     SetMasterVolume(f32),
     SetDucking(f32),
+    /// Pause crew speech while the spotter talks (instead of ducking).
+    SetPauseOnSpotter(bool),
 }
 
 pub struct SpeechItem {
@@ -56,6 +58,7 @@ pub struct Mixer {
     master: f32,
     ducking: f32,
     duck_gain: f32,
+    pause_on_spotter: bool,
     level: f32,
 }
 
@@ -65,7 +68,7 @@ pub fn channel() -> (Sender<MixerCmd>, Receiver<MixerCmd>) {
 
 impl Mixer {
     pub fn new(rx: Receiver<MixerCmd>, status: Arc<MixerStatus>) -> Self {
-        Self { rx, status, spotter: None, current: None, queue: Vec::with_capacity(64), master: 1.0, ducking: 0.75, duck_gain: 1.0, level: 0.0 }
+        Self { rx, status, spotter: None, current: None, queue: Vec::with_capacity(64), master: 1.0, ducking: 0.75, duck_gain: 1.0, pause_on_spotter: true, level: 0.0 }
     }
 
     fn handle(&mut self, cmd: MixerCmd) {
@@ -92,6 +95,7 @@ impl Mixer {
             }
             MixerCmd::SetMasterVolume(v) => self.master = v.clamp(0.0, 2.0),
             MixerCmd::SetDucking(d) => self.ducking = d.clamp(0.0, 1.0),
+            MixerCmd::SetPauseOnSpotter(p) => self.pause_on_spotter = p,
         }
     }
 
@@ -113,7 +117,7 @@ impl Mixer {
         while let Ok(cmd) = self.rx.try_recv() {
             self.handle(cmd);
         }
-        if self.current.is_none() {
+        if self.current.is_none() && !(self.spotter.is_some() && self.pause_on_spotter) {
             self.next_item();
         }
         let ch = channels.max(1);
@@ -131,7 +135,9 @@ impl Mixer {
             let target = if spotter_on { 1.0 - self.ducking } else { 1.0 };
             self.duck_gain += (target - self.duck_gain) * 0.002;
             let mut finished = false;
-            if let Some((item, pos)) = self.current.as_mut() {
+            // Only one voice at a time: crew speech waits while the spotter talks.
+            let paused = spotter_on && self.pause_on_spotter;
+            if let Some((item, pos)) = self.current.as_mut().filter(|_| !paused) {
                 s += item.pcm[*pos] * self.duck_gain;
                 *pos += 1;
                 finished = *pos >= item.pcm.len();
@@ -292,10 +298,29 @@ mod tests {
     }
 
     #[test]
+    fn spotter_pauses_crew() {
+        let (tx, rx) = channel();
+        let status = Arc::new(MixerStatus::default());
+        let mut m = Mixer::new(rx, status.clone());
+        tx.send(MixerCmd::Speech(item(1, Priority::Normal, 100, 5000))).unwrap();
+        let mut buf = vec![0.0; 10];
+        m.fill(&mut buf, 1);
+        tx.send(MixerCmd::Spotter(vec![0.0; 50].into())).unwrap();
+        let mut buf = vec![1.0; 50];
+        m.fill(&mut buf, 1);
+        // Spotter clip is silent (0.0) and crew is paused → nothing audible.
+        assert!(buf.iter().all(|x| x.abs() < 1e-6));
+        let mut buf = vec![0.0; 10];
+        m.fill(&mut buf, 1);
+        assert!(buf[0] > 0.4, "crew resumes after the spotter");
+    }
+
+    #[test]
     fn spotter_ducks_crew() {
         let (tx, rx) = channel();
         let status = Arc::new(MixerStatus::default());
         let mut m = Mixer::new(rx, status.clone());
+        tx.send(MixerCmd::SetPauseOnSpotter(false)).unwrap();
         tx.send(MixerCmd::Speech(item(1, Priority::Normal, 48_000, 5000))).unwrap();
         tx.send(MixerCmd::Spotter(vec![0.0; 20_000].into())).unwrap();
         let mut buf = vec![0.0; 20_000];

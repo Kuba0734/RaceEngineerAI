@@ -117,6 +117,7 @@ impl Core {
         }
         let _ = self.mixer.try_send(MixerCmd::SetMasterVolume(s.voices.master_volume));
         let _ = self.mixer.try_send(MixerCmd::SetDucking(s.spotter.ducking));
+        let _ = self.mixer.try_send(MixerCmd::SetPauseOnSpotter(s.spotter.pause_crew));
         let _ = self.app.emit("settings", &s);
     }
 

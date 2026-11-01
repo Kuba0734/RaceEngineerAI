@@ -125,7 +125,13 @@ pub struct RaceState {
     pressure_acc: ([f32; 4], [f32; 4], u32),
     outline_lap: Option<i32>,
     outline_tmp: Vec<[f32; 2]>,
+    /// Track outline built from every car: one point per spline bin.
+    outline_bins: Vec<Option<[f32; 2]>>,
+    outline_filled: usize,
 }
+
+/// Resolution of the outline built from all cars (bins along the spline).
+const OUTLINE_BINS: usize = 600;
 
 impl Default for RaceState {
     fn default() -> Self {
@@ -178,6 +184,8 @@ impl RaceState {
             pressure_acc: ([0.0; 4], [0.0; 4], 0),
             outline_lap: None,
             outline_tmp: Vec::new(),
+            outline_bins: vec![None; OUTLINE_BINS],
+            outline_filled: 0,
         }
     }
 
@@ -205,7 +213,9 @@ impl RaceState {
         let reference = self.reference.take();
         let corners = std::mem::take(&mut self.corners);
         let pit_loss = self.pit_loss_s;
+        let outline = (std::mem::take(&mut self.track_outline), std::mem::take(&mut self.outline_bins), self.outline_filled, self.outline_version);
         *self = Self::new();
+        (self.track_outline, self.outline_bins, self.outline_filled, self.outline_version) = outline;
         self.session = session;
         self.reference = reference;
         self.corners = corners;
@@ -221,9 +231,16 @@ impl RaceState {
             self.last_phase = info.phase;
             events.push(RaceEvent::SessionPhaseChanged(info.phase));
         }
-        let track_or_car_changed = info.track != self.session.track || info.car_model != self.session.car_model;
+        let track_changed = info.track != self.session.track;
+        let track_or_car_changed = track_changed || info.car_model != self.session.car_model;
         self.session = info;
         if new_session {
+            if track_changed {
+                self.track_outline.clear();
+                self.outline_bins = vec![None; OUTLINE_BINS];
+                self.outline_filled = 0;
+                self.outline_version += 1;
+            }
             if track_or_car_changed {
                 self.reference = None;
                 self.corners.clear();
@@ -236,6 +253,7 @@ impl RaceState {
 
     pub fn on_cars(&mut self, cars: Vec<CarState>, events: &mut Vec<RaceEvent>) {
         let t = self.t_s();
+        self.outline_from_cars(&cars);
         for c in &cars {
             if !c.is_player {
                 self.gaps.update(c.id, c.laps, c.spline, t);
@@ -293,7 +311,10 @@ impl RaceState {
         self.trace.record(f.spline, Sample { speed_kmh: f.speed_kmh, throttle: f.throttle, brake: f.brake, tc: f.tc_active, abs: f.abs_active });
 
         // Track outline from the first full lap.
-        self.record_outline(&f);
+        // Without broadcasting data the outline comes from the player's own first lap.
+        if self.cars.is_empty() {
+            self.record_outline(&f);
+        }
 
         // Pressures/temps while at speed.
         if f.speed_kmh > 80.0 {
@@ -473,6 +494,27 @@ impl RaceState {
         self.pressure_acc = ([0.0; 4], [0.0; 4], 0);
     }
 
+    /// Every car on track contributes points by spline position, so the map shows the
+    /// track after a few seconds instead of after the player's first lap.
+    fn outline_from_cars(&mut self, cars: &[CarState]) {
+        let before = self.outline_filled;
+        for c in cars {
+            if c.location != CarLocation::Track || !(0.0..1.0).contains(&c.spline) || (c.x == 0.0 && c.z == 0.0) {
+                continue;
+            }
+            let i = ((c.spline * OUTLINE_BINS as f32) as usize).min(OUTLINE_BINS - 1);
+            if self.outline_bins[i].is_none() {
+                self.outline_filled += 1;
+            }
+            self.outline_bins[i] = Some([c.x, c.z]);
+        }
+        // Publish when noticeably more of the lap is covered.
+        if self.outline_filled >= OUTLINE_BINS / 10 && self.outline_filled >= before + OUTLINE_BINS / 40 || (self.outline_filled == OUTLINE_BINS && before < OUTLINE_BINS) {
+            self.track_outline = self.outline_bins.iter().flatten().copied().collect();
+            self.outline_version += 1;
+        }
+    }
+
     fn record_outline(&mut self, f: &TelemetryFrame) {
         if !self.track_outline.is_empty() || f.in_pit_lane {
             return;
@@ -589,5 +631,34 @@ impl RaceState {
 
     pub fn best_valid_lap(&self) -> Option<&LapRecord> {
         self.laps.iter().filter(|l| l.valid).min_by_key(|l| l.time_ms)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn outline_from_other_cars() {
+        let mut s = RaceState::new();
+        let mut ev = Vec::new();
+        // 30 cars spread around a circle → outline published without the player driving.
+        let cars: Vec<CarState> = (0..30)
+            .map(|i| {
+                let sp = i as f32 / 30.0;
+                let a = sp * std::f32::consts::TAU;
+                CarState { id: i, spline: sp, x: 500.0 * a.cos(), z: 300.0 * a.sin(), location: CarLocation::Track, ..Default::default() }
+            })
+            .collect();
+        for k in 0..20 {
+            let shifted: Vec<CarState> = cars.iter().map(|c| {
+                let sp = (c.spline + k as f32 * 0.0017).fract();
+                let a = sp * std::f32::consts::TAU;
+                CarState { spline: sp, x: 500.0 * a.cos(), z: 300.0 * a.sin(), ..c.clone() }
+            }).collect();
+            s.on_cars(shifted, &mut ev);
+        }
+        assert!(s.track_outline.len() > 100, "{}", s.track_outline.len());
+        assert!(s.outline_version > 0);
     }
 }

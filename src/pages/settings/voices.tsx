@@ -173,6 +173,7 @@ export function SpotterSection() {
         <Field label={t("spotter.closingFast")}>
           <Slider value={sp.closing_fast_kmh} min={10} max={120} step={5} onChange={(v) => set({ closing_fast_kmh: v })} format={(v) => `${v} km/h`} />
         </Field>
+        <Toggle checked={sp.pause_crew} onChange={(v) => set({ pause_crew: v })} label={t("spotter.pauseCrew")} hint={t("spotter.pauseCrewHint")} />
         <Field label={t("spotter.ducking")} hint={t("spotter.duckingHint")}>
           <Slider value={sp.ducking} min={0} max={1} step={0.05} onChange={(v) => set({ ducking: v })} format={(v) => `${Math.round(v * 100)} %`} />
         </Field>

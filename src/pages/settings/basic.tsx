@@ -158,6 +158,15 @@ export function ListeningSection() {
         <Toggle checked={l.wake_word} onChange={(v) => set({ wake_word: v })} label={t("settings.listening.wake")} hint={t("settings.listening.wakeHint")} />
         <Toggle checked={l.push_to_talk} onChange={(v) => set({ push_to_talk: v })} label={t("settings.listening.ptt")} hint={t("settings.listening.pttHint")} />
         <Toggle checked={l.ptt_sound} onChange={(v) => set({ ptt_sound: v })} label={t("settings.listening.pttSound")} hint={t("settings.listening.pttSoundHint")} />
+        <Field label={t("settings.listening.sttLanguage")} hint={t("settings.listening.sttLanguageHint")}>
+          <Segmented value={l.stt_language} onChange={(v) => set({ stt_language: v })} options={[{ value: "app", label: t("settings.listening.sttApp") }, { value: "auto", label: t("settings.listening.sttAuto") }, { value: "de", label: "DE" }, { value: "en", label: "EN" }]} />
+        </Field>
+        <Field label={t("settings.listening.endSilence")} hint={t("settings.listening.endSilenceHint")}>
+          <Slider value={l.end_silence_s} min={0.3} max={2} step={0.1} onChange={(v) => set({ end_silence_s: v })} format={(v) => `${v.toFixed(1)} s`} />
+        </Field>
+        <Field label={t("settings.listening.minWords")} hint={t("settings.listening.minWordsHint")}>
+          <Slider value={l.min_words} min={1} max={4} step={1} onChange={(v) => set({ min_words: v })} />
+        </Field>
         <Toggle checked={l.only_when_game_running} onChange={(v) => set({ only_when_game_running: v })} label={t("settings.listening.onlyGame")} />
         <Toggle checked={l.allow_interrupt} onChange={(v) => set({ allow_interrupt: v })} label={t("settings.listening.interrupt")} hint={t("settings.listening.interruptHint")} />
       </Card>

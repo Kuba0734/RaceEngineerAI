@@ -10,7 +10,14 @@ pub async fn transcribe(groq: &Groq, key: &str, settings: &Settings, samples: &[
         return Ok(String::new());
     }
     let wav = wav_bytes(samples);
-    let text = groq.transcribe(key, wav, &settings.groq.stt_model, settings.language.code(), prompt).await?;
+    use crate::storage::settings::SttLanguage;
+    let lang = match settings.listening.stt_language {
+        SttLanguage::App => settings.language.code(),
+        SttLanguage::De => "de",
+        SttLanguage::En => "en",
+        SttLanguage::Auto => "",
+    };
+    let text = groq.transcribe(key, wav, &settings.groq.stt_model, lang, prompt).await?;
     Ok(filter_hallucination(&text))
 }
 

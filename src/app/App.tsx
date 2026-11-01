@@ -10,15 +10,17 @@ import Games from "@/pages/Games";
 import Session from "@/pages/Session";
 import Analysis from "@/pages/Analysis";
 import SettingsPage from "@/pages/Settings";
+import OverlayPage from "@/pages/Overlay";
 import { UpdateBanner } from "./UpdateBanner";
 
-export type Page = "dashboard" | "games" | "session" | "analysis" | "settings";
+export type Page = "dashboard" | "games" | "session" | "analysis" | "overlay" | "settings";
 
 const NAV: { id: Page; icon: string }[] = [
   { id: "dashboard", icon: "M3 12l9-8 9 8v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
   { id: "games", icon: "M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4zm2 2v2m-1-1h2m7 0h.01M18 13h.01" },
   { id: "session", icon: "M4 19h16M6 15l4-6 4 3 4-7" },
   { id: "analysis", icon: "M4 20V10m6 10V4m6 16v-7m4 7H2" },
+  { id: "overlay", icon: "M3 5h18v14H3zM7 9h4v3H7zm7 0h3m-3 3h3" },
   { id: "settings", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm7.4-3a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14.5 3h-5l-.4 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2l.4 2.6h5l.4-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z" },
 ];
 
@@ -111,6 +113,7 @@ export default function App() {
               {page === "games" && <Games />}
               {page === "session" && <Session />}
               {page === "analysis" && <Analysis />}
+              {page === "overlay" && <OverlayPage />}
               {page === "settings" && <SettingsPage />}
             </motion.div>
           </AnimatePresence>
