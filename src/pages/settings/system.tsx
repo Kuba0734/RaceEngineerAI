@@ -2,57 +2,9 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, on } from "@/lib/ipc";
 import type { ButtonBinding } from "@/lib/bindings/ButtonBinding";
-import { Badge, Button, Card, Field, Slider, TextInput, Toggle, useAsync } from "@/components/ui";
+import { Badge, Button, Card, Field, useAsync } from "@/components/ui";
 import { checkForUpdate } from "@/app/UpdateBanner";
 import { useSettings } from "./basic";
-
-const WIDGETS = ["map", "standings", "radar", "fuel", "delta", "radio"] as const;
-
-export function OverlaySection() {
-  const { t } = useTranslation();
-  const [s, up] = useSettings();
-  const o = s.overlay;
-  const set = (patch: Partial<typeof o>) => up((x) => ({ ...x, overlay: { ...x.overlay, ...patch } }));
-  const [editing, setEditing] = useState(false);
-  return (
-    <>
-      <Card title={t("ov.title")}>
-        <Toggle checked={o.enabled} onChange={(v) => set({ enabled: v })} label={t("ov.enabled")} hint={t("ov.enabledHint")} />
-        <Field label={t("ov.rate")}>
-          <Slider value={o.update_hz} min={10} max={30} step={5} onChange={(v) => set({ update_hz: v })} format={(v) => `${v} Hz`} />
-        </Field>
-        <Toggle checked={o.animations} onChange={(v) => set({ animations: v })} label={t("ov.animations")} />
-        <Field label={t("ov.hotkey")} hint={t("ov.hotkeyHint")}>
-          <TextInput value={o.edit_hotkey} onChange={(v) => set({ edit_hotkey: v })} className="w-40" />
-        </Field>
-        <Toggle checked={o.radar_auto_hide} onChange={(v) => set({ radar_auto_hide: v })} label={t("ov.radarAutoHide")} hint={t("ov.radarAutoHideHint")} />
-        <div className="mt-2 flex items-center gap-3">
-          <Button variant="primary" onClick={() => { void api.setOverlayEdit(!editing); setEditing(!editing); }}>{editing ? t("ov.stopEdit") : t("ov.edit")}</Button>
-          <span className="text-xs text-dim">{t("ov.editHint")}</span>
-        </div>
-      </Card>
-      <Card title={t("ov.widgets")}>
-        {WIDGETS.map((id) => {
-          const w = o.layout.find((x) => x.id === id) ?? { id, visible: false, x: 40, y: 40, scale: 1, opacity: 0.9 };
-          const setW = (patch: Partial<typeof w>) => set({ layout: [...o.layout.filter((x) => x.id !== id), { ...w, ...patch }] });
-          return (
-            <div key={id} className="border-t border-line/60 py-2">
-              <Toggle checked={w.visible} onChange={(v) => setW({ visible: v })} label={t(`widget.${id}`)} />
-              <div className="flex flex-wrap gap-x-6">
-                <Field label={t("ov.scale")}>
-                  <Slider value={w.scale} min={0.5} max={2} step={0.05} onChange={(v) => setW({ scale: v })} format={(v) => `${Math.round(v * 100)} %`} />
-                </Field>
-                <Field label={t("ov.opacity")}>
-                  <Slider value={w.opacity} min={0.2} max={1} step={0.05} onChange={(v) => setW({ opacity: v })} format={(v) => `${Math.round(v * 100)} %`} />
-                </Field>
-              </div>
-            </div>
-          );
-        })}
-      </Card>
-    </>
-  );
-}
 
 const QUICK = ["repeat", "quiet", "normal", "spotter_only", "fuel", "gap_ahead", "gap_behind", "time_left", "louder", "quieter"] as const;
 

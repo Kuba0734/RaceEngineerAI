@@ -78,6 +78,9 @@ export const api = {
   ptt: (pressed: boolean) => invoke<void>("ptt", { pressed }),
   setOverlayEdit: (edit: boolean) => invoke<void>("set_overlay_edit", { edit }),
   saveOverlayLayout: (game: string | null, layout: WidgetLayout[]) => invoke<void>("save_overlay_layout", { game, layout }),
+  getOverlayEdit: () => invoke<boolean>("get_overlay_edit"),
+  listMonitors: () => invoke<string[]>("list_monitors"),
+  resetOverlayLayout: (game: string | null) => invoke<void>("reset_overlay_layout", { game }),
   appInfo: () => invoke<Record<string, string>>("app_info"),
 };
 

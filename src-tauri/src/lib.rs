@@ -179,6 +179,9 @@ pub fn run() {
             commands::ptt,
             commands::set_overlay_edit,
             commands::save_overlay_layout,
+            commands::get_overlay_edit,
+            commands::list_monitors,
+            commands::reset_overlay_layout,
             commands::app_info,
         ])
         .run(tauri::generate_context!())

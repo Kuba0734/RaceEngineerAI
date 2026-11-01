@@ -55,7 +55,8 @@
           "German",
           "English"
         ],
-        "displayLanguageSelector": true
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico"
       },
       "webviewInstallMode": {
         "type": "downloadBootstrapper"

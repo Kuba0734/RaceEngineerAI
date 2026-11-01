@@ -395,6 +395,32 @@ pub async fn set_overlay_edit(core: CoreState<'_>, edit: bool) -> AppResult<()> 
 }
 
 #[tauri::command]
+pub fn get_overlay_edit(core: CoreState) -> bool {
+    core.overlay_edit.load(Ordering::Relaxed)
+}
+
+#[tauri::command]
+pub fn list_monitors(core: CoreState) -> Vec<String> {
+    core.app.available_monitors().map(|m| m.into_iter().filter_map(|m| m.name().cloned()).collect()).unwrap_or_default()
+}
+
+#[tauri::command]
+pub fn reset_overlay_layout(core: CoreState, game: Option<String>) {
+    {
+        let mut s = core.settings.write();
+        match game {
+            Some(g) => {
+                if let Some(gs) = s.games.get_mut(&g) {
+                    gs.overlay_layout = None;
+                }
+            }
+            None => s.overlay.layout = crate::storage::settings::default_layout(),
+        }
+    }
+    core.save_settings();
+}
+
+#[tauri::command]
 pub fn save_overlay_layout(core: CoreState, game: Option<String>, layout: Vec<WidgetLayout>) {
     {
         let mut s = core.settings.write();

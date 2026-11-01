@@ -125,7 +125,12 @@ pub fn speakable(text: &str, lang: Language) -> String {
     for (a, b) in pairs {
         out = out.replace(a, b);
     }
-    out.split_whitespace().collect::<Vec<_>>().join(" ")
+    // Symbols the voice would read out literally (markdown, semicolons, brackets, dashes).
+    for (a, b) in [(";", ","), ("–", ","), ("—", ","), ("(", ", "), (")", ", "), ("*", ""), ("#", ""), ("_", " "), ("`", ""), ("\n", ". "), ("|", ","), ("~", "")] {
+        out = out.replace(a, b);
+    }
+    let out = out.split_whitespace().collect::<Vec<_>>().join(" ");
+    out.replace(" ,", ",").replace(",,", ",").replace(", .", ".").trim_matches([',', ' ']).to_string()
 }
 
 /// Fallback tones when no voice is installed: the spotter still works.
@@ -236,5 +241,6 @@ mod tests {
     fn units_become_words() {
         assert_eq!(speakable("Strecke 29 °C, Luft 21°C.", Language::De), "Strecke 29 Grad, Luft 21 Grad.");
         assert_eq!(speakable("Track 29°C", Language::En), "Track 29 degrees");
+        assert_eq!(speakable("Reifen ok; vorne **warm** (85 Grad)", Language::De), "Reifen ok, vorne warm, 85 Grad");
     }
 }

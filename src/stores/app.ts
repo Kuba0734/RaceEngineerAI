@@ -32,8 +32,9 @@ export const useApp = create<AppStore>((set, get) => ({
     void on<string[]>("games", () => void api.getGames().then((g) => set({ games: g, status: g.status })));
     void on<RadioLogEntry>("radio", (e) => set({ radio: [...get().radio.slice(-199), e] }));
     void on<Settings>("settings", (s) => {
-      // Backend-side changes (voice command volume etc.) – keep local edits if pending.
-      if (!get().dirty) set({ settings: s });
+      // Backend-side changes (voice command volume etc.). Ignored while local edits are
+      // pending or being saved, otherwise a slider would jump back to an older value.
+      if (!get().dirty && saveTimer === undefined) set({ settings: s });
     });
   },
   update: (fn) => {
@@ -44,8 +45,10 @@ export const useApp = create<AppStore>((set, get) => ({
     set({ settings: next, dirty: true });
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => {
+      saveTimer = undefined;
       void api.saveSettings(next).then(async () => {
-        set({ dirty: false });
+        // Only clean if nothing changed meanwhile.
+        if (get().settings === next) set({ dirty: false });
         await get().reloadCatalog();
       });
     }, 350);

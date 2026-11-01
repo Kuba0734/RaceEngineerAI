@@ -71,7 +71,7 @@ export function Field({ label, hint, children }: { label: ReactNode; hint?: Reac
 export function Slider({ value, onChange, min, max, step = 1, format }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number; format?: (v: number) => string }) {
   return (
     <div className="flex w-64 items-center gap-3">
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-surface-2 accent-[var(--accent)]" />
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="range w-full" style={{ ["--fill" as string]: `${((value - min) / (max - min || 1)) * 100}%` }} />
       <span className="num w-14 text-right text-xs text-data">{format ? format(value) : value}</span>
     </div>
   );

@@ -260,7 +260,19 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
             let class = crate::games::cars::class_def(&state.session.car_class);
             let window = if state.frame.rain_tyres { class.wet } else { class.dry };
             let rec = crate::calls::triggers::next_stint_deltas(state, window, 0.1);
+            // Pre-digested summary so the answer stays short.
+            let axle = |a: usize, b: usize| {
+                let temp = (w[a].core_temp_c + w[b].core_temp_c) / 2.0;
+                let p = (w[a].pressure_psi + w[b].pressure_psi) / 2.0;
+                let t_state = if temp < class.core_temp_cold { "cold" } else if temp > class.core_temp_hot { "hot" } else { "ok" };
+                let p_state = if p < window[0] { "low" } else if p > window[1] { "high" } else { "ok" };
+                json!({ "temperature": t_state, "pressure": p_state })
+            };
+            let worst = (0..4).max_by(|a, b| (w[*a].core_temp_c - class.core_temp_hot).total_cmp(&(w[*b].core_temp_c - class.core_temp_hot))).unwrap_or(0);
+            let all_ok = w.iter().all(|x| x.core_temp_c >= class.core_temp_cold && x.core_temp_c <= class.core_temp_hot && x.pressure_psi >= window[0] && x.pressure_psi <= window[1]);
             json!({
+                "summary": { "all_ok": all_ok, "front": axle(0, 1), "rear": axle(2, 3), "hottest_wheel": f.wheel(worst) },
+                "note": "answer with the summary; mention single wheels only if they stand out",
                 "order": "FL, FR, RL, RR",
                 "core_temp_c": w.iter().map(|x| x.core_temp_c.round()).collect::<Vec<_>>(),
                 "pressure_psi": w.iter().map(|x| round1(x.pressure_psi)).collect::<Vec<_>>(),

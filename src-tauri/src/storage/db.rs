@@ -133,7 +133,9 @@ pub fn list_sessions(c: &Connection, limit: u32) -> AppResult<Vec<SessionRow>> {
         "SELECT s.id, s.game, s.track, s.car, s.session_type, s.started_at, s.ended_at, s.summary_json,
                 COUNT(l.id), MIN(CASE WHEN l.valid = 1 THEN l.time_ms END)
          FROM sessions s LEFT JOIN laps l ON l.session_id = s.id
-         GROUP BY s.id ORDER BY s.started_at DESC LIMIT ?1",
+         GROUP BY s.id
+         HAVING COUNT(l.id) > 0 OR s.summary_json LIKE '%\"from\":\"crew\"%' OR s.summary_json LIKE '%\"from\":\"driver\"%'
+         ORDER BY s.started_at DESC LIMIT ?1",
     )?;
     let rows = st.query_map([limit], |r| {
         Ok(SessionRow {
@@ -312,5 +314,21 @@ impl DbHandle {
 
     pub fn send(&self, job: DbJob) {
         let _ = self.tx.send(job);
+    }
+}
+
+#[cfg(test)]
+mod empty_session_tests {
+    use super::*;
+
+    #[test]
+    fn empty_sessions_are_hidden() {
+        let c = open_memory().unwrap();
+        let empty = insert_session(&c, "acc", "spa", "car", "practice").unwrap();
+        end_session(&c, empty, r#"{"radio":[]}"#).unwrap();
+        let talked = insert_session(&c, "acc", "spa", "car", "practice").unwrap();
+        end_session(&c, talked, r#"{"radio":[{"from":"crew","text":"Radio check"}]}"#).unwrap();
+        let ids: Vec<i64> = list_sessions(&c, 10).unwrap().into_iter().map(|s| s.id).collect();
+        assert_eq!(ids, vec![talked]);
     }
 }

@@ -89,6 +89,34 @@ textarea {
   user-select: text;
 }
 
+/* Range slider: filled track + round thumb. */
+input[type="range"].range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"].range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--surface-2) var(--fill, 50%));
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+input[type="range"].range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border-radius: 999px;
+  background: var(--text);
+  border: 3px solid var(--accent);
+}
+input[type="range"].range:focus-visible {
+  outline: none;
+}
+
 .overlay-body {
   background: transparent !important;
 }

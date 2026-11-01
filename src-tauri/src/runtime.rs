@@ -526,7 +526,14 @@ fn start_session(core: &Core, sdb: &mut SessionDb) {
 
 fn end_session(core: &Core, sdb: &mut SessionDb) {
     if let Some(id) = sdb.id.take() {
-        core.db.send(DbJob::EndSession { session_id: id, summary_json: session_summary_json(core) });
+        // Nothing happened (no lap, no radio from crew or driver): do not keep an empty session.
+        let laps = core.state.lock().laps.len();
+        let talked = core.engine.lock().log.iter().any(|e| e.priority != crate::storage::settings::Priority::Spotter);
+        if laps == 0 && !talked {
+            core.db.send(DbJob::DeleteSession { session_id: id });
+        } else {
+            core.db.send(DbJob::EndSession { session_id: id, summary_json: session_summary_json(core) });
+        }
     }
 }
 

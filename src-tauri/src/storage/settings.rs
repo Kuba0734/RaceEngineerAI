@@ -11,7 +11,7 @@ use ts_rs::TS;
 
 use crate::error::AppResult;
 
-pub const SETTINGS_VERSION: u32 = 1;
+pub const SETTINGS_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "snake_case")]
@@ -287,7 +287,7 @@ impl Default for SpotterSettings {
             closing_fast_kmh: 40.0,
             off_in_pits: true,
             ducking: 0.75,
-            pause_crew: true,
+            pause_crew: false,
             in_practice: true,
             in_qualifying: true,
             in_race: true,
@@ -671,6 +671,13 @@ pub struct OverlaySettings {
     pub monitor: Option<String>,
     /// Show the spotter radar only while another car is nearby.
     pub radar_auto_hide: bool,
+    /// Background opacity of the widget panels (0 = transparent).
+    pub panel_opacity: f32,
+    pub map_size: u32,
+    pub radar_size: u32,
+    pub standings_rows: u32,
+    pub delta_show_laps: bool,
+    pub radio_show_text: bool,
     /// Default layout; per-game layouts live in `games.<id>.overlay_layout`.
     pub layout: Vec<WidgetLayout>,
 }
@@ -702,6 +709,12 @@ impl Default for OverlaySettings {
             edit_hotkey: "Ctrl+Shift+O".into(),
             monitor: None,
             radar_auto_hide: true,
+            panel_opacity: 0.78,
+            map_size: 260,
+            radar_size: 180,
+            standings_rows: 9,
+            delta_show_laps: true,
+            radio_show_text: true,
             layout: default_layout(),
         }
     }
@@ -794,6 +807,12 @@ pub fn migrate(mut v: serde_json::Value) -> serde_json::Value {
             }
         }
     }
+    if version < 2 {
+        // v2: the engineer gets quieter (ducking) while the spotter talks instead of pausing.
+        if let Some(sp) = v.get_mut("spotter").and_then(|s| s.as_object_mut()) {
+            sp.insert("pause_crew".into(), false.into());
+        }
+    }
     if let Some(obj) = v.as_object_mut() {
         obj.insert("version".into(), SETTINGS_VERSION.into());
     }
@@ -846,6 +865,13 @@ mod tests {
         assert_eq!(s.language, Language::En);
         assert_eq!(s.spotter.name, "Sam");
         assert!(s.spotter.say_clear);
+    }
+
+    #[test]
+    fn migrates_v1_to_ducking() {
+        let v = serde_json::json!({"version": 1, "spotter": {"pause_crew": true}});
+        let s: Settings = serde_json::from_value(migrate(v)).unwrap();
+        assert!(!s.spotter.pause_crew);
     }
 
     #[test]

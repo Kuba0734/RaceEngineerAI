@@ -12,7 +12,7 @@ import { Radar } from "./widgets/Radar";
 import { Standings } from "./widgets/Standings";
 import { Fuel } from "./widgets/Fuel";
 
-function Widget({ layout, edit, onChange, children, title, hidden = false }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean }) {
+function Widget({ layout, edit, onChange, children, title, hidden = false, panel }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean; panel: number }) {
   const x = useMotionValue(layout.x);
   const y = useMotionValue(layout.y);
   useEffect(() => {
@@ -25,8 +25,8 @@ function Widget({ layout, edit, onChange, children, title, hidden = false }: { l
       dragMomentum={false}
       onDragEnd={() => onChange({ ...layout, x: Math.round(x.get()), y: Math.round(y.get()) })}
       onWheel={(e) => edit && onChange({ ...layout, scale: Math.min(2.5, Math.max(0.4, layout.scale - Math.sign(e.deltaY) * 0.05)) })}
-      style={{ x, y, scale: layout.scale, opacity: hidden && !edit ? 0 : layout.opacity, transformOrigin: "top left" }}
-      className={cx("absolute left-0 top-0 rounded-2xl border bg-[rgba(10,11,14,0.78)] p-3 text-fg", edit ? "cursor-move border-accent/80 ring-2 ring-accent/30" : "border-line/60")}
+      style={{ x, y, scale: layout.scale, opacity: hidden && !edit ? 0 : layout.opacity, transformOrigin: "top left", backgroundColor: `rgba(10,11,14,${edit ? Math.max(panel, 0.6) : panel})` }}
+      className={cx("absolute left-0 top-0 rounded-2xl border p-3 text-fg", edit ? "cursor-move border-accent/80 ring-2 ring-accent/30" : panel > 0.05 ? "border-line/60" : "border-transparent")}
     >
       {edit && <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-accent">{title} · {Math.round(layout.scale * 100)} %</div>}
       {children}
@@ -96,15 +96,16 @@ export default function Overlay() {
     setLocal({ game, layout: next });
     void api.saveOverlayLayout(game, next);
   };
-  const anim = settings.overlay.animations;
+  const o = settings.overlay;
+  const anim = o.animations;
   const content = (id: string): ReactNode => {
     switch (id) {
       case "map":
-        return <TrackMap liveRef={ref} size={260} />;
+        return <TrackMap liveRef={ref} size={o.map_size} />;
       case "radar":
-        return <Radar liveRef={ref} size={180} onActive={setRadarActive} />;
+        return <Radar liveRef={ref} size={o.radar_size} onActive={setRadarActive} />;
       case "standings":
-        return <div className="w-[360px]">{frame?.standings ? <Standings rows={frame.standings} compact max={9} animate={anim} /> : <span className="text-xs text-dim">{t("session.noStandings")}</span>}</div>;
+        return <div className="w-[360px]">{frame?.standings ? <Standings rows={frame.standings} compact max={o.standings_rows} animate={anim} /> : <span className="text-xs text-dim">{t("session.noStandings")}</span>}</div>;
       case "fuel":
         return <Fuel fuel={frame?.fuel} fuelNow={frame?.fuel_l ?? 0} />;
       case "delta": {
@@ -112,18 +113,20 @@ export default function Overlay() {
         return (
           <div className="min-w-48 text-center">
             <div className={cx("num text-3xl font-semibold", d <= 0 ? "text-ok" : "text-danger")}>{d > 0 ? "+" : ""}{d.toFixed(2)}</div>
-            <div className="num mt-1 flex justify-between gap-4 text-xs text-dim">
-              <span>{lapTime(frame?.last_lap_ms)}</span>
-              <span className="text-purple">{lapTime(frame?.best_lap_ms)}</span>
-            </div>
+            {o.delta_show_laps && (
+              <div className="num mt-1 flex justify-between gap-4 text-xs text-dim">
+                <span>{lapTime(frame?.last_lap_ms)}</span>
+                <span className="text-purple">{lapTime(frame?.best_lap_ms)}</span>
+              </div>
+            )}
           </div>
         );
       }
       case "radio":
         return (
-          <div className="flex w-[300px] items-center gap-3">
+          <div className={cx("flex items-center gap-3", o.radio_show_text && "w-[300px]")}>
             <span className={cx("h-3 w-3 shrink-0 rounded-full", frame?.speaking ? "bg-accent" : frame?.listening === "recording" ? "bg-data" : frame?.listening === "wake_window" ? "bg-warn" : "bg-line")} />
-            <span className="line-clamp-2 text-sm">{lastRadio?.text ?? t("ov.radioIdle")}</span>
+            {o.radio_show_text && <span className="line-clamp-2 text-sm">{lastRadio?.text ?? t("ov.radioIdle")}</span>}
           </div>
         );
       default:
@@ -140,7 +143,7 @@ export default function Overlay() {
         </div>
       )}
       {layout.filter((l) => l.visible).map((l) => (
-        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} hidden={l.id === "radar" && settings.overlay.radar_auto_hide && !radarActive}>
+        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} hidden={l.id === "radar" && o.radar_auto_hide && !radarActive}>
           {content(l.id)}
         </Widget>
       ))}
