@@ -554,6 +554,12 @@ pub struct SessionStartSettings {
     pub greeting: bool,
     pub greeting_scope: GreetingScope,
     pub spotter_intro: bool,
+    /// Engineer stays quiet from shortly before the race start until the first lap is done.
+    pub race_start_quiet: bool,
+    /// Share of the formation lap after which the silence starts.
+    pub formation_quiet_from: f32,
+    /// Race laps of silence after the start.
+    pub race_start_quiet_laps: f32,
 }
 
 impl Default for SessionStartSettings {
@@ -564,6 +570,9 @@ impl Default for SessionStartSettings {
             greeting: true,
             greeting_scope: GreetingScope::Short,
             spotter_intro: true,
+            race_start_quiet: true,
+            formation_quiet_from: 0.75,
+            race_start_quiet_laps: 1.0,
         }
     }
 }

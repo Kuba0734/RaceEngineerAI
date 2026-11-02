@@ -152,6 +152,15 @@ export function SessionStartSection() {
         <Segmented value={ss.greeting_scope} onChange={(v) => set({ greeting_scope: v })} options={[{ value: "short", label: t("start.short") }, { value: "with_weather", label: t("start.weather") }, { value: "with_briefing", label: t("start.briefing") }]} />
       </Field>
       <Toggle checked={ss.spotter_intro} onChange={(v) => set({ spotter_intro: v })} label={t("start.spotterIntro")} />
+      <div className="mt-2 border-t border-line/60 pt-2">
+        <Toggle checked={ss.race_start_quiet} onChange={(v) => set({ race_start_quiet: v })} label={t("start.quiet")} hint={t("start.quietHint")} />
+        <Field label={t("start.quietFrom")} hint={t("start.quietFromHint")}>
+          <Slider value={ss.formation_quiet_from} min={0} max={1} step={0.05} onChange={(v) => set({ formation_quiet_from: v })} format={(v) => `${Math.round(v * 100)} %`} />
+        </Field>
+        <Field label={t("start.quietLaps")}>
+          <Slider value={ss.race_start_quiet_laps} min={0.5} max={3} step={0.5} onChange={(v) => set({ race_start_quiet_laps: v })} format={(v) => v.toFixed(1)} />
+        </Field>
+      </div>
     </Card>
   );
 }

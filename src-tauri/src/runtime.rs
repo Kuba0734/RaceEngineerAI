@@ -417,6 +417,32 @@ fn speak_requests(core: &Core, reqs: Vec<CallRequest>) {
     }
 }
 
+/// Silence from shortly before the race start until the first race lap is done.
+fn update_start_hush(core: &Core, mem: &mut Memory, deferred: &mut Deferred) {
+    use crate::calls::start_hush::HushInput;
+    use crate::storage::settings::SessionKind;
+    let input = {
+        let settings = core.settings.read();
+        let st = core.state.lock();
+        let ss = &settings.session_start;
+        HushInput {
+            enabled: ss.race_start_quiet,
+            race: st.session.session_type.kind() == SessionKind::Race,
+            phase: st.session.phase,
+            completed_laps: st.frame.completed_laps,
+            spline: st.frame.spline,
+            speed_kmh: st.frame.speed_kmh,
+            formation_quiet_from: ss.formation_quiet_from,
+            quiet_laps: ss.race_start_quiet_laps,
+        }
+    };
+    let quiet = mem.start_hush.update(&input);
+    if quiet {
+        deferred.clear();
+    }
+    core.engine.lock().start_hush = quiet;
+}
+
 /// Lap-end calls waiting for their slot on the next lap: (request, lap, spline target).
 pub type Deferred = Vec<(CallRequest, i32, f32)>;
 
@@ -447,6 +473,7 @@ fn release_deferred(core: &Core, deferred: &mut Deferred) {
 }
 
 fn run_tick(core: &Core, mem: &mut Memory, deferred: &mut Deferred) {
+    update_start_hush(core, mem, deferred);
     release_deferred(core, deferred);
     let reqs = {
         let settings = core.settings.read();

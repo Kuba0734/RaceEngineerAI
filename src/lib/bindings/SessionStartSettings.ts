@@ -2,4 +2,16 @@
 import type { GreetingScope } from "./GreetingScope";
 import type { RadioCheckWhen } from "./RadioCheckWhen";
 
-export type SessionStartSettings = { radio_check: RadioCheckWhen, await_reply: boolean, greeting: boolean, greeting_scope: GreetingScope, spotter_intro: boolean, };
+export type SessionStartSettings = { radio_check: RadioCheckWhen, await_reply: boolean, greeting: boolean, greeting_scope: GreetingScope, spotter_intro: boolean, 
+/**
+ * Engineer stays quiet from shortly before the race start until the first lap is done.
+ */
+race_start_quiet: boolean, 
+/**
+ * Share of the formation lap after which the silence starts.
+ */
+formation_quiet_from: number, 
+/**
+ * Race laps of silence after the start.
+ */
+race_start_quiet_laps: number, };

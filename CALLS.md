@@ -31,6 +31,8 @@ Die Settings-Seite zeigt den Katalog gruppiert nach den Abschnitten unten, mit S
 | `session.greeting` | „Willkommen in Spa. Training, 60 Minuten, trocken, 24 Grad Strecke.“ | Session-Info + Wetter | an/aus, Umfang (kurz / mit Wetter / mit Briefing) |
 | `session.spotter_intro` | „Spotter ist da, ich pass auf die Seiten auf.“ | Session-Beginn | an/aus |
 
+**Funkstille beim Rennstart:** Der Ingenieur spricht bis kurz vor dem Start (einstellbar: Anteil der Formationsrunde) und schweigt dann bis nach der ersten Rennrunde (einstellbar). Der Spotter, kritische Meldungen und Antworten auf Fragen des Fahrers bleiben aktiv.
+
 ## 1. Spotter
 | call_id | Beispiel | Daten | Einstellbar |
 |---|---|---|---|

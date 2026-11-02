@@ -102,6 +102,8 @@ pub struct Memory {
     pub quali_time_said: bool,
     pub push_said_lap: Option<i32>,
     pub traffic_said_lap: Option<i32>,
+    // race start silence
+    pub start_hush: crate::calls::start_hush::StartHush,
 }
 
 impl Memory {

@@ -80,6 +80,8 @@ pub struct CallEngine {
     say_counter: u32,
     /// After the chequered flag only result calls are said.
     pub race_finished: bool,
+    /// Silence around the race start: only critical calls and answers to the driver.
+    pub start_hush: bool,
 }
 
 impl CallEngine {
@@ -99,6 +101,7 @@ impl CallEngine {
             phrasing: SpotterPhrasing::Normal,
             say_counter: 0,
             race_finished: false,
+            start_hush: false,
         };
         e.refresh(settings);
         e
@@ -124,6 +127,7 @@ impl CallEngine {
 
     pub fn reset_session(&mut self) {
         self.race_finished = false;
+        self.start_hush = false;
         self.last_said.clear();
         self.crew.reset_session();
     }
@@ -189,6 +193,9 @@ impl CallEngine {
         let e = self.effective.get(req.call_id)?.clone();
         const AFTER_FINISH: [&str; 3] = ["flag.checkered", "race.summary", "penalty.received"];
         if self.race_finished && !req.on_request && !AFTER_FINISH.contains(&req.call_id) {
+            return None;
+        }
+        if self.start_hush && !req.on_request && e.priority < Priority::Critical {
             return None;
         }
         if !req.on_request {
@@ -306,6 +313,20 @@ mod tests {
         let k = SessionKind::Race;
         assert!(e.submit(CallRequest::new("fuel.critical").p("laps", "1"), 0.0, 1, 0.0, k).is_none());
         assert!(e.submit(CallRequest::new("flag.checkered").p("position", "3"), 0.0, 1, 0.0, k).is_some());
+    }
+
+    #[test]
+    fn start_hush_keeps_only_critical_and_requests() {
+        let s = Settings::default();
+        let mut e = CallEngine::new(&s);
+        e.start_hush = true;
+        let k = SessionKind::Race;
+        assert!(e.submit(CallRequest::new("race.time_left").p("minutes", "10").p("laps", "5"), 0.0, 0, 0.0, k).is_none());
+        assert!(e.submit(CallRequest::new("flag.green"), 0.0, 0, 0.0, k).is_none());
+        assert!(e.submit(CallRequest::new("fuel.critical").p("laps", "1"), 0.0, 0, 0.0, k).is_some());
+        let mut asked = CallRequest::new("answer.position").p("position", "3");
+        asked.on_request = true;
+        assert!(e.submit(asked, 0.0, 0, 0.0, k).is_some());
     }
 
     #[test]
