@@ -75,6 +75,18 @@
       "speakers": 1
     },
     {
+      "id": "en_US-bryce-medium",
+      "lang": "en",
+      "name": "Bryce",
+      "gender": "m",
+      "license": "Public domain",
+      "tag": "tts-models",
+      "archive": "vits-piper-en_US-bryce-medium.tar.bz2",
+      "sha256": "f35bb77ddecdf229798e850d1c77ded839d4179879be8b90da5f82e7beb538f2",
+      "size": 67278133,
+      "speakers": 1
+    },
+    {
       "id": "en_US-john-medium",
       "lang": "en",
       "name": "John",

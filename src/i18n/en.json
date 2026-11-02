@@ -1,7 +1,7 @@
 {
  "about.checkUpdate": "Check for updates",
  "about.credits": "Licenses & credits",
- "about.creditsText": "Speech: Piper voices via sherpa-onnx (Apache-2.0). Voices: Thorsten (CC0), Kerstin (CC0), Northern English Male (CC-BY-SA 4.0, OpenSLR 83), VCTK, Aru and Alba (CC-BY 4.0), Cori & John (public domain, LibriVox), Joe (CC0). Silero VAD (MIT). Speech recognition & AI: Groq. Assetto Corsa Competizione is a trademark of Kunos Simulazioni.",
+ "about.creditsText": "Speech: Piper voices via sherpa-onnx (Apache-2.0). Voices: Thorsten (CC0), Kerstin (CC0), Northern English Male (CC-BY-SA 4.0, OpenSLR 83), VCTK, Aru and Alba (CC-BY 4.0), Cori & John (public domain, LibriVox), Bryce (public domain), Joe (CC0). Silero VAD (MIT). Speech recognition & AI: Groq. Assetto Corsa Competizione is a trademark of Kunos Simulazioni.",
  "about.logs": "Logs",
  "about.models": "Voices",
  "about.settings": "Settings",

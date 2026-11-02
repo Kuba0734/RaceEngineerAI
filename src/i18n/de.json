@@ -1,7 +1,7 @@
 {
  "about.checkUpdate": "Nach Updates suchen",
  "about.credits": "Lizenzen & Danksagungen",
- "about.creditsText": "Sprachausgabe: Piper-Stimmen über sherpa-onnx (Apache-2.0). Stimmen: Thorsten (CC0), Kerstin (CC0), Northern English Male (CC-BY-SA 4.0, OpenSLR 83), VCTK, Aru und Alba (CC-BY 4.0), Cori & John (Public Domain, LibriVox), Joe (CC0). Silero VAD (MIT). Spracherkennung & KI: Groq. Assetto Corsa Competizione ist eine Marke von Kunos Simulazioni.",
+ "about.creditsText": "Sprachausgabe: Piper-Stimmen über sherpa-onnx (Apache-2.0). Stimmen: Thorsten (CC0), Kerstin (CC0), Northern English Male (CC-BY-SA 4.0, OpenSLR 83), VCTK, Aru und Alba (CC-BY 4.0), Cori & John (Public Domain, LibriVox), Bryce (Public Domain), Joe (CC0). Silero VAD (MIT). Spracherkennung & KI: Groq. Assetto Corsa Competizione ist eine Marke von Kunos Simulazioni.",
  "about.logs": "Protokolle",
  "about.models": "Stimmen",
  "about.settings": "Einstellungen",

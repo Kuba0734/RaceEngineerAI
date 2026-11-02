@@ -15,6 +15,7 @@ Katalog: `src-tauri/resources/models.json`. Quelle: GitHub-Releases `k2-fsa/sher
 | en_GB-northern_english_male-medium | CC-BY-SA 4.0 (OpenSLR 83) – Namensnennung in „Über“ |
 | en_GB-cori-medium, en_US-john-medium | Public Domain (LibriVox) |
 | en_US-joe-medium | CC0 |
+| en_US-bryce-medium | Public Domain |
 | silero_vad.onnx | MIT |
 | sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01 | Apache-2.0 |
 
