@@ -55,6 +55,10 @@ pub struct TyreView {
     pub pressure_min: f32,
     pub pressure_max: f32,
     pub brake_hot: f32,
+    /// Values measured at the last pit stop (game has no live tyre data).
+    pub from_pit: bool,
+    /// Tread left of the most worn zone per wheel, % (0 = unknown).
+    pub wear_pct: [f32; 4],
 }
 
 /// How many laps the live frame carries for the lap time widget.
@@ -175,9 +179,16 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         tyres: heavy.then(|| {
             let c = crate::games::cars::class_def(&st.session.car_class);
             let window = if f.rain_tyres { c.wet } else { c.dry };
+            // Without live tyre data: the values measured at the last stop (middle of the tread).
+            let pit = f.tyre_check.filter(|_| !st.has("hasTyreCoreTemps"));
             TyreView {
-                core_temp_c: f.wheels.map(|w| w.core_temp_c),
-                pressure_psi: f.wheels.map(|w| w.pressure_psi),
+                core_temp_c: match pit {
+                    Some(c) => c.temp_c.map(|z| z[1]),
+                    None => f.wheels.map(|w| w.core_temp_c),
+                },
+                pressure_psi: if pit.is_some() { [0.0; 4] } else { f.wheels.map(|w| w.pressure_psi) },
+                from_pit: pit.is_some(),
+                wear_pct: pit.map(|c| c.wear.map(|z| z.iter().copied().fold(1.0f32, f32::min) * 100.0)).unwrap_or([0.0; 4]),
                 brake_temp_c: f.wheels.map(|w| w.brake_temp_c),
                 temp_cold: c.core_temp_cold,
                 temp_hot: c.core_temp_hot,

@@ -260,6 +260,7 @@ pub fn build_frame(p: &SPageFilePhysics, g: &SPageFileGraphic, t_ms: u64) -> Tel
         near_cars: Vec::new(),
         laps_left: None,
         setup_menu: g.isSetupMenuVisible != 0,
+        ..Default::default()
     }
 }
 
@@ -289,6 +290,7 @@ impl AccProvider {
             session_end_ms: rt.map(|r| f64::from(r.session_end_time_ms)).unwrap_or(0.0),
             dry_tyres: shm::wstr(&s.dryTyresName),
             wet_tyres: shm::wstr(&s.wetTyresName),
+            ..Default::default()
         }
     }
 
@@ -332,6 +334,7 @@ impl AccProvider {
                     is_player: i32::from(u.car_index) == player_id,
                     team: info.map(|i| i.team_name.clone()).unwrap_or_default(),
                     delta_ms: u.delta,
+                    ..Default::default()
                 }
             })
             .collect()

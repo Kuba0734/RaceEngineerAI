@@ -183,6 +183,65 @@ pub struct CarPos {
     pub z: f32,
 }
 
+/// Engine temperatures and warning lights.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Engine {
+    pub water_temp_c: f32,
+    pub oil_temp_c: f32,
+    pub water_hot: bool,
+    pub oil_hot: bool,
+    pub oil_pressure_low: bool,
+    pub fuel_pressure_low: bool,
+    pub stalled: bool,
+}
+
+/// Repair work the pit crew still has to do (games that report repair times).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Repair {
+    /// Repairs that must be done before rejoining (s).
+    pub mandatory_s: f32,
+    /// Additional repairs that can be skipped (s).
+    pub optional_s: f32,
+    /// None = not limited / unknown.
+    pub fast_repairs_left: Option<i32>,
+}
+
+/// What the next pit stop is set to do.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct PitMenu {
+    pub fuel_l: f32,
+    /// Tyre change FL, FR, RL, RR.
+    pub tyres: [bool; 4],
+    pub fast_repair: bool,
+    pub windshield: bool,
+}
+
+/// Tyre values measured in the pits, for games without live tyre data.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TyreCheck {
+    /// Completed laps when measured.
+    pub lap: i32,
+    /// Per wheel FL, FR, RL, RR: inner, middle, outer (°C).
+    pub temp_c: [[f32; 3]; 4],
+    /// Tread left per wheel and zone (inner, middle, outer), 0–1.
+    pub wear: [[f32; 3]; 4],
+    pub cold_pressure_psi: [f32; 4],
+}
+
+/// Safety car / pace car situation of the player.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Pacing {
+    pub green_next_lap: bool,
+    pub free_pass: bool,
+    pub waved_around: bool,
+    pub end_of_line: bool,
+}
+
 /// Side-by-side state reported by games with their own spotter (iRacing `CarLeftRight`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -281,6 +340,23 @@ pub struct TelemetryFrame {
     /// The game's setup/start menu is open: the driver is not driving yet.
     #[serde(default)]
     pub setup_menu: bool,
+    #[serde(default)]
+    pub engine: Engine,
+    #[serde(default)]
+    pub repair: Option<Repair>,
+    #[serde(default)]
+    pub pit_menu: Option<PitMenu>,
+    /// Latest tyre values measured in the pits (None = never / game has live values).
+    #[serde(default)]
+    pub tyre_check: Option<TyreCheck>,
+    /// Incident points of the driver (iRacing).
+    #[serde(default)]
+    pub incidents: Option<i32>,
+    /// Race control allows wet tyres (None = no such rule in the game).
+    #[serde(default)]
+    pub wet_tyres_allowed: Option<bool>,
+    #[serde(default)]
+    pub pacing: Pacing,
 }
 
 /// Data that changes rarely. Sent when it changes.
@@ -306,6 +382,10 @@ pub struct SessionInfo {
     pub session_end_ms: f64,
     pub dry_tyres: String,
     pub wet_tyres: String,
+    /// Incident points that lead to a penalty or disqualification (None = unlimited/unknown).
+    #[serde(default)]
+    #[ts(optional)]
+    pub incident_limit: Option<i32>,
 }
 
 /// Lower-rate state of one car (broadcasting API or equivalent).
@@ -337,6 +417,14 @@ pub struct CarState {
     pub is_player: bool,
     pub team: String,
     pub delta_ms: i32,
+    /// Official race gap to the leader from the game (s).
+    #[serde(default)]
+    #[ts(optional)]
+    pub gap_to_leader_s: Option<f32>,
+    /// On wet tyres (None = unknown).
+    #[serde(default)]
+    #[ts(optional)]
+    pub wet_tyres: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

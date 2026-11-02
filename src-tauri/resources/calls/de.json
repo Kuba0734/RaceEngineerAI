@@ -566,5 +566,93 @@
  "answer.no_live": [
   "Ich hab gerade keine Live-Daten.",
   "Kein Spiel aktiv, keine Daten."
+ ],
+ "penalty.incidents": [
+  "Incident, du stehst jetzt bei {count}.",
+  "Das war ein Incident, jetzt {count}."
+ ],
+ "penalty.incidents:limit": [
+  "Incident, jetzt {count} von {limit}. Noch {left} bis zur Strafe, ruhig bleiben.",
+  "Vorsicht, {count} Incidents, nur noch {left} bis zum Limit."
+ ],
+ "car.engine:water_temp": [
+  "Wassertemperatur zu hoch, {temp}. Nimm Windschatten raus, lass ihn atmen.",
+  "Motor wird heiß, Wasser bei {temp}."
+ ],
+ "car.engine:oil_temp": [
+  "Öltemperatur zu hoch, {temp}. Etwas früher schalten.",
+  "Öl wird heiß, {temp}."
+ ],
+ "car.engine:oil_pressure": [
+  "Öldruck-Warnung! Behalt die Anzeigen im Blick.",
+  "Warnung Öldruck, das sieht nicht gut aus."
+ ],
+ "car.engine:fuel_pressure": [
+  "Benzindruck-Warnung.",
+  "Warnung Spritdruck."
+ ],
+ "damage.repair:mandatory": [
+  "Schaden. Pflichtreparatur in der Box, etwa {seconds} Sekunden.{optional}",
+  "Wir müssen reparieren, ungefähr {seconds} Sekunden Standzeit.{optional}"
+ ],
+ "damage.repair:optional": [
+  "Leichter Schaden, optionale Reparatur etwa {seconds} Sekunden.",
+  "Kleiner Schaden, reparieren würde etwa {seconds} Sekunden kosten."
+ ],
+ "damage.repair:optional_part": [
+  " Dazu optional {seconds} Sekunden."
+ ],
+ "damage.repair:fast_repair_part": [
+  " Du hast noch {count} Fast Repair."
+ ],
+ "pit.menu_check:ok": [
+  "Box ist eingestellt: {fuel}, {tyres}.",
+  "Boxenmenü passt: {fuel}, {tyres}."
+ ],
+ "pit.menu_check:fuel_low": [
+  "Achtung, nur {fuel} eingestellt, du brauchst {needed}.",
+  "Zu wenig Sprit im Boxenmenü: {fuel}, nötig sind {needed}."
+ ],
+ "pit.menu_check:tyres_all": [
+  "vier neue Reifen"
+ ],
+ "pit.menu_check:tyres_none": [
+  "keine Reifen"
+ ],
+ "pit.menu_check:tyres_some": [
+  "{count} Reifen"
+ ],
+ "pit.menu_check:no_fuel": [
+  "kein Sprit"
+ ],
+ "tyre.after_stop": [
+  "Reifen beim Stopp gemessen: {wheel} am meisten runter, noch {wear} Prozent.{spread}",
+  "Reifencheck aus der Box: {wheel} hat noch {wear} Prozent.{spread}"
+ ],
+ "tyre.after_stop:spread_inner": [
+  " {wheel} innen {delta} heißer als außen."
+ ],
+ "tyre.after_stop:spread_outer": [
+  " {wheel} außen {delta} heißer als innen."
+ ],
+ "flag.pace:green_next_lap": [
+  "Safety Car kommt rein, nächste Runde ist grün. Bereit machen.",
+  "Pace Car geht raus, Restart nächste Runde."
+ ],
+ "flag.pace:free_pass": [
+  "Du bekommst den Free Pass, Runde zurück.",
+  "Free Pass für dich, du holst die Runde zurück."
+ ],
+ "flag.pace:waved_around": [
+  "Wave Around, du darfst dich zurückrunden.",
+  "Du wirst rumgewunken, ab ans Ende der Schlange."
+ ],
+ "flag.pace:end_of_line": [
+  "Du musst ans Ende der Schlange.",
+  "Strafe: hinten anstellen, ans Ende der Schlange."
+ ],
+ "weather.wet_declared": [
+  "Rennleitung hat nass freigegeben, Regenreifen sind erlaubt.",
+  "Strecke ist offiziell nass, Regenreifen frei."
  ]
 }

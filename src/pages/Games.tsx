@@ -5,9 +5,9 @@ import { api, type BroadcastingStatus } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
 import type { GameDef } from "@/lib/bindings/GameDef";
 import type { GameSettings } from "@/lib/bindings/GameSettings";
-import { Badge, Button, Card, Toggle, cx, useAsync } from "@/components/ui";
+import { Badge, Button, Card, Field, NumberInput, Toggle, cx, useAsync } from "@/components/ui";
 
-const DEFAULT_GAME: GameSettings = { enabled: true, broadcasting_port: 0, broadcasting_password: "" };
+const DEFAULT_GAME: GameSettings = { enabled: true, broadcasting_port: 0, broadcasting_password: "", mandatory_stops: 0, pit_window_open_min: 0, pit_window_close_min: 0 };
 
 function AccSetup() {
   const { t } = useTranslation();
@@ -99,6 +99,19 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-dim">
                 {hints.map((h) => <li key={h}>{h}</li>)}
               </ul>
+            )}
+            {!g.capabilities.hasPitWindow && (
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                <Field label={t("games.rules.mandatoryStops")} hint={t("games.rules.hint")}>
+                  <NumberInput value={gs.mandatory_stops} min={0} max={5} onChange={(v) => set((x) => ({ ...x, mandatory_stops: Math.max(0, Math.round(v)) }))} />
+                </Field>
+                <Field label={t("games.rules.windowOpen")}>
+                  <NumberInput value={gs.pit_window_open_min} min={0} max={600} onChange={(v) => set((x) => ({ ...x, pit_window_open_min: Math.max(0, v) }))} />
+                </Field>
+                <Field label={t("games.rules.windowClose")}>
+                  <NumberInput value={gs.pit_window_close_min} min={0} max={600} onChange={(v) => set((x) => ({ ...x, pit_window_close_min: Math.max(0, v) }))} />
+                </Field>
+              </div>
             )}
           </div>
         )}

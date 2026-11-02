@@ -275,6 +275,7 @@ impl MockProvider {
             near_cars: Vec::new(),
             laps_left: None,
             setup_menu: false,
+            ..Default::default()
         }
     }
 
@@ -315,6 +316,7 @@ impl MockProvider {
                     is_player: c.id == 0,
                     team: String::new(),
                     delta_ms: 0,
+                    ..Default::default()
                 }
             })
             .collect()
@@ -374,6 +376,7 @@ impl TelemetryProvider for MockProvider {
                 session_end_ms: 3_600_000.0,
                 dry_tyres: "DHF".into(),
                 wet_tyres: "WH".into(),
+                ..Default::default()
             }));
             out.push(ProviderEvent::SecondaryConnected(true));
         }

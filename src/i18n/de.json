@@ -673,5 +673,21 @@
  "widget.radar": "Spotter-Radar",
  "widget.radio": "Funk-Anzeige",
  "widget.standings": "Rangliste",
- "widget.tyres": "Reifen"
+ "widget.tyres": "Reifen",
+ "call.penalty.incidents": "Incident-Punkte",
+ "call.car.engine": "Motorwarnungen",
+ "call.damage.repair": "Reparaturzeit",
+ "call.pit.menu_check": "Boxenmenü prüfen",
+ "call.tyre.after_stop": "Reifencheck beim Stopp",
+ "call.flag.pace": "Safety Car / Restart",
+ "call.weather.wet_declared": "Nass freigegeben",
+ "games.cap.hasIncidents": "Incident-Punkte",
+ "games.cap.hasRepairTimes": "Reparaturzeiten",
+ "games.cap.hasPitMenu": "Boxenmenü",
+ "games.cap.hasPitTyreCheck": "Reifenwerte beim Stopp",
+ "wd.tyresFromPit": "Stand letzter Boxenstopp",
+ "games.rules.mandatoryStops": "Pflichtstopps",
+ "games.rules.windowOpen": "Boxenfenster ab (Min.)",
+ "games.rules.windowClose": "Boxenfenster bis (Min.)",
+ "games.rules.hint": "Das Spiel meldet diese Regeln nicht – trag sie aus der Serien-Ausschreibung ein. 0 = keine."
 }

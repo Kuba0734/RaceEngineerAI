@@ -108,6 +108,9 @@ pub struct RaceState {
     pub weather_at_start: Option<Weather>,
     /// What the running game provides (None = everything, e.g. demo/replay).
     pub caps: Option<crate::games::registry::Capabilities>,
+    /// Own stops in the pit box this session (for mandatory stops from the settings).
+    pub own_stops: u32,
+    was_in_box: bool,
     // Internal edge detection.
     last_completed_laps: i32,
     last_sector_index: i32,
@@ -169,6 +172,8 @@ impl RaceState {
             race_start_position: None,
             weather_at_start: None,
             caps: None,
+            own_stops: 0,
+            was_in_box: false,
             last_completed_laps: -1,
             last_sector_index: -1,
             sector_times: [None; 3],
@@ -334,7 +339,8 @@ impl RaceState {
         self.cars.iter().find(|c| c.id == id)
     }
 
-    pub fn on_frame(&mut self, f: TelemetryFrame, settings: &Settings, spotter_out: &mut Vec<SpotterCall>, events: &mut Vec<RaceEvent>) {
+    pub fn on_frame(&mut self, mut f: TelemetryFrame, settings: &Settings, spotter_out: &mut Vec<SpotterCall>, events: &mut Vec<RaceEvent>) {
+        self.apply_pit_rules(&mut f, settings);
         let t = f.t_ms as f64 / 1000.0;
         let kind = self.session.session_type.kind();
         use crate::storage::settings::SessionKind;
@@ -472,6 +478,28 @@ impl RaceState {
         self.last_completed_laps = f.completed_laps;
         self.frame = f;
         self.has_frame = true;
+    }
+
+    /// Mandatory stops and pit window from the settings, for games that do not report them.
+    fn apply_pit_rules(&mut self, f: &mut TelemetryFrame, settings: &Settings) {
+        if self.has("hasPitWindow") {
+            return;
+        }
+        let Some(g) = settings.games.get(&self.session.game_id) else { return };
+        let race = self.session.session_type.kind() == crate::storage::settings::SessionKind::Race;
+        if f.in_pit_box && !self.was_in_box && race && f.status == SimStatus::Live {
+            self.own_stops += 1;
+        }
+        self.was_in_box = f.in_pit_box;
+        if g.mandatory_stops > 0 && race {
+            f.mandatory_pit_done = self.own_stops >= g.mandatory_stops;
+            f.missing_mandatory_pits = g.mandatory_stops.saturating_sub(self.own_stops) as i32;
+        }
+        let (open, close) = (g.pit_window_open_min, g.pit_window_close_min);
+        if race && close > open {
+            self.session.pit_window_start_ms = (open * 60_000.0) as i32;
+            self.session.pit_window_end_ms = (close * 60_000.0) as i32;
+        }
     }
 
     fn complete_lap(&mut self, f: &TelemetryFrame, settings: &Settings, events: &mut Vec<RaceEvent>) {

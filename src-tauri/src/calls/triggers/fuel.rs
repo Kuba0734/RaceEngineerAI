@@ -7,7 +7,29 @@ use crate::race::pit;
 use crate::race::state::RaceEvent;
 use crate::storage::settings::SessionKind;
 
+/// On the way into the pits: what the stop is set to do and whether the fuel is enough.
+fn pit_menu_check(ctx: &mut Ctx) {
+    let s = ctx.state;
+    let Some(m) = s.frame.pit_menu else { return };
+    let needed = s.fuel_strategy(ctx.settings).refuel_l.max(0.0);
+    let tyres = match m.tyres.iter().filter(|t| **t).count() {
+        4 => ctx.frag("pit.menu_check:tyres_all", &[]),
+        0 => ctx.frag("pit.menu_check:tyres_none", &[]),
+        n => ctx.frag("pit.menu_check:tyres_some", &[("count", n.to_string())]),
+    };
+    let fuel = if m.fuel_l > 0.0 { ctx.fmt.fuel(m.fuel_l) } else { ctx.frag("pit.menu_check:no_fuel", &[]) };
+    let r = if needed > 0.5 && m.fuel_l + 0.5 < needed {
+        CallRequest::new("pit.menu_check").variant("fuel_low").p("fuel", fuel).p("needed", ctx.fmt.fuel(needed))
+    } else {
+        CallRequest::new("pit.menu_check").variant("ok").p("fuel", fuel).p("tyres", tyres)
+    };
+    ctx.push(r);
+}
+
 pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
+    if matches!(ev, RaceEvent::PitEntry) {
+        pit_menu_check(ctx);
+    }
     let s = ctx.state;
     match ev {
         RaceEvent::LapCompleted(_) => {

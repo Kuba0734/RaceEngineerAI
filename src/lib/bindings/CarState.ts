@@ -4,4 +4,12 @@ import type { CarLocation } from "./CarLocation";
 /**
  * Lower-rate state of one car (broadcasting API or equivalent).
  */
-export type CarState = { id: number, race_number: number, position: number, class_position: number, track_position: number, laps: number, spline: number, x: number, z: number, yaw: number, speed_kmh: number, location: CarLocation, last_lap_ms: number | null, best_lap_ms: number | null, current_lap_ms: number | null, last_splits: [number | null, number | null, number | null], best_splits: [number | null, number | null, number | null], driver: string, driver_short: string, car_model: string, car_brand: string, cup_category: number, is_player: boolean, team: string, delta_ms: number, };
+export type CarState = { id: number, race_number: number, position: number, class_position: number, track_position: number, laps: number, spline: number, x: number, z: number, yaw: number, speed_kmh: number, location: CarLocation, last_lap_ms: number | null, best_lap_ms: number | null, current_lap_ms: number | null, last_splits: [number | null, number | null, number | null], best_splits: [number | null, number | null, number | null], driver: string, driver_short: string, car_model: string, car_brand: string, cup_category: number, is_player: boolean, team: string, delta_ms: number, 
+/**
+ * Official race gap to the leader from the game (s).
+ */
+gap_to_leader_s?: number, 
+/**
+ * On wet tyres (None = unknown).
+ */
+wet_tyres?: boolean, };

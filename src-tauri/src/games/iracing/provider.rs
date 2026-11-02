@@ -2,10 +2,12 @@
 //! the session YAML. Mapping to the game-independent model: see `docs/iracing.md`.
 
 use std::collections::HashMap;
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use super::sdk::{self, Memory, Row, Var};
 use super::session::{self, SessionData};
+use super::timing::Timing;
 use super::trackmap::{self, TrackMap};
 use crate::games::provider::*;
 
@@ -16,6 +18,7 @@ mod flags {
     pub const GREEN: u32 = 0x0000_0004;
     pub const YELLOW: u32 = 0x0000_0008;
     pub const BLUE: u32 = 0x0000_0020;
+    pub const ONE_LAP_TO_GREEN: u32 = 0x0000_0200;
     pub const YELLOW_WAVING: u32 = 0x0000_0100;
     pub const CAUTION: u32 = 0x0000_4000;
     pub const CAUTION_WAVING: u32 = 0x0000_8000;
@@ -32,6 +35,41 @@ const TRK_APPROACHING_PITS: i32 = 2;
 
 /// Cars further away along the track are not passed to the spotter.
 const NEAR_RANGE_M: f32 = 60.0;
+
+/// `irsdk_EngineWarnings`
+mod engine_bits {
+    pub const WATER_TEMP: u32 = 0x0001;
+    pub const FUEL_PRESSURE: u32 = 0x0002;
+    pub const OIL_PRESSURE: u32 = 0x0004;
+    pub const STALLED: u32 = 0x0008;
+    pub const OIL_TEMP: u32 = 0x0040;
+}
+
+/// `irsdk_PitSvFlags`
+mod pit_bits {
+    pub const TYRES: [u32; 4] = [0x0001, 0x0002, 0x0004, 0x0008];
+    pub const FUEL: u32 = 0x0010;
+    pub const WINDSHIELD: u32 = 0x0020;
+    pub const FAST_REPAIR: u32 = 0x0040;
+}
+
+/// `irsdk_PaceFlags`
+mod pace_bits {
+    pub const END_OF_LINE: u32 = 0x0001;
+    pub const FREE_PASS: u32 = 0x0002;
+    pub const WAVED_AROUND: u32 = 0x0004;
+}
+
+/// `FastRepairAvailable` value for "unlimited".
+const UNLIMITED_FAST_REPAIRS: i32 = 255;
+const KPA_PER_PSI: f32 = 6.894_757;
+/// Seconds standing in the pit stall before the tyre values are taken (sim updates them on arrival).
+const TYRE_CHECK_DELAY_S: f64 = 1.0;
+
+fn map_file(track: &str) -> std::path::PathBuf {
+    let safe: String = track.chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
+    crate::storage::paths::local_dir().join("maps").join("iracing").join(format!("{safe}.bin"))
+}
 
 pub struct IRacingProvider {
     #[cfg(windows)]
@@ -51,6 +89,16 @@ pub struct IRacingProvider {
     speeds: HashMap<i32, (f32, f64, f32)>,
     last_cars_emit: Option<Instant>,
     was_live: bool,
+    timing: Timing,
+    timing_session: i32,
+    /// Lap (completed count) that went off track: invalid for track limits.
+    invalid_lap: Option<i32>,
+    tyre_check: Option<TyreCheck>,
+    stall_since: Option<f64>,
+    stall_captured: bool,
+    /// Saved map being loaded in the background (file IO never runs on this thread).
+    map_load: Option<mpsc::Receiver<Vec<u8>>>,
+    map_saved: bool,
 }
 
 impl Default for IRacingProvider {
@@ -196,7 +244,20 @@ impl IRacingProvider {
             speeds: HashMap::new(),
             last_cars_emit: None,
             was_live: false,
+            timing: Timing::default(),
+            timing_session: -1,
+            invalid_lap: None,
+            tyre_check: None,
+            stall_since: None,
+            stall_captured: false,
+            map_load: None,
+            map_saved: false,
         }
+    }
+
+    /// Direction of the dead-reckoned map once a lap is done (for the live check).
+    pub fn map_clockwise(&self) -> Option<bool> {
+        self.map.clockwise()
     }
 
     fn num(&self, name: &str) -> Option<f64> {
@@ -247,6 +308,8 @@ impl IRacingProvider {
                 let data = session::parse(&yaml);
                 if data.track_name != self.data.track_name {
                     self.map.reset();
+                    self.map_saved = false;
+                    self.map_load = (!data.track_name.is_empty()).then(|| Self::load_map(&data.track_name));
                 }
                 self.data = data;
                 self.last_session_check = None;
@@ -265,11 +328,81 @@ impl IRacingProvider {
         Ok(())
     }
 
+    fn load_map(track: &str) -> mpsc::Receiver<Vec<u8>> {
+        let (tx, rx) = mpsc::channel();
+        let path = map_file(track);
+        let _ = std::thread::Builder::new().name("iracing-map".into()).spawn(move || {
+            if let Ok(b) = std::fs::read(&path) {
+                let _ = tx.send(b);
+            }
+        });
+        rx
+    }
+
+    /// Takes over a saved map, saves a freshly built one.
+    fn sync_map(&mut self) {
+        if let Some(rx) = &self.map_load {
+            match rx.try_recv() {
+                Ok(b) => {
+                    self.map_saved = self.map.load_bytes(&b) || self.map_saved;
+                    self.map_load = None;
+                }
+                Err(mpsc::TryRecvError::Disconnected) => self.map_load = None,
+                Err(mpsc::TryRecvError::Empty) => {}
+            }
+        }
+        if self.map.is_built() && !self.map_saved && !self.data.track_name.is_empty() {
+            self.map_saved = true;
+            if let Some(bytes) = self.map.to_bytes() {
+                let path = map_file(&self.data.track_name);
+                let _ = std::thread::Builder::new().name("iracing-map".into()).spawn(move || {
+                    let saved = path.parent().map(std::fs::create_dir_all).transpose().and_then(|_| std::fs::write(&path, bytes));
+                    if let Err(e) = saved {
+                        tracing::warn!("iracing map not saved: {e}");
+                    }
+                });
+            }
+        }
+    }
+
+    /// Tyre values while standing in the pit stall (the sim only updates them there).
+    fn capture_tyres(&mut self, completed: i32, session_time: f64, speed_ms: f32) {
+        if !self.b("PlayerCarInPitStall") {
+            self.stall_since = None;
+            self.stall_captured = false;
+            return;
+        }
+        if speed_ms > 0.5 || self.stall_captured {
+            return;
+        }
+        let since = *self.stall_since.get_or_insert(session_time);
+        if session_time - since < TYRE_CHECK_DELAY_S {
+            return;
+        }
+        self.stall_captured = true;
+        let mut c = TyreCheck { lap: completed, ..Default::default() };
+        for (k, w) in ["LF", "RF", "LR", "RR"].iter().enumerate() {
+            let zones = |kind: &str| -> [f32; 3] {
+                let v = |side: &str| self.num(&format!("{w}{kind}{side}")).unwrap_or(0.0) as f32;
+                let (l, m, r) = (v("L"), v("M"), v("R"));
+                // "Left"/"right" side of the tyre: on the left wheels the left side is the outside.
+                if k % 2 == 0 { [r, m, l] } else { [l, m, r] }
+            };
+            c.temp_c[k] = zones("tempC");
+            c.wear[k] = zones("wear");
+            c.cold_pressure_psi[k] = self.num(&format!("{w}coldPressure")).unwrap_or(0.0) as f32 / KPA_PER_PSI;
+        }
+        if c.temp_c.iter().any(|z| z[1] > 0.0) {
+            self.tyre_check = Some(c);
+        }
+    }
+
     fn t_ms(&self) -> u64 {
         self.start.elapsed().as_millis() as u64
     }
 
     fn emit(&mut self, out: &mut Vec<ProviderEvent>) {
+        self.sync_map();
         let frame = self.build_frame();
         self.was_live = frame.status == SimStatus::Live;
         if self.last_session_check.is_none_or(|t| t.elapsed() > Duration::from_millis(500)) {
@@ -299,7 +432,7 @@ impl IRacingProvider {
             session_type: def.map(|s| s.kind).unwrap_or_default(),
             phase: phase(self.i("SessionState")),
             car_model: me.map(|m| m.car_path.clone()).unwrap_or_default(),
-            car_class: me.map(|m| session::class_key(&m.car_class)).unwrap_or_default(),
+            car_class: me.map(session::class_of).unwrap_or_default(),
             max_fuel_l: d.fuel_max_l,
             max_rpm: d.redline_rpm as i32,
             sector_count: 3,
@@ -312,6 +445,7 @@ impl IRacingProvider {
             session_end_ms: def.and_then(|s| s.time_s).map(|t| t * 1000.0).unwrap_or(0.0),
             dry_tyres: String::new(),
             wet_tyres: String::new(),
+            incident_limit: d.incident_limit,
         }
     }
 
@@ -337,9 +471,27 @@ impl IRacingProvider {
         let (forward, right) = trackmap::axes(yaw);
         let p = self.map.player_pos(pct);
 
-        let completed = self.i("LapCompleted");
+        // -1 until the car first crosses the line (out of the pits); the logic counts from 0.
+        let completed = self.i("LapCompleted").max(0);
         let current_lap_ms = (self.f("LapCurrentLapTime") * 1000.0) as i32;
         let (sector_index, last_sector_ms) = self.sectors.update(pct, completed, current_lap_ms);
+        self.capture_tyres(completed, session_time, speed_ms);
+        // Four wheels off the track = track limits; the rest of the lap is invalid.
+        if status == SimStatus::Live && surface == TRK_OFF_TRACK && !on_pit_road {
+            self.invalid_lap = Some(completed);
+        }
+        let lap_valid = self.invalid_lap != Some(completed);
+        // Sector times of every car, timed at the full rate.
+        let session_num = self.i("SessionNum");
+        if session_num != self.timing_session {
+            self.timing_session = session_num;
+            self.timing.reset();
+        }
+        for i in 0..self.car_count() {
+            let p = self.at("CarIdxLapDistPct", i).unwrap_or(-1.0) as f32;
+            let pits = self.at("CarIdxOnPitRoad", i).is_some_and(|v| v != 0.0);
+            self.timing.update(i as i32, p, session_time, pits);
+        }
 
         let bits = self.vars.get("SessionFlags").and_then(|v| self.row.bits(v, 0)).unwrap_or(0);
         let (flag, fcy, local_yellow, penalty) = map_flags(bits);
@@ -361,6 +513,39 @@ impl IRacingProvider {
         let laps_left = (lap_race && (0..sdk::UNLIMITED_LAPS).contains(&laps_remain)).then(|| (laps_remain as f32 - pct).max(0.0));
 
         let wheel = |w: &str| Wheel { wear: self.num(&format!("{w}wearM")).unwrap_or(0.0) as f32, ..Default::default() };
+        let warn = self.vars.get("EngineWarnings").and_then(|v| self.row.bits(v, 0)).unwrap_or(0);
+        let engine = Engine {
+            water_temp_c: self.f("WaterTemp"),
+            oil_temp_c: self.f("OilTemp"),
+            water_hot: warn & engine_bits::WATER_TEMP != 0,
+            oil_hot: warn & engine_bits::OIL_TEMP != 0,
+            oil_pressure_low: warn & engine_bits::OIL_PRESSURE != 0,
+            fuel_pressure_low: warn & engine_bits::FUEL_PRESSURE != 0,
+            stalled: warn & engine_bits::STALLED != 0,
+        };
+        let repair = self.vars.contains_key("PitRepairLeft").then(|| Repair {
+            mandatory_s: self.f("PitRepairLeft"),
+            optional_s: self.f("PitOptRepairLeft"),
+            fast_repairs_left: self.num("FastRepairAvailable").map(|v| v as i32).filter(|v| *v != UNLIMITED_FAST_REPAIRS),
+        });
+        let pit_menu = self.vars.get("PitSvFlags").and_then(|v| self.row.bits(v, 0)).map(|b| PitMenu {
+            fuel_l: if b & pit_bits::FUEL != 0 { self.f("PitSvFuel") } else { 0.0 },
+            tyres: pit_bits::TYRES.map(|t| b & t != 0),
+            fast_repair: b & pit_bits::FAST_REPAIR != 0,
+            windshield: b & pit_bits::WINDSHIELD != 0,
+        });
+        let incidents = self.vars.contains_key("PlayerCarMyIncidentCount").then(|| {
+            // In team events the limit applies to the team.
+            if self.data.team_racing { self.i("PlayerCarTeamIncidentCount") } else { self.i("PlayerCarMyIncidentCount") }
+        });
+        let pace = if player >= 0 { self.vars.get("CarIdxPaceFlags").and_then(|v| self.row.bits(v, player as usize)).unwrap_or(0) } else { 0 };
+        let pacing = Pacing {
+            green_next_lap: bits & flags::ONE_LAP_TO_GREEN != 0,
+            free_pass: pace & pace_bits::FREE_PASS != 0,
+            waved_around: pace & pace_bits::WAVED_AROUND != 0,
+            end_of_line: pace & pace_bits::END_OF_LINE != 0,
+        };
+        let rain_tyres = !self.data.wet_compounds.is_empty() && self.data.wet_compounds.contains(&self.i("PlayerTireCompound"));
         let precipitation = self.f("Precipitation");
         let best = self.f("LapBestLapTime");
         let last = self.f("LapLastLapTime");
@@ -405,7 +590,7 @@ impl IRacingProvider {
             current_lap_ms,
             last_lap_ms: if last > 0.0 { (last * 1000.0) as i32 } else { 0 },
             best_lap_ms: if best > 0.0 { (best * 1000.0) as i32 } else { 0 },
-            lap_valid: true,
+            lap_valid,
             spline: pct.clamp(0.0, 1.0),
             sector_index,
             last_sector_ms,
@@ -434,7 +619,7 @@ impl IRacingProvider {
             },
             lights_stage: -1,
             wiper_level: -1,
-            rain_tyres: false,
+            rain_tyres,
             stint_time_left_ms: 0,
             tc_level: self.i("dcTractionControl"),
             abs_level: self.i("dcABS"),
@@ -446,6 +631,13 @@ impl IRacingProvider {
             near_cars,
             laps_left,
             setup_menu: false,
+            engine,
+            repair,
+            pit_menu,
+            tyre_check: self.tyre_check,
+            incidents,
+            wet_tyres_allowed: self.vars.contains_key("WeatherDeclaredWet").then(|| self.b("WeatherDeclaredWet")),
+            pacing,
         }
     }
 
@@ -521,6 +713,13 @@ impl IRacingProvider {
             };
             let xy = if pct >= 0.0 { self.map.at(pct) } else { None }.unwrap_or([0.0, 0.0]);
             let lap_s = |name: &str| self.at(name, idx).filter(|v| *v > 0.0).map(|v| (v * 1000.0) as i32);
+            let splits = self.timing.get(i).cloned().unwrap_or_default();
+            // F2Time is the gap to the leader only in races (fastest lap time otherwise).
+            let race = self.session.session_type == SessionType::Race;
+            let gap_to_leader_s = self.at("CarIdxF2Time", idx).filter(|v| race && *v >= 0.0 && position > 0).map(|v| v as f32);
+            let wet_tyres = (!self.data.wet_compounds.is_empty())
+                .then(|| self.at("CarIdxTireCompound", idx).map(|c| self.data.wet_compounds.contains(&(c as i32))))
+                .flatten();
             cars.push(CarState {
                 id: i,
                 race_number: d.car_number,
@@ -536,9 +735,9 @@ impl IRacingProvider {
                 location,
                 last_lap_ms: lap_s("CarIdxLastLapTime"),
                 best_lap_ms: lap_s("CarIdxBestLapTime"),
-                current_lap_ms: None,
-                last_splits: [None; 3],
-                best_splits: [None; 3],
+                current_lap_ms: self.timing.current_lap_ms(i, t),
+                last_splits: splits.last,
+                best_splits: splits.best,
                 driver: d.user_name.clone(),
                 driver_short: d.abbrev_name.clone(),
                 car_model: if d.car_name_short.is_empty() { d.car_name.clone() } else { d.car_name_short.clone() },
@@ -547,6 +746,8 @@ impl IRacingProvider {
                 is_player: i == player,
                 team: d.team_name.clone(),
                 delta_ms: 0,
+                gap_to_leader_s,
+                wet_tyres,
             });
         }
         // Order on track: furthest round the lap first.
@@ -719,6 +920,35 @@ DriverInfo:
         assert_eq!((me.race_number, me.position, me.track_position), (5, 2, 2));
         assert_eq!(me.last_lap_ms, Some(101_500));
         assert_eq!(cars.iter().find(|c| c.id == 2).unwrap().car_brand, "Mazda");
+    }
+
+    #[test]
+    fn engine_repair_pit_menu_incidents_and_track_limits() {
+        let mut b = base();
+        b.bits("EngineWarnings", 0x0001 | 0x0040)
+            .f32("WaterTemp", 0, 1, 117.0)
+            .f32("PitRepairLeft", 0, 1, 18.0)
+            .f32("PitOptRepairLeft", 0, 1, 40.0)
+            .i32("FastRepairAvailable", 0, 1, 255)
+            .bits("PitSvFlags", 0x0001 | 0x0002 | 0x0010)
+            .f32("PitSvFuel", 0, 1, 42.0)
+            .i32("PlayerCarMyIncidentCount", 0, 1, 6)
+            .bool("WeatherDeclaredWet", 0, 1, true)
+            .bits("SessionFlags", 0x0000_0204)
+            .i32("PlayerTrackSurface", 0, 1, 0);
+        let (_, out) = run(&b);
+        let f = out.iter().find_map(|e| if let ProviderEvent::Frame(f) = e { Some(f) } else { None }).unwrap();
+        assert!(f.engine.water_hot && f.engine.oil_hot && !f.engine.oil_pressure_low);
+        assert_eq!(f.engine.water_temp_c, 117.0);
+        let r = f.repair.unwrap();
+        assert_eq!((r.mandatory_s, r.optional_s, r.fast_repairs_left), (18.0, 40.0, None));
+        let m = f.pit_menu.unwrap();
+        assert_eq!((m.fuel_l, m.tyres, m.fast_repair), (42.0, [true, true, false, false], false));
+        assert_eq!(f.incidents, Some(6));
+        assert_eq!(f.wet_tyres_allowed, Some(true));
+        assert!(f.pacing.green_next_lap);
+        // Four wheels off: the lap is no longer valid (track limits).
+        assert!(!f.lap_valid);
     }
 
     #[test]

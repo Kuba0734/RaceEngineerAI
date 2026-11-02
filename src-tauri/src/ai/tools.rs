@@ -140,6 +140,8 @@ fn car_json(state: &RaceState, c: &CarState, f: &Fmt) -> Value {
         "in_pits": c.location.in_pits(),
         "pit_stops": r.map(|r| r.pit_stops).unwrap_or(0),
         "tyre_age_laps": r.and_then(|r| r.last_pit_lap).map(|l| c.laps - l).unwrap_or(c.laps),
+        "gap_to_leader_s": c.gap_to_leader_s.map(|g| (g * 10.0).round() / 10.0),
+        "on_wet_tyres": c.wet_tyres,
     })
 }
 
@@ -233,6 +235,12 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
                     fs.laps_possible >= laps_until
                 }),
                 "start_fuel_next_race": { "race_minutes": minutes, "fuel": round1(start * fk) },
+                "pit_menu": state.frame.pit_menu.map(|m| json!({
+                    "fuel_set": round1(m.fuel_l * fk),
+                    "tyres_changed_FL_FR_RL_RR": m.tyres,
+                    "fast_repair": m.fast_repair,
+                    "fuel_set_is_enough": m.fuel_l + 0.5 >= fs.refuel_l,
+                })),
             })
         }
         "simulate_pit_stop" => {
@@ -255,9 +263,31 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
                 "unit": fu,
             })
         }
-        "get_tyres" if !state.has("hasTyreCoreTemps") => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),
+        "get_tyres" if !state.has("hasTyreCoreTemps") => match state.frame.tyre_check {
+            // No live values: the last measurement in the pit stall is all there is.
+            Some(c) if c.lap > 0 => json!({
+                "live_values_available": false,
+                "measured_in_pits_after_lap": c.lap,
+                "note": "values from the last pit stop, not live – say that",
+                "order": "FL, FR, RL, RR",
+                "temp_inner_middle_outer_c": c.temp_c.map(|w| w.map(|t| t.round())),
+                "tread_left_pct_inner_middle_outer": c.wear.map(|w| w.map(|x| (x * 100.0).round())),
+                "cold_pressure_psi": c.cold_pressure_psi.map(round1),
+                "wet_tyres_on": state.frame.rain_tyres,
+            }),
+            _ => json!({ "available": false, "note": "the game has no live tyre data; values come only after a pit stop – say so, do not guess" }),
+        },
         "get_brakes" if !state.has("hasBrakeWear") => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),
-        "get_damage" if !state.has("hasCarDamage") => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),
+        "get_damage" if !state.has("hasCarDamage") => match state.frame.repair {
+            Some(r) => json!({
+                "damage_zones_available": false,
+                "mandatory_repair_s": r.mandatory_s.round(),
+                "optional_repair_s": r.optional_s.round(),
+                "fast_repairs_left": r.fast_repairs_left,
+                "note": "0 s = no damage that needs repair",
+            }),
+            None => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),
+        },
         "get_tyres" => {
             let w = &state.frame.wheels;
             let class = crate::games::cars::class_def(&state.session.car_class);
@@ -312,6 +342,17 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
                 "mandatory_pit_done": state.frame.mandatory_pit_done, "missing_mandatory_pits": state.frame.missing_mandatory_pits,
                 "pit_window_ms": [s.pit_window_start_ms, s.pit_window_end_ms],
                 "standings_available": !state.cars.is_empty(),
+                "incidents": state.frame.incidents,
+                "incident_limit": s.incident_limit,
+                "wet_tyres_allowed": state.frame.wet_tyres_allowed,
+                "safety_car": state.frame.global_yellow,
+                "restart_next_lap": state.frame.pacing.green_next_lap,
+                "engine": {
+                    "water_c": state.frame.engine.water_temp_c.round(),
+                    "oil_c": state.frame.engine.oil_temp_c.round(),
+                    "warnings": ([("water_hot", state.frame.engine.water_hot), ("oil_hot", state.frame.engine.oil_hot), ("oil_pressure_low", state.frame.engine.oil_pressure_low), ("fuel_pressure_low", state.frame.engine.fuel_pressure_low)]
+                        .iter().filter(|(_, on)| *on).map(|(n, _)| *n).collect::<Vec<_>>()),
+                },
             })
         }
         "get_penalties" => json!({ "penalty": state.frame.penalty, "penalty_time_s": state.frame.penalty_time_s, "track_limits": state.track_limits, "flag": state.frame.flag, "yellow_sectors": state.frame.yellow_sectors }),

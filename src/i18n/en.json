@@ -673,5 +673,21 @@
  "widget.radar": "Spotter radar",
  "widget.radio": "Radio",
  "widget.standings": "Standings",
- "widget.tyres": "Tyres"
+ "widget.tyres": "Tyres",
+ "call.penalty.incidents": "Incident points",
+ "call.car.engine": "Engine warnings",
+ "call.damage.repair": "Repair time",
+ "call.pit.menu_check": "Pit menu check",
+ "call.tyre.after_stop": "Tyre check at the stop",
+ "call.flag.pace": "Safety car / restart",
+ "call.weather.wet_declared": "Wet declared",
+ "games.cap.hasIncidents": "Incident points",
+ "games.cap.hasRepairTimes": "Repair times",
+ "games.cap.hasPitMenu": "Pit menu",
+ "games.cap.hasPitTyreCheck": "Tyre values at the stop",
+ "wd.tyresFromPit": "From the last pit stop",
+ "games.rules.mandatoryStops": "Mandatory stops",
+ "games.rules.windowOpen": "Pit window opens (min)",
+ "games.rules.windowClose": "Pit window closes (min)",
+ "games.rules.hint": "The game does not report these rules – enter them from the series rules. 0 = none."
 }

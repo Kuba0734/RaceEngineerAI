@@ -50,7 +50,9 @@ Die Settings-Seite zeigt den Katalog gruppiert nach den Abschnitten unten, mit S
 | `flag.fcy` | „FCY! Box diese Runde, Stopp ist jetzt billig“ | Flaggen/Rennleitung | Box-Empfehlung an/aus |
 | `flag.green` | „Grün, grün, grün!“ | Flagge/Session-Phase | – |
 | `flag.white` / `flag.checkered` | „Letzte Runde“ / „Zielflagge, P4, gut gemacht“ | Session | – |
-| `penalty.track_limits` | „Track Limit Nummer 3, beim nächsten gibt's Strafe“ | abgeleitet aus `isValidLap`/Penalty-Feldern | Zähler-Warnung ab N |
+| `penalty.track_limits` | „Track Limit Nummer 3, beim nächsten gibt's Strafe“ | abgeleitet aus `isValidLap`/Penalty-Feldern (iRacing: vier Räder neben der Strecke) | Zähler-Warnung ab N |
+| `penalty.incidents` | „Incident, jetzt 12 von 17. Noch 5 bis zur Strafe“ | iRacing `PlayerCarMyIncidentCount` + `IncidentLimit` | ab N Incidents melden, Warnung N vor dem Limit |
+| `flag.pace` | „Safety Car kommt rein, nächste Runde grün“ / Free Pass / Wave Around / ans Ende | iRacing `SessionFlags` (oneLapToGreen), `CarIdxPaceFlags` | an/aus |
 | `penalty.received` | „Drive-Through, innerhalb von 3 Runden absitzen“ | `graphics.penalty` | – |
 | `penalty.reminder` | „Strafe noch offen, diese Runde rein“ | abgeleitet | Erinnerungsrunde |
 
@@ -73,6 +75,7 @@ Die Settings-Seite zeigt den Katalog gruppiert nach den Abschnitten unten, mit S
 | `fuel.save_target` | „Spar 0,2 Liter pro Runde, dann ohne Stopp. Lift and Coast vor Kurve 1 und 8“ | abgeleitet + Kurvendaten | an/aus, max. Sparziel |
 | `pit.window` | „Boxenfenster offen“ / „Pflichtstopp noch nicht erledigt“ | `pitWindowStart/End`, `mandatoryPitDone` | – |
 | `pit.fuel_amount` | „Nachtanken: 38 Liter“ | abgeleitet | Reserve (Runden/Liter) |
+| `pit.menu_check` | „Box ist eingestellt: 40 Liter, vier neue Reifen“ / „Nur 10 Liter eingestellt, du brauchst 32“ | iRacing `PitSvFlags`, `PitSvFuel` vs. Spritbedarf | an/aus |
 | `pit.exit_position` | „Nach dem Stopp kommst du als P7 raus, hinter der 88“ | Box-Verlustzeit + Abstände | an/aus |
 | `pit.rival_pitting` | „P3 fährt an die Box“ | Broadcasting `CarLocation` | nur Autos innerhalb N Positionen |
 | `pit.undercut` | „Undercut-Gefahr: der hinter dir ist rein“ | abgeleitet | *Schwelle* Sekunden |
@@ -89,7 +92,10 @@ Die Settings-Seite zeigt den Katalog gruppiert nach den Abschnitten unten, mit S
 | `tyre.wet_switch` | „Regen kommt in 10 Minuten, Regenreifen beim nächsten Stopp“ | Regenprognose + `trackGripStatus` | Aggressivität (früh/normal/spät) |
 | `brake.wear` | „Bremsbeläge reichen noch 2 Stints“ | `padLife`, `discLife` | *Schwelle* |
 | `brake.temp` | „Bremsen vorne sehr heiß“ | `brakeTemp` | *Schwelle* |
-| `damage.report` | „Schaden kostet ~4 Zehntel/Runde, Reparatur 25 s – lohnt sich nicht“ | `carDamage` + Pace-Vergleich | an/aus |
+| `damage.report` | „Schaden kostet ~4 Zehntel/Runde, Reparatur 25 s – lohnt sich nicht“ | `carDamage` + Pace-Vergleich (iRacing: echte optionale Reparaturzeit) | an/aus |
+| `damage.repair` | „Pflichtreparatur etwa 20 Sekunden, dazu optional 35“ | iRacing `PitRepairLeft`, `PitOptRepairLeft`, `FastRepairAvailable` | an/aus |
+| `car.engine` | „Wassertemperatur zu hoch, 118 Grad“ / Öltemperatur / Öldruck / Spritdruck | iRacing `EngineWarnings`, `WaterTemp`, `OilTemp` | an/aus |
+| `tyre.after_stop` | „Reifen beim Stopp: vorne rechts noch 70 Prozent, innen 15 Grad heißer als außen“ | iRacing `tempCL/CM/CR`, `wearL/M/R` (nur in der Box) | Temperatur-Spreizung ab N °C |
 | `assist.tc` | „TC greift viel in Kurve 6, probier TC eins runter“ | TC-Eingriffe + Kurven | *Schwelle*, nur Training/Rennen |
 | `assist.lockup` | „Du blockierst vorne beim Anbremsen, Balance einen Klick nach hinten“ | `wheelSlip`, Bremse | *Schwelle* |
 | `car.lights` / `car.wipers` | „Wird dunkel, Licht an“ / „Regen, Scheibenwischer“ | Tageszeit, Lichtstatus, Regen | – |
@@ -99,6 +105,7 @@ Die Settings-Seite zeigt den Katalog gruppiert nach den Abschnitten unten, mit S
 | call_id | Beispiel | Daten | Einstellbar |
 |---|---|---|---|
 | `weather.forecast` | „Leichter Regen in 10 Minuten“ | `rainIntensityIn10min/30min` | Vorwarnzeit |
+| `weather.wet_declared` | „Rennleitung hat nass freigegeben, Regenreifen erlaubt“ | iRacing `WeatherDeclaredWet` (Regenreifen-Empfehlung erst danach) | an/aus |
 | `track.grip` | „Strecke wird schneller“ / „Strecke trocknet ab“ | `trackGripStatus` | – |
 | `track.temp` | „Streckentemperatur fällt, Drücke im Auge behalten“ | `roadTemp` | *Schwelle* °C |
 

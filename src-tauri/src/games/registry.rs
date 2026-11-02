@@ -17,6 +17,14 @@ pub struct Capabilities {
     pub has_car_coordinates: bool,
     #[serde(default)]
     pub has_car_damage: bool,
+    #[serde(default)]
+    pub has_incidents: bool,
+    #[serde(default)]
+    pub has_repair_times: bool,
+    #[serde(default)]
+    pub has_pit_menu: bool,
+    #[serde(default)]
+    pub has_pit_tyre_check: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -70,6 +78,10 @@ pub fn has_capability(c: &Capabilities, name: &str) -> bool {
         "hasTrackLimits" => c.has_track_limits,
         "hasCarCoordinates" => c.has_car_coordinates,
         "hasCarDamage" => c.has_car_damage,
+        "hasIncidents" => c.has_incidents,
+        "hasRepairTimes" => c.has_repair_times,
+        "hasPitMenu" => c.has_pit_menu,
+        "hasPitTyreCheck" => c.has_pit_tyre_check,
         _ => false,
     }
 }

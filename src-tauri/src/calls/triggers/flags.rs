@@ -149,7 +149,46 @@ fn yellow(ctx: &mut Ctx, y: &[bool; 3]) {
     }
 }
 
-pub fn tick(ctx: &mut Ctx, _mem: &mut Memory) {
+/// Incident points: every new incident from `report_from`, always when the limit is close.
+fn incidents(ctx: &mut Ctx, mem: &mut Memory) {
+    let Some(n) = ctx.state.frame.incidents else { return };
+    let Some(prev) = mem.last_incidents.replace(n) else { return };
+    if n <= prev {
+        return;
+    }
+    let report_from = ctx.th("penalty.incidents", "report_from") as i32;
+    let warn_left = ctx.th("penalty.incidents", "warn_left") as i32;
+    match ctx.state.session.incident_limit {
+        Some(limit) => {
+            let left = (limit - n).max(0);
+            if n >= report_from || left <= warn_left {
+                ctx.push(CallRequest::new("penalty.incidents").variant("limit").p("count", n.to_string()).p("limit", limit.to_string()).p("left", left.to_string()));
+            }
+        }
+        None if n >= report_from => ctx.push(CallRequest::new("penalty.incidents").p("count", n.to_string())),
+        None => {}
+    }
+}
+
+/// Safety car situations: restart next lap, free pass, wave around, end of line.
+fn pacing(ctx: &mut Ctx, mem: &mut Memory) {
+    let p = ctx.state.frame.pacing;
+    let old = std::mem::replace(&mut mem.last_pacing, p);
+    for (now, before, sub) in [
+        (p.green_next_lap, old.green_next_lap, "green_next_lap"),
+        (p.free_pass, old.free_pass, "free_pass"),
+        (p.waved_around, old.waved_around, "waved_around"),
+        (p.end_of_line, old.end_of_line, "end_of_line"),
+    ] {
+        if now && !before {
+            ctx.push(CallRequest::new("flag.pace").variant(sub).key(sub));
+        }
+    }
+}
+
+pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
+    incidents(ctx, mem);
+    pacing(ctx, mem);
     // Early blue flag warning: lapping car within the threshold before the official flag.
     if ctx.state.frame.flag != Flag::Blue && ctx.on("flag.blue_leader") {
         let s = ctx.state;

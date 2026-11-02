@@ -3,4 +3,12 @@
 /**
  * Tyre and brake values with the target windows of the car class.
  */
-export type TyreView = { core_temp_c: [number, number, number, number], pressure_psi: [number, number, number, number], brake_temp_c: [number, number, number, number], temp_cold: number, temp_hot: number, pressure_min: number, pressure_max: number, brake_hot: number, };
+export type TyreView = { core_temp_c: [number, number, number, number], pressure_psi: [number, number, number, number], brake_temp_c: [number, number, number, number], temp_cold: number, temp_hot: number, pressure_min: number, pressure_max: number, brake_hot: number, 
+/**
+ * Values measured at the last pit stop (game has no live tyre data).
+ */
+from_pit: boolean, 
+/**
+ * Tread left of the most worn zone per wheel, % (0 = unknown).
+ */
+wear_pct: [number, number, number, number], };

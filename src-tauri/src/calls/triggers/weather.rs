@@ -6,6 +6,13 @@ use crate::calls::engine::CallRequest;
 use crate::games::provider::{RainIntensity, TrackGrip};
 
 pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
+    // Race control declares the track wet (wet tyres become legal).
+    if let Some(wet) = ctx.state.frame.wet_tyres_allowed {
+        if wet && mem.wet_declared.replace(wet) == Some(false) {
+            ctx.push(CallRequest::new("weather.wet_declared"));
+        }
+        mem.wet_declared = Some(wet);
+    }
     let w = ctx.state.frame.weather;
     let now = (w.rain_now, w.rain_10min, w.rain_30min);
     if let Some((n0, t10, _t30)) = mem.last_rain {

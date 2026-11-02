@@ -93,6 +93,16 @@ pub struct Memory {
     pub locking: bool,
     pub pad_life_lap_start: Option<f32>,
     pub pad_wear_per_lap: Option<f32>,
+    pub engine_warned: [bool; 4],
+    /// Last seen (mandatory, optional) repair time.
+    pub last_repair: (f32, f32),
+    /// Real repair time from the game, replaces the estimate in the damage decision.
+    pub repair_estimate_s: Option<f32>,
+    pub tyre_check_said: Option<i32>,
+    // race control
+    pub last_incidents: Option<i32>,
+    pub last_pacing: crate::games::provider::Pacing,
+    pub wet_declared: Option<bool>,
     // weather
     pub last_rain: Option<(RainIntensity, RainIntensity, RainIntensity)>,
     pub last_grip: Option<TrackGrip>,
@@ -217,5 +227,83 @@ mod tests {
         s.frame.best_lap_ms = 100_000;
         let ids = run(&mut s, &settings, &engine, &mut mem, 0, 30);
         assert!(!ids.iter().any(|x| x == "race.time_left"), "{ids:?}");
+    }
+
+    /// Calls of one detector as "id" or "id:sub".
+    fn calls(state: &RaceState, mem: &mut Memory, f: impl Fn(&mut Ctx, &mut Memory)) -> Vec<String> {
+        let settings = Settings::default();
+        let engine = CallEngine::new(&settings);
+        let mut ctx = Ctx::new(state, &settings, &engine);
+        f(&mut ctx, mem);
+        ctx.out.iter().map(|r| match r.sub { Some(sub) => format!("{}:{sub}", r.call_id), None => r.call_id.to_string() }).collect()
+    }
+
+    #[test]
+    fn incidents_near_the_limit() {
+        let mut s = loaded_race();
+        s.session.incident_limit = Some(17);
+        let mut mem = Memory::new();
+        s.frame.incidents = Some(1);
+        assert!(calls(&s, &mut mem, flags::tick).is_empty(), "first value only sets the baseline");
+        s.frame.incidents = Some(3);
+        assert!(calls(&s, &mut mem, flags::tick).is_empty(), "below report_from (4)");
+        s.frame.incidents = Some(14);
+        assert_eq!(calls(&s, &mut mem, flags::tick), vec!["penalty.incidents:limit"]);
+        assert!(calls(&s, &mut mem, flags::tick).is_empty(), "no repeat without a new incident");
+    }
+
+    #[test]
+    fn safety_car_restart_and_wet_declared() {
+        let mut s = loaded_race();
+        let mut mem = Memory::new();
+        s.frame.pacing.green_next_lap = true;
+        assert_eq!(calls(&s, &mut mem, flags::tick), vec!["flag.pace:green_next_lap"]);
+        assert!(calls(&s, &mut mem, flags::tick).is_empty());
+        s.frame.wet_tyres_allowed = Some(false);
+        assert!(calls(&s, &mut mem, weather::tick).iter().all(|c| c != "weather.wet_declared"));
+        s.frame.wet_tyres_allowed = Some(true);
+        assert!(calls(&s, &mut mem, weather::tick).iter().any(|c| c == "weather.wet_declared"));
+    }
+
+    #[test]
+    fn engine_warning_and_repair_time_once() {
+        let mut s = loaded_race();
+        s.frame.speed_kmh = 200.0;
+        s.frame.fuel_l = 40.0;
+        let mut mem = Memory::new();
+        s.frame.engine.water_hot = true;
+        s.frame.engine.water_temp_c = 118.0;
+        s.frame.repair = Some(crate::games::provider::Repair { mandatory_s: 0.0, optional_s: 0.0, fast_repairs_left: Some(1) });
+        let first = calls(&s, &mut mem, car::tick);
+        assert!(first.contains(&"car.engine:water_temp".to_string()), "{first:?}");
+        assert!(!calls(&s, &mut mem, car::tick).contains(&"car.engine:water_temp".to_string()));
+        s.frame.repair = Some(crate::games::provider::Repair { mandatory_s: 21.0, optional_s: 35.0, fast_repairs_left: Some(1) });
+        assert!(calls(&s, &mut mem, car::tick).contains(&"damage.repair:mandatory".to_string()));
+        assert_eq!(mem.repair_estimate_s, Some(35.0));
+        // Counting down in the pits is not new damage.
+        s.frame.repair = Some(crate::games::provider::Repair { mandatory_s: 5.0, optional_s: 35.0, fast_repairs_left: Some(1) });
+        assert!(!calls(&s, &mut mem, car::tick).iter().any(|c| c.starts_with("damage.repair")));
+    }
+
+    #[test]
+    fn pit_menu_and_tyre_check() {
+        let mut s = loaded_race();
+        s.frame.fuel_l = 5.0;
+        s.frame.best_lap_ms = 100_000;
+        s.frame.pit_menu = Some(crate::games::provider::PitMenu { fuel_l: 10.0, tyres: [true; 4], ..Default::default() });
+        let mut mem = Memory::new();
+        let ev = RaceEvent::PitEntry;
+        let menu = |s: &RaceState, mem: &mut Memory| calls(s, mem, |c, m| fuel::on_event(c, m, &ev)).into_iter().filter(|c| c.starts_with("pit.menu_check")).collect::<Vec<_>>();
+        assert_eq!(menu(&s, &mut mem), vec!["pit.menu_check:fuel_low"]);
+        s.frame.pit_menu = Some(crate::games::provider::PitMenu { fuel_l: 60.0, tyres: [true; 4], ..Default::default() });
+        assert_eq!(menu(&s, &mut mem), vec!["pit.menu_check:ok"]);
+
+        let mut check = crate::games::provider::TyreCheck { lap: 12, ..Default::default() };
+        check.wear = [[0.9; 3], [0.7, 0.75, 0.8], [0.95; 3], [0.95; 3]];
+        check.temp_c = [[80.0, 75.0, 70.0], [95.0, 85.0, 80.0], [70.0; 3], [70.0; 3]];
+        s.frame.tyre_check = Some(check);
+        let exit = RaceEvent::PitExit { loss_s: None };
+        assert_eq!(calls(&s, &mut mem, |c, m| car::on_event(c, m, &exit)), vec!["tyre.after_stop"]);
+        assert!(calls(&s, &mut mem, |c, m| car::on_event(c, m, &exit)).is_empty(), "same stop only once");
     }
 }

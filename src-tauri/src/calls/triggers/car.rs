@@ -83,7 +83,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
                     let avg = after.iter().map(|x| *x as i64).sum::<i64>() / after.len() as i64;
                     let loss = (avg as i32 - before) as f32 / 1000.0;
                     let left = s.fuel_strategy(ctx.settings).laps_to_go;
-                    let repair = ctx.th("damage.report", "repair_estimate_s") as f32;
+                    let repair = mem.repair_estimate_s.unwrap_or_else(|| ctx.th("damage.report", "repair_estimate_s") as f32);
                     let sub = if loss * left > repair { "worth" } else { "not_worth" };
                     mem.damage_lap = None;
                     if loss > 0.1 {
@@ -102,7 +102,78 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
             }
             mem.stint_marks = [false; 2];
         }
+        RaceEvent::PitExit { .. } => tyre_after_stop(ctx, mem),
         _ => {}
+    }
+}
+
+/// Tyre values measured in the pit stall (games without live tyre data): most worn tyre and
+/// the biggest inside/outside temperature spread.
+fn tyre_after_stop(ctx: &mut Ctx, mem: &mut Memory) {
+    let Some(c) = ctx.state.frame.tyre_check else { return };
+    // Lap 0 = values from sitting in the box before the session: nothing driven yet.
+    if c.lap <= 0 || mem.tyre_check_said == Some(c.lap) {
+        return;
+    }
+    mem.tyre_check_said = Some(c.lap);
+    let min_wear = |w: &[f32; 3]| w.iter().copied().fold(f32::MAX, f32::min);
+    let Some(worn) = (0..4).min_by(|a, b| min_wear(&c.wear[*a]).total_cmp(&min_wear(&c.wear[*b]))) else { return };
+    let spread_th = ctx.th("tyre.after_stop", "spread_c") as f32;
+    let spread = (0..4)
+        .map(|i| (i, c.temp_c[i][0] - c.temp_c[i][2]))
+        .max_by(|a, b| a.1.abs().total_cmp(&b.1.abs()))
+        .filter(|(_, d)| d.abs() >= spread_th)
+        .map(|(i, d)| {
+            let key = if d > 0.0 { "tyre.after_stop:spread_inner" } else { "tyre.after_stop:spread_outer" };
+            ctx.frag(key, &[("wheel", ctx.fmt.wheel(i).to_string()), ("delta", ctx.fmt.temp(d.abs()))])
+        })
+        .unwrap_or_default();
+    let wear = (min_wear(&c.wear[worn]) * 100.0).round();
+    ctx.push(CallRequest::new("tyre.after_stop").p("wheel", ctx.fmt.wheel(worn).to_string()).p("wear", format!("{wear}")).p("spread", spread));
+}
+
+/// Engine warning lights (rising edge only).
+fn engine(ctx: &mut Ctx, mem: &mut Memory) {
+    let e = ctx.state.frame.engine;
+    let checks = [(e.water_hot, "water_temp", e.water_temp_c), (e.oil_hot, "oil_temp", e.oil_temp_c), (e.oil_pressure_low, "oil_pressure", 0.0), (e.fuel_pressure_low, "fuel_pressure", 0.0)];
+    for (i, (on, sub, temp)) in checks.into_iter().enumerate() {
+        if on && !mem.engine_warned[i] {
+            ctx.push(CallRequest::new("car.engine").variant(sub).p("temp", ctx.fmt.temp(temp)).key(sub));
+        }
+        mem.engine_warned[i] = on;
+    }
+}
+
+/// Repair times reported by the game: announce new damage with the real time it costs.
+fn repair(ctx: &mut Ctx, mem: &mut Memory) {
+    let Some(r) = ctx.state.frame.repair else { return };
+    let (m0, o0) = std::mem::replace(&mut mem.last_repair, (r.mandatory_s, r.optional_s));
+    // Times only go up with new damage; they count down while the crew repairs.
+    let new_mandatory = r.mandatory_s > m0 + 1.0;
+    let new_optional = r.optional_s > o0 + 1.0;
+    if !new_mandatory && !new_optional {
+        return;
+    }
+    let secs = |s: f32| format!("{}", s.round() as i32);
+    if new_mandatory {
+        let mut extra = String::new();
+        if r.optional_s > 1.0 {
+            extra.push_str(&ctx.frag("damage.repair:optional_part", &[("seconds", secs(r.optional_s))]));
+        }
+        if let Some(n) = r.fast_repairs_left.filter(|n| *n > 0) {
+            extra.push_str(&ctx.frag("damage.repair:fast_repair_part", &[("count", n.to_string())]));
+        }
+        ctx.push(CallRequest::new("damage.repair").variant("mandatory").p("seconds", secs(r.mandatory_s)).p("optional", extra));
+    } else {
+        ctx.push(CallRequest::new("damage.repair").variant("optional").p("seconds", secs(r.optional_s)));
+    }
+    // The pace check after damage weighs the loss against the optional repair.
+    if r.optional_s > 1.0 {
+        mem.repair_estimate_s = Some(r.optional_s);
+        if mem.damage_lap.is_none() {
+            mem.damage_lap = Some(ctx.lap());
+            mem.pace_before_damage_ms = Some(ctx.state.avg_lap_ms(5)).filter(|p| *p > 0);
+        }
     }
 }
 
@@ -140,11 +211,13 @@ pub fn on_frame(state: &RaceState, mem: &mut Memory) {
 }
 
 pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
+    repair(ctx, mem);
     let s = ctx.state;
     let f = &s.frame;
     if f.in_pit_lane || f.speed_kmh < 30.0 {
         return;
     }
+    engine(ctx, mem);
     let c = class(ctx);
     // Cold tyres after the start or a stop.
     if mem.cold_check_pending && f.speed_kmh > 60.0 {
@@ -192,7 +265,11 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
     let wet_track = matches!(w.grip, TrackGrip::Wet | TrackGrip::Flooded) || (aggr == 0 && w.grip == TrackGrip::Damp);
     let soon = if aggr == 0 { w.rain_30min.max(w.rain_10min) } else { w.rain_10min };
     let soon_threshold = if aggr == 2 { RainIntensity::Medium } else { RainIntensity::Light };
-    let state = if !f.rain_tyres && wet_track {
+    // Wet tyres not allowed yet (race control has not declared the track wet).
+    let wets_banned = f.wet_tyres_allowed == Some(false);
+    let state = if wets_banned && !f.rain_tyres {
+        None
+    } else if !f.rain_tyres && wet_track {
         Some("to_wet_now")
     } else if !f.rain_tyres && soon >= soon_threshold {
         Some("to_wet_soon")

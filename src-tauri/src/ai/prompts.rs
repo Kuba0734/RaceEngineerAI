@@ -73,6 +73,7 @@ pub fn snapshot(state: &RaceState, crew: &CrewState) -> String {
         "phase": state.session.phase,
         "time_left_min": (f.session_time_left_ms / 6000.0).round() / 10.0,
         "laps_left": f.laps_left.map(|l| l.ceil()),
+        "incidents": f.incidents.map(|n| match state.session.incident_limit { Some(l) => format!("{n}/{l}"), None => n.to_string() }),
         "lap": f.completed_laps + 1,
         "pos": state.player_position(),
         "cars": state.cars.len(),

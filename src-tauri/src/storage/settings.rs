@@ -896,11 +896,16 @@ pub struct GameSettings {
     pub enabled: bool,
     pub broadcasting_port: u16,
     pub broadcasting_password: String,
+    /// Rules the game does not report itself (e.g. iRacing series rules): 0 = none.
+    pub mandatory_stops: u32,
+    /// Pit window in minutes from the race start (open < close; 0/0 = none).
+    pub pit_window_open_min: f32,
+    pub pit_window_close_min: f32,
 }
 
 impl Default for GameSettings {
     fn default() -> Self {
-        Self { enabled: true, broadcasting_port: 0, broadcasting_password: String::new() }
+        Self { enabled: true, broadcasting_port: 0, broadcasting_password: String::new(), mandatory_stops: 0, pit_window_open_min: 0.0, pit_window_close_min: 0.0 }
     }
 }
 

@@ -11,6 +11,8 @@ const MAX_DT: f64 = 0.25;
 const MIN_POINTS: usize = 300;
 /// Largest accepted closing error relative to the driven distance.
 const MAX_CLOSURE: f32 = 0.08;
+/// File format version of saved maps; bump when the geometry convention changes.
+const FILE_VERSION: u32 = 1;
 
 #[derive(Default)]
 pub struct TrackMap {
@@ -33,6 +35,54 @@ pub fn axes(yaw: f32) -> ([f32; 2], [f32; 2]) {
 impl TrackMap {
     pub fn is_built(&self) -> bool {
         !self.bins.is_empty()
+    }
+
+    /// Driving direction of the built line (shoelace area; x right, z up). A known clockwise
+    /// track that comes out counter-clockwise means the `Yaw` sign is flipped.
+    pub fn clockwise(&self) -> Option<bool> {
+        if self.bins.is_empty() {
+            return None;
+        }
+        let n = self.bins.len();
+        let area: f32 = (0..n).map(|i| {
+            let (a, b) = (self.bins[i], self.bins[(i + 1) % n]);
+            a[0] * b[1] - b[0] * a[1]
+        }).sum();
+        Some(area < 0.0)
+    }
+
+    /// Saved form: version, bin count, then x/z pairs (f32 little endian).
+    pub fn to_bytes(&self) -> Option<Vec<u8>> {
+        if self.bins.is_empty() {
+            return None;
+        }
+        let mut b = Vec::with_capacity(8 + self.bins.len() * 8);
+        b.extend_from_slice(&FILE_VERSION.to_le_bytes());
+        b.extend_from_slice(&(self.bins.len() as u32).to_le_bytes());
+        for p in &self.bins {
+            b.extend_from_slice(&p[0].to_le_bytes());
+            b.extend_from_slice(&p[1].to_le_bytes());
+        }
+        Some(b)
+    }
+
+    /// Takes over a saved map (ignored if a map was built meanwhile or the file is invalid).
+    pub fn load_bytes(&mut self, b: &[u8]) -> bool {
+        let word = |o: usize| b.get(o..o + 4).map(|s| [s[0], s[1], s[2], s[3]]);
+        let (Some(v), Some(n)) = (word(0), word(4)) else { return false };
+        let n = u32::from_le_bytes(n) as usize;
+        if u32::from_le_bytes(v) != FILE_VERSION || n != BINS || b.len() != 8 + n * 8 || self.is_built() {
+            return false;
+        }
+        self.bins = (0..n)
+            .filter_map(|i| {
+                let o = 8 + i * 8;
+                Some([f32::from_le_bytes(word(o)?), f32::from_le_bytes(word(o + 4)?)])
+            })
+            .collect();
+        self.recording = false;
+        self.rec.clear();
+        true
     }
 
     pub fn reset(&mut self) {
@@ -134,7 +184,7 @@ impl TrackMap {
         self.bins = bins;
         self.recording = false;
         self.rec.clear();
-        tracing::info!("iracing map built ({n} samples, {:.0} m)", self.dist);
+        tracing::info!("iracing map built ({n} samples, {:.0} m, clockwise={:?})", self.dist, self.clockwise());
     }
 }
 
@@ -170,6 +220,12 @@ mod tests {
         // Start heading up (+z), turning left: a quarter lap later the car is up and left.
         let q = m.at(0.25).unwrap();
         assert!(q[1] > 300.0 && q[0] < -300.0, "{q:?}");
+        assert_eq!(m.clockwise(), Some(false));
+        // Saved and loaded again: same line.
+        let mut m2 = TrackMap::default();
+        assert!(m2.load_bytes(&m.to_bytes().unwrap()));
+        assert_eq!(m2.at(0.37), m.at(0.37));
+        assert!(!TrackMap::default().load_bytes(&[1, 2, 3]));
     }
 
     #[test]

@@ -664,8 +664,7 @@
    "sessions": [
     "race"
    ],
-   "enabled": true,
-   "requires": "hasPitWindow"
+   "enabled": true
   },
   {
    "id": "pit.fuel_amount",
@@ -1653,6 +1652,150 @@
    "priority": "answer",
    "cooldownS": 0,
    "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "penalty.incidents",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 5,
+   "expiryS": 15,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "report_from": {
+     "default": 4,
+     "min": 1,
+     "max": 30,
+     "step": 1,
+     "unit": ""
+    },
+    "warn_left": {
+     "default": 4,
+     "min": 1,
+     "max": 15,
+     "step": 1,
+     "unit": ""
+    }
+   },
+   "requires": "hasIncidents"
+  },
+  {
+   "id": "car.engine",
+   "group": "car",
+   "priority": "critical",
+   "cooldownS": 120,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "damage.repair",
+   "group": "car",
+   "priority": "critical",
+   "cooldownS": 20,
+   "expiryS": 30,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasRepairTimes"
+  },
+  {
+   "id": "pit.menu_check",
+   "group": "fuel_pit",
+   "priority": "high",
+   "cooldownS": 30,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true,
+   "requires": "hasPitMenu"
+  },
+  {
+   "id": "tyre.after_stop",
+   "group": "car",
+   "priority": "normal",
+   "cooldownS": 60,
+   "expiryS": 60,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true,
+   "thresholds": {
+    "spread_c": {
+     "default": 8,
+     "min": 3,
+     "max": 25,
+     "step": 1,
+     "unit": "°C"
+    }
+   },
+   "requires": "hasPitTyreCheck"
+  },
+  {
+   "id": "flag.pace",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 10,
+   "expiryS": 20,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "race"
+   ],
+   "enabled": true
+  },
+  {
+   "id": "weather.wet_declared",
+   "group": "weather",
+   "priority": "high",
+   "cooldownS": 300,
+   "expiryS": 30,
    "frequency": {
     "kind": "always"
    },

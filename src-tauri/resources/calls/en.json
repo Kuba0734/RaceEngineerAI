@@ -562,5 +562,93 @@
  "answer.no_live": [
   "I don't have live data right now.",
   "No game running, no data."
+ ],
+ "penalty.incidents": [
+  "Incident, you're on {count} now.",
+  "That's an incident, {count} now."
+ ],
+ "penalty.incidents:limit": [
+  "Incident, {count} of {limit}. {left} to go before a penalty, stay calm.",
+  "Careful, {count} incidents, only {left} left to the limit."
+ ],
+ "car.engine:water_temp": [
+  "Water temperature high, {temp}. Get out of the tow, let it breathe.",
+  "Engine's running hot, water at {temp}."
+ ],
+ "car.engine:oil_temp": [
+  "Oil temperature high, {temp}. Short shift a bit.",
+  "Oil's getting hot, {temp}."
+ ],
+ "car.engine:oil_pressure": [
+  "Oil pressure warning! Keep an eye on the gauges.",
+  "Oil pressure warning, that doesn't look good."
+ ],
+ "car.engine:fuel_pressure": [
+  "Fuel pressure warning.",
+  "Warning, fuel pressure."
+ ],
+ "damage.repair:mandatory": [
+  "Damage. Required repair in the pits, about {seconds} seconds.{optional}",
+  "We have to repair, about {seconds} seconds standing.{optional}"
+ ],
+ "damage.repair:optional": [
+  "Light damage, optional repair about {seconds} seconds.",
+  "Minor damage, fixing it would cost about {seconds} seconds."
+ ],
+ "damage.repair:optional_part": [
+  " Plus {seconds} seconds optional."
+ ],
+ "damage.repair:fast_repair_part": [
+  " You have {count} fast repair left."
+ ],
+ "pit.menu_check:ok": [
+  "Pit stop is set: {fuel}, {tyres}.",
+  "Pit menu looks good: {fuel}, {tyres}."
+ ],
+ "pit.menu_check:fuel_low": [
+  "Careful, only {fuel} set, you need {needed}.",
+  "Not enough fuel in the pit menu: {fuel}, you need {needed}."
+ ],
+ "pit.menu_check:tyres_all": [
+  "four new tyres"
+ ],
+ "pit.menu_check:tyres_none": [
+  "no tyres"
+ ],
+ "pit.menu_check:tyres_some": [
+  "{count} tyres"
+ ],
+ "pit.menu_check:no_fuel": [
+  "no fuel"
+ ],
+ "tyre.after_stop": [
+  "Tyres measured at the stop: {wheel} most worn, {wear} percent left.{spread}",
+  "Tyre check from the stop: {wheel} has {wear} percent left.{spread}"
+ ],
+ "tyre.after_stop:spread_inner": [
+  " {wheel} inside {delta} hotter than outside."
+ ],
+ "tyre.after_stop:spread_outer": [
+  " {wheel} outside {delta} hotter than inside."
+ ],
+ "flag.pace:green_next_lap": [
+  "Safety car's in this lap, green next time by. Get ready.",
+  "Pace car's pulling off, restart next lap."
+ ],
+ "flag.pace:free_pass": [
+  "You've got the free pass, you get your lap back.",
+  "Free pass for you, lap back."
+ ],
+ "flag.pace:waved_around": [
+  "Wave around, you can unlap yourself.",
+  "You're being waved around, go to the tail."
+ ],
+ "flag.pace:end_of_line": [
+  "You have to go to the end of the line.",
+  "Penalty: end of the longest line."
+ ],
+ "weather.wet_declared": [
+  "Race control has declared the track wet, wet tyres allowed.",
+  "Track's officially wet, wets are allowed."
  ]
 }

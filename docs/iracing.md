@@ -53,13 +53,22 @@ Wagenabhängig, nur wenn vorhanden: `dcTractionControl`, `dcABS`, `[LF|RF|LR|RR]
 | Sprit max. | YAML `DriverCarFuelMaxLtr × DriverCarMaxFuelPct` | |
 | Grip | `TrackWetness` | Dry→Optimum, MostlyDry→Greasy, VeryLightly/LightlyWet→Damp, Moderately/VeryWet→Wet, ExtremelyWet→Flooded |
 | Regen jetzt | `Precipitation` | 0 → keiner, <0,1 Niesel, <0,3 leicht, <0,6 mittel, sonst stark. **Keine Vorhersage** (`hasWeatherForecast=false`). |
-| Rangliste/Abstände | `CarIdx*`-Arrays + YAML `DriverInfo.Drivers` | Kein zweiter Kanal nötig → `hasBroadcastTiming=true`. Sektorzeiten anderer Autos gibt es nicht. |
-| Track Limits | – | iRacing hat keinen „Runde ungültig“-Wert, nur Incident-Punkte. `hasTrackLimits=false`. Neue Incidents → Ereignis `Accident`. |
-| Reifen | `tempCM`, `wearM` | iRacing aktualisiert diese Werte nur in der Box. Live-Drücke gibt es nicht → `hasTyreCoreTemps=false`, Druck bleibt 0 (Druck-Meldungen sind dadurch still). |
-| Bremsen, Schaden | – | nicht vorhanden → 0 (`hasBrakeWear=false`). |
-| Licht, Wischer | – | kein Zustand vorhanden → `-1` = unbekannt, die Meldungen „Licht an“/„Wischer an“ bleiben still. |
-| Regenreifen montiert | – | `PlayerTireCompound` ist ein Index ohne dokumentierte Bedeutung → `false`. |
-| Boxenfenster, Pflichtstopp | – | nicht vorhanden. |
+| Rangliste/Abstände | `CarIdx*`-Arrays + YAML `DriverInfo.Drivers` | Kein zweiter Kanal nötig → `hasBroadcastTiming=true`. Offizieller Abstand zum Führenden aus `CarIdxF2Time` (nur im Rennen). |
+| Sektorzeiten aller Autos | – (selbst gemessen) | Der Provider misst für jedes Auto die drei Drittel der Runde aus `CarIdxLapDistPct` + `SessionTime` (60 Hz, ±16 ms). Runden über die Boxengasse zählen nicht als Bestzeit. |
+| Karte | gekoppelt + gespeichert | Siehe oben; die fertige Linie wird pro Strecke unter `%LOCALAPPDATA%\RaceEngineerAI\maps\iracing\` gespeichert und beim nächsten Mal sofort geladen. |
+| Track Limits | `PlayerTrackSurface` | Vier Räder neben der Strecke (`irsdk_OffTrack`) = Track Limit, die Runde gilt als ungültig. `hasTrackLimits=true`. |
+| Incidents | `PlayerCarMyIncidentCount` (Team: `PlayerCarTeamIncidentCount`), YAML `WeekendOptions.IncidentLimit` | Meldung `penalty.incidents`. |
+| Reifen | `tempCL/CM/CR`, `wearL/M/R`, `coldPressure` | iRacing gibt **keine Live-Reifenwerte** heraus; die Werte ändern sich nur in der Box. Der Provider hält sie 1 s nach dem Anhalten in der Box fest (`TyreCheck`, innen/mitte/außen – bei linken Rädern ist „L“ außen). Overlay zeigt sie als „Stand letzter Boxenstopp“, Meldung `tyre.after_stop`. Live-Drücke: nicht vorhanden. |
+| Bremsen | – | iRacing gibt weder Bremstemperatur noch Verschleiß heraus (nur `brakeLinePress`). |
+| Schaden | `PitRepairLeft`, `PitOptRepairLeft`, `FastRepairAvailable`, `EngineWarnings` (mandRepNeeded) | Keine Schadenszonen, aber die echte Reparaturzeit → Meldung `damage.repair` und Abwägung in `damage.report`. |
+| Motor | `EngineWarnings`, `WaterTemp`, `OilTemp` | Meldung `car.engine`. |
+| Boxenmenü | `PitSvFlags`, `PitSvFuel` | Meldung `pit.menu_check` bei Boxeneinfahrt, auch im KI-Werkzeug `get_fuel_strategy`. |
+| Safety Car | `SessionFlags` (caution, oneLapToGreen), `CarIdxPaceFlags` | FCY wie bei ACC, dazu `flag.pace`. |
+| Regenreifen | `PlayerTireCompound`, `CarIdxTireCompound` + YAML `DriverInfo.DriverTires[].TireCompoundType` | **Live prüfen:** `DriverTires` ist nicht dokumentiert; ohne den Schlüssel bleibt „Regenreifen montiert“ unbekannt. `WeatherDeclaredWet` sperrt die Regenreifen-Empfehlung, bis nass freigegeben ist. |
+| Regenprognose | – | iRacing gibt keine Vorhersage heraus, nur Regen und Nässe jetzt. |
+| Licht, Wischer, Stint-Restzeit | – | kein Zustand vorhanden → `-1` = unbekannt, „Licht an“/„Wischer an“ bleiben still; iRacing kennt keine Stint-Grenze. |
+| Strafen | `SessionFlags` black/disqualify | Die Art (Durchfahrt, Stop-and-Go) gibt iRacing nicht heraus, nur „schwarze Flagge“. |
+| Boxenfenster, Pflichtstopp | – | Nicht im SDK. Pro Spiel in den Einstellungen (Spiele-Seite) eintragbar; die App zählt die eigenen Stopps. |
 
 ## Sektoren
 
@@ -67,9 +76,27 @@ iRacing teilt Strecken in viele Zeitsektoren (`SplitTimeInfo`). Die Logik arbeit
 
 ## Live-Prüfung
 
-`cargo test --test iracing_live -- --ignored --nocapture` (im Auto sitzen) gibt Header, alle Variablennamen, die Sessions aus der YAML, Rohwerte und den fertigen Frame aus. Offen, weil iRacing hier nicht installiert ist:
+`cargo test --test iracing_live -- --ignored --nocapture` (im Auto sitzen) gibt Header, alle Variablennamen, die Sessions aus der YAML, Rohwerte und den fertigen Frame aus. Mit `IRACING_LIVE_SECONDS=240` läuft er länger; nach einer vollen sauberen Runde meldet er die Fahrtrichtung der gekoppelten Karte.
 
-1. Vorzeichen von `Yaw` (Karte gespiegelt?) und Richtung von `SteeringWheelAngle`.
-2. `SessionLapsRemainEx` zählt die laufende Runde mit? (`laps_left = Rest − LapDistPct`)
-3. `WeekendInfo.SubSessionID` ist offline 0 (→ `online`).
-4. Namen der wagenabhängigen Variablen `dcTractionControl` / `dcABS` bei GT3-Autos.
+### Live verifiziert (2026-11-02, Nürburgring GP, Porsche 911 GT3 R (992), Offline-Test)
+
+| Punkt | Ergebnis |
+|---|---|
+| Header | `ver=2`, `status=1`, `tickRate=60`, `numBuf=3`, 335 Variablen – Layout passt |
+| Session-YAML | Strecke `nurburgring gp`, 5068,5 m, Session `Practice` unbegrenzt, Spielername, Startnummer, Auto korrekt |
+| Unbegrenzte Zeit/Runden | `SessionTimeRemain=604800`, `SessionLapsRemainEx=32767` → als „unbegrenzt“ erkannt |
+| `CarLeftRight` | `1` (Clear) im Auto |
+| `dcTractionControl`, `dcABS` | vorhanden (GT3) |
+| `SteeringWheelAngleMax` | 9,89 rad |
+| `WeekendInfo.SubSessionID` offline | → `online=false` |
+| `CarClassShortName` | **offline leer** → Klasse wird jetzt zusätzlich aus Autoname/-pfad abgeleitet |
+| `LapCompleted` | **-1** bis zur ersten Überfahrt der Linie aus der Box → wird auf 0 begrenzt |
+| `SessionFlags` in der Box | `0x10040000` = startHidden + servicible → keine Flagge |
+
+### Noch offen
+
+1. Vorzeichen von `Yaw` (Karte gespiegelt?) – mit `IRACING_LIVE_SECONDS` eine Runde auf einer bekannten Strecke fahren. Nürburgring GP wird im Uhrzeigersinn gefahren.
+2. Richtung von `SteeringWheelAngle` (Vorzeichen links/rechts).
+3. `SessionLapsRemainEx` in einem Rennen nach Runden: zählt es die laufende Runde mit? (`laps_left = Rest − LapDistPct`)
+4. `online` in einer gehosteten/offiziellen Session.
+5. Spotter, Rangliste und Abstände mit Gegnern (KI-Rennen).

@@ -46,6 +46,11 @@ pub struct SessionData {
     pub fuel_max_l: f32,
     pub redline_rpm: f32,
     pub drivers: Vec<Driver>,
+    /// `WeekendOptions.IncidentLimit` (None = unlimited).
+    pub incident_limit: Option<i32>,
+    pub team_racing: bool,
+    /// Tyre compound indices that are wet tyres (`DriverInfo.DriverTires`).
+    pub wet_compounds: Vec<i32>,
 }
 
 /// `SessionType` strings as written by the sim.
@@ -62,6 +67,7 @@ pub fn session_kind(s: &str) -> SessionType {
     }
 }
 
+/// Number or "unlimited" (-> None).
 fn limit(n: &Node, key: &str) -> Option<f64> {
     n.str(key).filter(|s| !s.eq_ignore_ascii_case("unlimited")).and_then(yaml::leading_number)
 }
@@ -117,6 +123,14 @@ pub fn parse(src: &str) -> SessionData {
         fuel_max_l: (max_l * max_pct) as f32,
         redline_rpm: y.num("DriverInfo.DriverCarRedLine").unwrap_or(0.0) as f32,
         drivers,
+        incident_limit: limit(&y, "WeekendInfo.WeekendOptions.IncidentLimit").map(|v| v as i32).filter(|v| *v > 0),
+        team_racing: flag(&y, "WeekendInfo.TeamRacing"),
+        wet_compounds: y
+            .list("DriverInfo.DriverTires")
+            .iter()
+            .filter(|t| t.str("TireCompoundType").is_some_and(|c| c.to_lowercase().contains("wet")))
+            .filter_map(|t| t.num("TireIndex").map(|i| i as i32))
+            .collect(),
     }
 }
 
@@ -131,17 +145,27 @@ impl SessionData {
 }
 
 /// iRacing class short names ("GT3 Class", "GT4", "PCup") → classes of `cars.json`.
-pub fn class_key(short: &str) -> String {
+pub fn class_key(short: &str) -> Option<&'static str> {
     let s = short.to_uppercase();
     if s.contains("GT3") {
-        "GT3".into()
+        Some("GT3")
     } else if s.contains("GT4") {
-        "GT4".into()
+        Some("GT4")
     } else if s.contains("CUP") {
-        "CUP".into()
+        Some("CUP")
     } else {
-        short.trim().to_string()
+        None
     }
+}
+
+/// Class of a car. Offline test sessions leave `CarClassShortName` empty (seen live with the
+/// Porsche 992 GT3 R), so the car name and path are checked as well.
+pub fn class_of(d: &Driver) -> String {
+    [&d.car_class, &d.car_name, &d.car_path]
+        .into_iter()
+        .find_map(|s| class_key(s))
+        .map(str::to_string)
+        .unwrap_or_else(|| d.car_class.trim().to_string())
 }
 
 #[cfg(test)]
@@ -154,6 +178,9 @@ WeekendInfo:
  TrackDisplayName: Circuit de Spa-Francorchamps
  TrackLength: 6.96 km
  SubSessionID: 0
+ TeamRacing: 0
+ WeekendOptions:
+  IncidentLimit: 17
 SessionInfo:
  Sessions:
  - SessionNum: 0
@@ -170,6 +197,11 @@ SessionInfo:
    SessionType: Lone Qualify
 DriverInfo:
  DriverCarIdx: 2
+ DriverTires:
+ - TireIndex: 0
+   TireCompoundType: \"Hard\"
+ - TireIndex: 1
+   TireCompoundType: \"Wet\"
  DriverCarFuelMaxLtr: 120.000
  DriverCarMaxFuelPct: 0.900
  DriverCarRedLine: 8000.000
@@ -206,8 +238,14 @@ DriverInfo:
         assert!((s.fuel_max_l - 108.0).abs() < 0.01);
         let me = s.driver(2).unwrap();
         assert_eq!(me.car_number, 7);
+        assert_eq!(s.incident_limit, Some(17));
+        assert!(!s.team_racing);
+        assert_eq!(s.wet_compounds, vec![1]);
         assert!(me.races());
         assert!(!s.driver(0).unwrap().races());
-        assert_eq!(class_key(&me.car_class), "GT3");
+        assert_eq!(class_of(me), "GT3");
+        let offline = Driver { car_name: "Porsche 911 GT3 R (992)".into(), car_path: "porsche992rgt3".into(), ..Default::default() };
+        assert_eq!(class_of(&offline), "GT3");
+        assert_eq!(class_of(&Driver { car_class: "MX5 Cup".into(), ..Default::default() }), "CUP");
     }
 }

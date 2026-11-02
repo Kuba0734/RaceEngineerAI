@@ -16,7 +16,11 @@
       "hasPitWindow": true,
       "hasTrackLimits": true,
       "hasCarCoordinates": true,
-      "hasCarDamage": true
+      "hasCarDamage": true,
+      "hasIncidents": false,
+      "hasRepairTimes": false,
+      "hasPitMenu": false,
+      "hasPitTyreCheck": false
     },
     "setupHintsDe": [
       "Broadcasting-API aktivieren: RaceEngineerAI kann broadcasting.json automatisch einrichten (Backup wird angelegt). Danach ACC neu starten.",
@@ -57,9 +61,13 @@
       "hasTyreCoreTemps": false,
       "hasBrakeWear": false,
       "hasPitWindow": false,
-      "hasTrackLimits": false,
+      "hasTrackLimits": true,
       "hasCarCoordinates": false,
-      "hasCarDamage": false
+      "hasCarDamage": false,
+      "hasIncidents": true,
+      "hasRepairTimes": true,
+      "hasPitMenu": true,
+      "hasPitTyreCheck": true
     },
     "setupHintsDe": [
       "Keine Einrichtung nötig: iRacing stellt seine Telemetrie (SDK) automatisch bereit, sobald du im Auto sitzt.",
