@@ -1,7 +1,7 @@
 # Builds the signed NSIS installer and publishes a GitHub release with latest.json
 # for the in-app updater. Trigger: push a tag like v0.1.0.
 # Required repository secrets: TAURI_SIGNING_PRIVATE_KEY (content of %USERPROFILE%\.tauri\raceengineerai.key)
-# and TAURI_SIGNING_PRIVATE_KEY_PASSWORD (empty if none).
+# and TAURI_SIGNING_PRIVATE_KEY_PASSWORD (leave out if the key has no password).
 name: release
 on:
   push:
@@ -36,5 +36,5 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: RaceEngineerAI ${{ github.ref_name }}
           releaseBody: See the changelog.
-          releaseDraft: true
+          releaseDraft: false
           includeUpdaterJson: true

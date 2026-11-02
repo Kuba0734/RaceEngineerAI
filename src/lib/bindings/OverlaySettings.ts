@@ -17,4 +17,4 @@ delta_range_s: number, radio_show_text: boolean, dash_show_assists: boolean,
 /**
  * Time span of the input graph (seconds).
  */
-inputs_seconds: number, inputs_show_steer: boolean, laps_rows: number, layout: Array<WidgetLayout>, };
+inputs_seconds: number, inputs_show_steer: boolean, laps_rows: number, tyres_show_brakes: boolean, flag_yellow: boolean, flag_blue: boolean, flag_penalty: boolean, layout: Array<WidgetLayout>, };

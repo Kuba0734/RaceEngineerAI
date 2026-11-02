@@ -14,6 +14,8 @@ import { Dash } from "./widgets/Dash";
 import { Delta } from "./widgets/Delta";
 import { Inputs } from "./widgets/Inputs";
 import { RecentLaps } from "./widgets/RecentLaps";
+import { Tyres } from "./widgets/Tyres";
+import { FlagBanner, activeFlag } from "./widgets/FlagBanner";
 
 function Widget({ layout, edit, onChange, children, title, hidden = false, panel }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean; panel: number }) {
   const x = useMotionValue(layout.x);
@@ -97,6 +99,7 @@ export default function Overlay() {
   };
   const o = settings.overlay;
   const anim = o.animations;
+  const flag = activeFlag(frame, o);
   const content = (id: string): ReactNode => {
     switch (id) {
       case "map":
@@ -115,6 +118,10 @@ export default function Overlay() {
         return <Inputs liveRef={ref} hz={hz} seconds={o.inputs_seconds} showSteer={o.inputs_show_steer} />;
       case "laps":
         return <RecentLaps laps={frame?.recent_laps} rows={o.laps_rows} />;
+      case "tyres":
+        return <Tyres tyres={frame?.tyres} units={settings.units} showBrakes={o.tyres_show_brakes} />;
+      case "flag":
+        return <FlagBanner flag={flag} />;
       case "radio":
         return (
           <div className={cx("flex items-center gap-3", o.radio_show_text && "w-[300px]")}>
@@ -136,7 +143,7 @@ export default function Overlay() {
         </div>
       )}
       {layout.filter((l) => l.visible).map((l) => (
-        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} hidden={l.id === "radar" && o.radar_auto_hide && !radarActive}>
+        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} hidden={(l.id === "radar" && o.radar_auto_hide && !radarActive) || (l.id === "flag" && !flag)}>
           {content(l.id)}
         </Widget>
       ))}

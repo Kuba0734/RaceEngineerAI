@@ -777,6 +777,10 @@ pub struct OverlaySettings {
     pub inputs_seconds: f32,
     pub inputs_show_steer: bool,
     pub laps_rows: u32,
+    pub tyres_show_brakes: bool,
+    pub flag_yellow: bool,
+    pub flag_blue: bool,
+    pub flag_penalty: bool,
     pub layout: Vec<WidgetLayout>,
 }
 
@@ -819,6 +823,10 @@ impl Default for OverlaySettings {
             inputs_seconds: 8.0,
             inputs_show_steer: true,
             laps_rows: 5,
+            tyres_show_brakes: true,
+            flag_yellow: true,
+            flag_blue: true,
+            flag_penalty: true,
             layout: default_layout(),
         }
     }

@@ -43,6 +43,20 @@ pub struct RecentLap {
     pub out_lap: bool,
 }
 
+/// Tyre and brake values with the target windows of the car class.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TyreView {
+    pub core_temp_c: [f32; 4],
+    pub pressure_psi: [f32; 4],
+    pub brake_temp_c: [f32; 4],
+    pub temp_cold: f32,
+    pub temp_hot: f32,
+    pub pressure_min: f32,
+    pub pressure_max: f32,
+    pub brake_hot: f32,
+}
+
 /// How many laps the live frame carries for the lap time widget.
 const RECENT_LAPS: usize = 20;
 
@@ -73,6 +87,8 @@ pub struct LiveFrame {
     pub delta_ms: i32,
     pub time_left_ms: f64,
     pub flag: Flag,
+    pub yellow_sectors: [bool; 3],
+    pub penalty: Option<crate::games::provider::Penalty>,
     pub in_pits: bool,
     pub spotter: Side,
     pub radar: Vec<RadarCar>,
@@ -84,6 +100,8 @@ pub struct LiveFrame {
     pub fuel: Option<FuelStrategy>,
     #[ts(optional)]
     pub recent_laps: Option<Vec<RecentLap>>,
+    #[ts(optional)]
+    pub tyres: Option<TyreView>,
     pub speaking: bool,
     pub listening: crate::voice::ListenState,
     pub mic_level: f32,
@@ -145,6 +163,8 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         delta_ms: f.delta_ms,
         time_left_ms: f.session_time_left_ms,
         flag: f.flag,
+        yellow_sectors: f.yellow_sectors,
+        penalty: f.penalty,
         in_pits: f.in_pit_lane,
         spotter: st.spotter.state(),
         radar: st.spotter.radar.clone(),
@@ -152,6 +172,20 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         outline_version: st.outline_version,
         standings: heavy.then(|| st.standings(5)),
         fuel: heavy.then(|| st.fuel_strategy(&settings)),
+        tyres: heavy.then(|| {
+            let c = crate::games::cars::class_def(&st.session.car_class);
+            let window = if f.rain_tyres { c.wet } else { c.dry };
+            TyreView {
+                core_temp_c: f.wheels.map(|w| w.core_temp_c),
+                pressure_psi: f.wheels.map(|w| w.pressure_psi),
+                brake_temp_c: f.wheels.map(|w| w.brake_temp_c),
+                temp_cold: c.core_temp_cold,
+                temp_hot: c.core_temp_hot,
+                pressure_min: window[0],
+                pressure_max: window[1],
+                brake_hot: c.brake_temp_hot,
+            }
+        }),
         recent_laps: heavy.then(|| st.laps.iter().rev().take(RECENT_LAPS).map(|l| RecentLap { lap: l.lap, time_ms: l.time_ms, valid: l.valid, in_lap: l.in_lap, out_lap: l.out_lap }).collect()),
         speaking: core.mixer_status.any_speaking(),
         listening: core.voice.state(),

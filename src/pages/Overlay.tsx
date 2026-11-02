@@ -7,10 +7,10 @@ import type { OverlaySettings } from "@/lib/bindings/OverlaySettings";
 import { Badge, Button, Card, Field, Select, Slider, TextInput, Toggle, cx, useAsync } from "@/components/ui";
 import { useSettings } from "./settings/basic";
 
-type WidgetId = "map" | "standings" | "radar" | "fuel" | "delta" | "radio" | "dash" | "inputs" | "laps";
+type WidgetId = "map" | "standings" | "radar" | "fuel" | "delta" | "radio" | "dash" | "inputs" | "laps" | "tyres" | "flag";
 
 /** Start position of widgets that are not in a saved layout yet. */
-const NEW_WIDGET_Y: Partial<Record<WidgetId, number>> = { dash: 40, inputs: 220, laps: 370 };
+const NEW_WIDGET_Y: Partial<Record<WidgetId, number>> = { dash: 40, inputs: 220, laps: 370, tyres: 560, flag: 780 };
 
 const ICONS: Record<WidgetId, string> = {
   map: "M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2zM9 4v14m6-12v14",
@@ -22,6 +22,8 @@ const ICONS: Record<WidgetId, string> = {
   dash: "M4 16a8 8 0 1 1 16 0M12 16l4-5",
   inputs: "M3 18l5-9 4 6 4-10 5 13",
   laps: "M12 7v5l3 2M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18",
+  tyres: "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0-16 0M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0",
+  flag: "M5 21V4h13l-3 4 3 4H5",
 };
 
 function WidgetCard({ id, w, onW, children }: { id: WidgetId; w: WidgetLayout; onW: (p: Partial<WidgetLayout>) => void; children?: ReactNode }) {
@@ -136,6 +138,14 @@ export default function OverlayPage() {
             <Slider value={o.inputs_seconds} min={3} max={20} step={1} onChange={(v) => set({ inputs_seconds: v })} format={(v) => `${v} s`} />
           </Field>
           <Toggle checked={o.inputs_show_steer} onChange={(v) => set({ inputs_show_steer: v })} label={t("ov.inputsSteer")} />
+        </WidgetCard>
+        <WidgetCard id="tyres" w={widget("tyres")} onW={(p) => setW("tyres", p)}>
+          <Toggle checked={o.tyres_show_brakes} onChange={(v) => set({ tyres_show_brakes: v })} label={t("ov.tyresBrakes")} />
+        </WidgetCard>
+        <WidgetCard id="flag" w={widget("flag")} onW={(p) => setW("flag", p)}>
+          <Toggle checked={o.flag_yellow} onChange={(v) => set({ flag_yellow: v })} label={t("ov.flagYellow")} />
+          <Toggle checked={o.flag_blue} onChange={(v) => set({ flag_blue: v })} label={t("ov.flagBlue")} />
+          <Toggle checked={o.flag_penalty} onChange={(v) => set({ flag_penalty: v })} label={t("ov.flagPenalty")} />
         </WidgetCard>
         <WidgetCard id="laps" w={widget("laps")} onW={(p) => setW("laps", p)}>
           <Field label={t("ov.rows")}>

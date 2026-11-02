@@ -24,4 +24,4 @@ cargo test --test questions -- --ignored --nocapture       # GROQ_API_KEY setzen
 
 ## Release
 
-Tag `vX.Y.Z` pushen → GitHub Actions baut das signierte NSIS-Setup und einen Draft-Release mit `latest.json` für den Auto-Updater. Secrets im Repo: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Der private Schlüssel liegt **nur** unter `%USERPROFILE%\.tauri\raceengineerai.key` – sichern, sonst können keine Updates mehr ausgeliefert werden.
+Tag `vX.Y.Z` pushen → GitHub Actions baut das signierte NSIS-Setup und veröffentlicht einen Release mit `latest.json` für den Auto-Updater. Secret im Repo: `TAURI_SIGNING_PRIVATE_KEY`. Vorher die Version in `package.json`, `src-tauri/Cargo.toml` und `src-tauri/tauri.conf.json` erhöhen. Der private Schlüssel liegt **nur** unter `%USERPROFILE%\.tauri\raceengineerai.key` – sichern, sonst können keine Updates mehr ausgeliefert werden.

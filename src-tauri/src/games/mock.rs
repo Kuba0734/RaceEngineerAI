@@ -236,7 +236,8 @@ impl MockProvider {
             in_pit_box: false,
             tyres_out: 0,
             flag: Flag::None,
-            yellow_sectors: [false; 3],
+            // Periodic yellow so the flag banner can be seen in the demo.
+            yellow_sectors: [false, (60.0..70.0).contains(&(t % 180.0)), false],
             global_yellow: false,
             penalty: None,
             penalty_time_s: 0.0,
