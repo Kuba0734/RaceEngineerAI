@@ -9,4 +9,12 @@ export type SessionInfo = { game_id: string, track: string, track_length_m: numb
 /**
  * Incident points that lead to a penalty or disqualification (None = unlimited/unknown).
  */
-incident_limit?: number, };
+incident_limit?: number, pit_speed_limit_kmh?: number, 
+/**
+ * Position of the player's pit box along the lap (0–1).
+ */
+pit_box_pct?: number, 
+/**
+ * Lap time estimate of the player's car (s), e.g. to wrap relative gaps.
+ */
+est_lap_s?: number, };

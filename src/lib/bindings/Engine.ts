@@ -3,4 +3,4 @@
 /**
  * Engine temperatures and warning lights.
  */
-export type Engine = { water_temp_c: number, oil_temp_c: number, water_hot: boolean, oil_hot: boolean, oil_pressure_low: boolean, fuel_pressure_low: boolean, stalled: boolean, };
+export type Engine = { water_temp_c: number, oil_temp_c: number, water_hot: boolean, oil_hot: boolean, oil_pressure_low: boolean, fuel_pressure_low: boolean, stalled: boolean, pit_limiter: boolean, };

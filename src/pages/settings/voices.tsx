@@ -6,6 +6,8 @@ import type { VoiceProfile } from "@/lib/bindings/VoiceProfile";
 import { Badge, Button, Card, Field, NumberInput, Segmented, Select, Slider, TextInput, Toggle, useAsync } from "@/components/ui";
 import { bytes } from "@/lib/format";
 import { useSettings } from "./basic";
+import { useGameCaps } from "@/hooks/useGameCaps";
+import { useExpert } from "./expert";
 
 function useModels(): [ModelStatus[], Record<string, DownloadProgress>, (m: ModelStatus[]) => void] {
   const [models, setModels] = useState<ModelStatus[]>([]);
@@ -157,6 +159,9 @@ export function SpotterSection() {
   const { t } = useTranslation();
   const [s, up] = useSettings();
   const sp = s.spotter;
+  // Games with their own spotter decide left/right themselves: lateral limits do not apply.
+  const nativeSpotter = !!useGameCaps()?.hasNativeSpotter;
+  const expert = useExpert();
   const set = (patch: Partial<typeof sp>) => up((x) => ({ ...x, spotter: { ...x.spotter, ...patch } }));
   return (
     <>
@@ -176,13 +181,17 @@ export function SpotterSection() {
           <Toggle checked={sp.in_race} onChange={(v) => set({ in_race: v })} label={t("sessionKind.race")} />
         </div>
       </Card>
-      <Card title={t("spotter.geometry")}>
-        <Field label={t("spotter.latMin")}>
-          <Slider value={sp.lateral_min_m} min={0.2} max={3} step={0.1} onChange={(v) => set({ lateral_min_m: v })} format={(v) => `${v.toFixed(1)} m`} />
-        </Field>
-        <Field label={t("spotter.latMax")}>
-          <Slider value={sp.lateral_max_m} min={3} max={10} step={0.5} onChange={(v) => set({ lateral_max_m: v })} format={(v) => `${v.toFixed(1)} m`} />
-        </Field>
+      {expert && <Card title={t("spotter.geometry")}>
+        {!nativeSpotter && (
+          <>
+            <Field label={t("spotter.latMin")}>
+              <Slider value={sp.lateral_min_m} min={0.2} max={3} step={0.1} onChange={(v) => set({ lateral_min_m: v })} format={(v) => `${v.toFixed(1)} m`} />
+            </Field>
+            <Field label={t("spotter.latMax")}>
+              <Slider value={sp.lateral_max_m} min={3} max={10} step={0.5} onChange={(v) => set({ lateral_max_m: v })} format={(v) => `${v.toFixed(1)} m`} />
+            </Field>
+          </>
+        )}
         <Field label={t("spotter.carLength")}>
           <Slider value={sp.car_length_m} min={3.5} max={6} step={0.1} onChange={(v) => set({ car_length_m: v })} format={(v) => `${v.toFixed(1)} m`} />
         </Field>
@@ -199,7 +208,7 @@ export function SpotterSection() {
         <Field label={t("spotter.ducking")} hint={t("spotter.duckingHint")}>
           <Slider value={sp.ducking} min={0} max={1} step={0.05} onChange={(v) => set({ ducking: v })} format={(v) => `${Math.round(v * 100)} %`} />
         </Field>
-      </Card>
+      </Card>}
       <p className="text-xs text-dim">{t("spotter.voiceHint")}</p>
     </>
   );

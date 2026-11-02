@@ -64,7 +64,38 @@ pub fn fill(template: &str, params: &[(&str, String)]) -> String {
         }
         out.replace_range(a..=b, "");
     }
-    out.split_whitespace().collect::<Vec<_>>().join(" ").replace(" .", ".").replace(" ,", ",")
+    sentences(&out.split_whitespace().collect::<Vec<_>>().join(" ").replace(" .", ".").replace(" ,", ","))
+}
+
+/// Joined parts can lose the space after a full stop ("left.front right …"): every sentence
+/// end gets its space back (the voice pauses there) and the next sentence a capital letter.
+/// Decimal numbers ("1.4") are left alone.
+fn sentences(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 4);
+    let mut after_end = false;
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if after_end && c.is_alphabetic() {
+            out.extend(c.to_uppercase());
+            after_end = false;
+            continue;
+        }
+        if c != ' ' {
+            after_end = false;
+        }
+        out.push(c);
+        if matches!(c, '.' | '!' | '?') {
+            match chars.peek() {
+                Some(n) if n.is_alphabetic() => {
+                    out.push(' ');
+                    after_end = true;
+                }
+                Some(' ') => after_end = true,
+                _ => {}
+            }
+        }
+    }
+    out
 }
 
 /// Renders `key` (call id or `call_id:sub`). `style_keys` in order of preference.
@@ -96,6 +127,14 @@ mod tests {
         assert_eq!(s, "Links!");
         let s = render(Language::En, "lap.personal_best", &["british"], &[("laptime", "1:47.9".into())]).unwrap();
         assert!(s.contains("Splendid"));
+    }
+
+    #[test]
+    fn sentences_keep_their_space_and_capital() {
+        let s = fill("Tyre check: {wheel} has {wear} percent left.{spread}", &[("wheel", "rear left".into()), ("wear", "95".into()), ("spread", "front right inside 18 degrees hotter.".into())]);
+        assert_eq!(s, "Tyre check: rear left has 95 percent left. Front right inside 18 degrees hotter.");
+        assert_eq!(fill("Gap 1.4 seconds. keep going", &[]), "Gap 1.4 seconds. Keep going");
+        assert_eq!(fill("Box: {fuel}, {tyres}.", &[("fuel", "40 litres".into()), ("tyres", "four new tyres".into())]), "Box: 40 litres, four new tyres.");
     }
 
     #[test]

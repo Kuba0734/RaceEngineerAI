@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
+import { hasCap, useGameCaps } from "@/hooks/useGameCaps";
+import { useExpert } from "./expert";
 import type { CallDef } from "@/lib/bindings/CallDef";
 import type { CallOverride } from "@/lib/bindings/CallOverride";
 import type { EffectiveCall } from "@/lib/bindings/EffectiveCall";
@@ -26,9 +28,6 @@ function CallRow({ def, eff }: { def: CallDef; eff: EffectiveCall }) {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const spotter = def.priority === "spotter";
-  const caps = useApp((s) => s.games?.games.find((g) => g.id === s.status?.active_game)?.capabilities);
-  // "a|b" = any of the capabilities is enough.
-  const unavailable = def.requires && caps ? !def.requires.split("|").some((r) => (caps as unknown as Record<string, boolean>)[r]) : false;
   const setO = (patch: Partial<CallOverride>) =>
     up((x) => {
       const cur: CallOverride = x.calls.overrides[def.id] ?? { thresholds: {} };
@@ -41,14 +40,13 @@ function CallRow({ def, eff }: { def: CallDef; eff: EffectiveCall }) {
       return { ...x, calls: { ...x.calls, overrides: o } };
     });
   return (
-    <div className={cx("border-t border-line/60 py-2", unavailable && "opacity-50")}>
+    <div className="border-t border-line/60 py-2">
       <div className="flex items-center gap-3">
         <button onClick={() => setOpen(!open)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <motion.svg animate={{ rotate: open ? 90 : 0 }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 text-dim">
             <path d="M9 6l6 6-6 6" />
           </motion.svg>
           <span className="truncate text-sm">{t(`call.${def.id}`, { defaultValue: def.id })}</span>
-          {unavailable && <Badge tone="warn">{t("calls.unavailable")}</Badge>}
         </button>
         <Badge tone={eff.priority === "critical" ? "danger" : eff.priority === "spotter" ? "purple" : eff.priority === "high" ? "accent" : "dim"}>{t(`priority.${eff.priority}`)}</Badge>
         <Button small variant="ghost" onClick={() => void api.previewCall(def.id).then(setPreview).catch(() => setPreview(null))}>▶</Button>
@@ -113,17 +111,21 @@ export function CallsSection() {
   const { t, i18n } = useTranslation();
   const [s, up] = useSettings();
   const catalog = useApp((x) => x.catalog);
+  // Calls the selected game cannot deliver are not shown at all.
+  const caps = useGameCaps();
+  const expert = useExpert();
   const [q, setQ] = useState("");
   const [presetName, setPresetName] = useState("");
   const groups = useMemo(() => {
     const m = new Map<string, CallDef[]>();
     for (const c of catalog?.calls ?? []) {
+      if (!hasCap(caps, c.requires)) continue;
       const label = t(`call.${c.id}`, { defaultValue: c.id }).toLowerCase();
       if (q && !c.id.includes(q.toLowerCase()) && !label.includes(q.toLowerCase())) continue;
       m.set(c.group, [...(m.get(c.group) ?? []), c]);
     }
     return [...m.entries()].sort((a, b) => GROUP_ORDER.indexOf(a[0]) - GROUP_ORDER.indexOf(b[0]));
-  }, [catalog, q, t]);
+  }, [catalog, q, t, caps]);
   if (!catalog) return null;
   const setGroup = (ids: string[], enabled: boolean) =>
     up((x) => {
@@ -153,8 +155,9 @@ export function CallsSection() {
           <Button variant="ghost" onClick={() => up((x) => ({ ...x, calls: { ...x.calls, overrides: {} } }))}>{t("calls.resetAll")}</Button>
         </div>
       </Card>
-      <TextInput value={q} onChange={setQ} placeholder={t("calls.search")} className="w-full" />
-      {groups.map(([group, defs]) => (
+      {!expert && <p className="text-sm text-dim">{t("calls.simpleHint")}</p>}
+      {expert && <TextInput value={q} onChange={setQ} placeholder={t("calls.search")} className="w-full" />}
+      {expert && groups.map(([group, defs]) => (
         <Card
           key={group}
           title={t(`group.${group}`)}

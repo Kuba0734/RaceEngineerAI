@@ -17,4 +17,16 @@ delta_range_s: number, radio_show_text: boolean, dash_show_assists: boolean,
 /**
  * Time span of the input graph (seconds).
  */
-inputs_seconds: number, inputs_show_steer: boolean, laps_rows: number, tyres_show_brakes: boolean, flag_yellow: boolean, flag_blue: boolean, flag_penalty: boolean, layout: Array<WidgetLayout>, };
+inputs_seconds: number, inputs_show_steer: boolean, laps_rows: number, tyres_show_brakes: boolean, flag_yellow: boolean, flag_blue: boolean, flag_penalty: boolean, 
+/**
+ * Size of all widgets on top of their own scale (smaller default than before).
+ */
+global_scale: number, 
+/**
+ * Class standings: rows of the player's class and of every other class.
+ */
+class_rows: number, class_rows_other: number, class_show_header: boolean, class_show_pos_change: boolean, class_show_brand: boolean, class_show_license: boolean, class_show_irating: boolean, class_show_gap: boolean, class_show_last_lap: boolean, class_show_sectors: boolean, 
+/**
+ * Relative: cars on each side of the player.
+ */
+relative_rows: number, relative_show_header: boolean, relative_show_footer: boolean, relative_show_license: boolean, relative_show_irating: boolean, pit_show_menu: boolean, pit_show_exit: boolean, radar_show_distance: boolean, layout: Array<WidgetLayout>, };

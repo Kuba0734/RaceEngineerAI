@@ -8,6 +8,26 @@ import { Badge, Button, Card, RadioOrb, TextInput, Ticker, cx, useAsync } from "
 import { clock, lapTime } from "@/lib/format";
 import type { Page } from "@/app/App";
 
+/** Top of the dashboard: ready to drive, or the one thing that is still missing. */
+function ReadyBanner({ checklist, gameName, running, go }: { checklist: { ok: boolean; label: string; page: Page }[]; gameName: string; running: boolean; go: (p: Page) => void }) {
+  const { t } = useTranslation();
+  const missing = checklist.filter((c) => !c.ok);
+  const ready = missing.length === 0;
+  const first = missing[0];
+  return (
+    <div className={cx("col-span-12 flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius)] border px-6 py-5", ready ? "border-ok/40 bg-ok/10" : "border-warn/40 bg-warn/10")}>
+      <div className="flex items-center gap-4">
+        <span className={cx("flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold", ready ? "bg-ok/20 text-ok" : "bg-warn/20 text-warn")}>{ready ? "✓" : missing.length}</span>
+        <div>
+          <div className="text-lg font-semibold">{ready ? (running ? t("dash.ready.running", { game: gameName }) : t("dash.ready.title")) : t("dash.ready.missing", { n: missing.length })}</div>
+          <div className="text-sm text-dim">{ready ? (running ? t("dash.ready.runningHint") : t("dash.ready.hint", { game: gameName })) : t("dash.ready.next", { step: first?.label ?? "" })}</div>
+        </div>
+      </div>
+      {first && <Button variant="primary" onClick={() => go(first.page)}>{t("dash.ready.fix")}</Button>}
+    </div>
+  );
+}
+
 export default function Dashboard({ go }: { go: (p: Page) => void }) {
   const { t } = useTranslation();
   const status = useApp((s) => s.status);
@@ -56,6 +76,7 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
 
   return (
     <div className="grid grid-cols-12 gap-5">
+      <ReadyBanner checklist={checklist} gameName={activeGame?.name ?? games?.games.find((g) => g.id === settings?.selected_game)?.name ?? ""} running={!!status?.connected && !status.demo} go={go} />
       <Card className="col-span-12 lg:col-span-5" title={t("dash.radio")}>
         <div className="flex items-center gap-6">
           <RadioOrb levelRef={levelRef} active={!settings?.app.reduce_motion} size={170} />

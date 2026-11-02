@@ -11,7 +11,7 @@ use ts_rs::TS;
 
 use crate::error::AppResult;
 
-pub const SETTINGS_VERSION: u32 = 3;
+pub const SETTINGS_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "snake_case")]
@@ -781,6 +781,28 @@ pub struct OverlaySettings {
     pub flag_yellow: bool,
     pub flag_blue: bool,
     pub flag_penalty: bool,
+    /// Size of all widgets on top of their own scale (smaller default than before).
+    pub global_scale: f32,
+    /// Class standings: rows of the player's class and of every other class.
+    pub class_rows: u32,
+    pub class_rows_other: u32,
+    pub class_show_header: bool,
+    pub class_show_pos_change: bool,
+    pub class_show_brand: bool,
+    pub class_show_license: bool,
+    pub class_show_irating: bool,
+    pub class_show_gap: bool,
+    pub class_show_last_lap: bool,
+    pub class_show_sectors: bool,
+    /// Relative: cars on each side of the player.
+    pub relative_rows: u32,
+    pub relative_show_header: bool,
+    pub relative_show_footer: bool,
+    pub relative_show_license: bool,
+    pub relative_show_irating: bool,
+    pub pit_show_menu: bool,
+    pub pit_show_exit: bool,
+    pub radar_show_distance: bool,
     pub layout: Vec<WidgetLayout>,
 }
 
@@ -799,6 +821,10 @@ pub fn default_layout() -> Vec<WidgetLayout> {
         w("fuel", 754.0, 864.0),
         w("delta", 1383.0, 26.0),
         w("radio", 1444.0, 1003.0),
+        // Only shown for games that support them (see the overlay's widget availability).
+        w("relative", 1440.0, 640.0),
+        w("class_standings", 20.0, 420.0),
+        w("pit", 754.0, 600.0),
     ]
 }
 
@@ -827,6 +853,25 @@ impl Default for OverlaySettings {
             flag_yellow: true,
             flag_blue: true,
             flag_penalty: true,
+            global_scale: 0.85,
+            class_rows: 7,
+            class_rows_other: 3,
+            class_show_header: true,
+            class_show_pos_change: true,
+            class_show_brand: true,
+            class_show_license: true,
+            class_show_irating: true,
+            class_show_gap: true,
+            class_show_last_lap: true,
+            class_show_sectors: true,
+            relative_rows: 3,
+            relative_show_header: true,
+            relative_show_footer: true,
+            relative_show_license: true,
+            relative_show_irating: true,
+            pit_show_menu: true,
+            pit_show_exit: true,
+            radar_show_distance: true,
             layout: default_layout(),
         }
     }
@@ -881,11 +926,15 @@ pub struct AppSettings {
     pub updates: UpdateMode,
     pub reduce_motion: bool,
     pub start_minimized: bool,
+    /// The first-start assistant was finished or skipped.
+    pub onboarding_done: bool,
+    /// Settings show every option instead of the essentials.
+    pub expert_mode: bool,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
-        Self { autostart: false, updates: UpdateMode::Automatic, reduce_motion: false, start_minimized: false }
+        Self { autostart: false, updates: UpdateMode::Automatic, reduce_motion: false, start_minimized: false, onboarding_done: false, expert_mode: false }
     }
 }
 
@@ -931,6 +980,14 @@ pub fn migrate(mut v: serde_json::Value) -> serde_json::Value {
         let acc_layout = v.pointer("/games/acc/overlay_layout").filter(|l| l.is_array()).cloned();
         if let (Some(layout), Some(overlay)) = (acc_layout, v.get_mut("overlay").and_then(|o| o.as_object_mut())) {
             overlay.insert("layout".into(), layout);
+        }
+    }
+    if version < 4 {
+        // v4: first-start assistant. Existing installs are set up already: skip it, and keep
+        // the full settings view they know.
+        if let Some(app) = v.as_object_mut().map(|o| o.entry("app").or_insert_with(|| serde_json::json!({}))).and_then(|a| a.as_object_mut()) {
+            app.insert("onboarding_done".into(), true.into());
+            app.insert("expert_mode".into(), true.into());
         }
     }
     if let Some(obj) = v.as_object_mut() {
@@ -1029,5 +1086,13 @@ mod tests {
         let s: Settings = serde_json::from_value(migrate(v)).unwrap();
         assert_eq!(s.groq.llm_model, "foo");
         assert_eq!(s.version, SETTINGS_VERSION);
+    }
+
+    #[test]
+    fn existing_installs_skip_the_assistant() {
+        let old = migrate(serde_json::json!({"version": 3, "app": {"autostart": true}}));
+        let s: Settings = serde_json::from_value(old).unwrap();
+        assert!(s.app.onboarding_done && s.app.expert_mode && s.app.autostart);
+        assert!(!Settings::default().app.onboarding_done);
     }
 }

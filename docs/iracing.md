@@ -71,6 +71,23 @@ Wagenabhängig, nur wenn vorhanden: `dcTractionControl`, `dcABS`, `[LF|RF|LR|RR]
 | Strafen | `SessionFlags` black/disqualify | Die Art (Durchfahrt, Stop-and-Go) gibt iRacing nicht heraus, nur „schwarze Flagge“. |
 | Boxenfenster, Pflichtstopp | – | Nicht im SDK. Pro Spiel in den Einstellungen (Spiele-Seite) eintragbar; die App zählt die eigenen Stopps. |
 
+## Rangliste, Relative, Pit-Helfer
+
+| Was | Quelle | Hinweis |
+|---|---|---|
+| Relative-Abstand | `CarIdxEstTime` (geschätzte Zeit von der Linie bis zur Position) | Differenz zur eigenen Zeit, über die Runde umgebrochen mit `DriverCarEstLapTime`. Farbe: rot = eine Runde voraus, blau = eine Runde zurück. |
+| iRating, Lizenz | YAML `Drivers[].IRating`, `LicString`, `LicColor` | `LicColor` ist offline `0xundefined` → Farbe nach Lizenzklasse. |
+| iRating-Prognose, SOF | Community-Formel (Elo-ähnlich, Basis 1600/ln 2), `race/irating.rs` | **Schätzung**, iRacing veröffentlicht die Formel nicht. Nur im Rennen und wenn alle Autos der Klasse ein Rating haben. |
+| Klassen | YAML `CarClassID`, `CarClassColor`, `CarClassShortName` | Offline ist der Klassenname leer → Autoname. |
+| Positionsänderung | erste Position im Rennen | |
+| Abstand/Intervall in der Klasse | `CarIdxF2Time` (Rennen), sonst Bestzeiten | |
+| Box-Entfernung, Tempolimit | YAML `DriverPitTrkPct`, `TrackPitSpeedLimit`; `EngineWarnings` (pitSpeedLimiter), `PitstopActive` | |
+
+## Rundenzeit und Delta
+
+- `LapCompleted` steigt an der Linie, `LapLastLapTime` kommt einen Moment später (live gesehen: die App übernahm die vorherige Runde). Eine neue Runde wird erst gemeldet, wenn sich `LapLastLapTime` geändert hat, spätestens nach 3 s.
+- Delta: `LapDeltaToBestLap`, ohne gültigen Wert `LapDeltaToSessionBestLap`, dann `LapDeltaToOptimalLap` (jeweils mit `_OK`).
+
 ## Sektoren
 
 iRacing teilt Strecken in viele Zeitsektoren (`SplitTimeInfo`). Die Logik arbeitet mit drei Sektoren; der Provider misst daher Drittel der Runde (`LapDistPct`) selbst mit `LapCurrentLapTime`. Gelbe Flaggen werden ebenfalls dem Drittel zugeordnet, in dem ein langsames oder neben der Strecke stehendes Auto liegt.

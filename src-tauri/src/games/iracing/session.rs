@@ -26,6 +26,15 @@ pub struct Driver {
     pub car_class: String,
     pub is_pace_car: bool,
     pub is_spectator: bool,
+    /// Number as shown, with leading zeros ("07").
+    pub car_number_str: String,
+    pub irating: Option<i32>,
+    /// `LicString`, e.g. "A 3.45".
+    pub license: String,
+    /// `LicColor` as "#rrggbb" (None when the sim writes "0xundefined", seen offline).
+    pub license_color: Option<String>,
+    pub class_id: i32,
+    pub class_color: Option<String>,
 }
 
 impl Driver {
@@ -48,6 +57,12 @@ pub struct SessionData {
     pub drivers: Vec<Driver>,
     /// `WeekendOptions.IncidentLimit` (None = unlimited).
     pub incident_limit: Option<i32>,
+    /// `DriverCarEstLapTime` (s): wraps relative gaps around the lap.
+    pub est_lap_s: f32,
+    /// `DriverPitTrkPct`: where the player's pit box is along the lap.
+    pub pit_box_pct: Option<f32>,
+    /// `WeekendInfo.TrackPitSpeedLimit` ("80.00 kph").
+    pub pit_speed_limit_kmh: Option<f32>,
     pub team_racing: bool,
     /// Tyre compound indices that are wet tyres (`DriverInfo.DriverTires`).
     pub wet_compounds: Vec<i32>,
@@ -97,6 +112,12 @@ pub fn session_kind(s: &str) -> SessionType {
     }
 }
 
+/// "0xffffff" → "#ffffff"; anything else (e.g. "0xundefined") → None.
+fn hex_color(v: &str) -> Option<String> {
+    let h = v.trim().strip_prefix("0x")?;
+    (h.len() <= 6 && !h.is_empty() && h.chars().all(|c| c.is_ascii_hexdigit())).then(|| format!("#{h:0>6}"))
+}
+
 /// Number or "unlimited" (-> None).
 fn limit(n: &Node, key: &str) -> Option<f64> {
     n.str(key).filter(|s| !s.eq_ignore_ascii_case("unlimited")).and_then(yaml::leading_number)
@@ -138,6 +159,12 @@ pub fn parse(src: &str) -> SessionData {
             car_class: text(d, "CarClassShortName"),
             is_pace_car: flag(d, "CarIsPaceCar"),
             is_spectator: flag(d, "IsSpectator"),
+            car_number_str: text(d, "CarNumber"),
+            irating: d.num("IRating").map(|v| v as i32).filter(|v| *v > 0),
+            license: text(d, "LicString"),
+            license_color: d.str("LicColor").and_then(hex_color),
+            class_id: d.num("CarClassID").unwrap_or(0.0) as i32,
+            class_color: d.str("CarClassColor").and_then(hex_color),
         })
         .collect();
     let max_l = y.num("DriverInfo.DriverCarFuelMaxLtr").unwrap_or(0.0);
@@ -155,6 +182,13 @@ pub fn parse(src: &str) -> SessionData {
         drivers,
         incident_limit: limit(&y, "WeekendInfo.WeekendOptions.IncidentLimit").map(|v| v as i32).filter(|v| *v > 0),
         team_racing: flag(&y, "WeekendInfo.TeamRacing"),
+        est_lap_s: y.num("DriverInfo.DriverCarEstLapTime").unwrap_or(0.0) as f32,
+        pit_box_pct: y.num("DriverInfo.DriverPitTrkPct").map(|v| v as f32).filter(|v| (0.0..=1.0).contains(v)),
+        pit_speed_limit_kmh: y.str("WeekendInfo.TrackPitSpeedLimit").and_then(|v| {
+            let n = yaml::leading_number(v)? as f32;
+            // Usually "kph"; convert if the sim writes mph.
+            Some(if v.to_lowercase().contains("mph") { n * 1.609_344 } else { n })
+        }),
         hot_pressure_psi: y.get("CarSetup").and_then(hot_pressures),
         fast_repairs_unlimited: y.str("WeekendInfo.WeekendOptions.FastRepairsLimit").is_some_and(|v| v.eq_ignore_ascii_case("unlimited")),
         wet_compounds: y
@@ -254,6 +288,11 @@ DriverInfo:
    CarClassShortName: GT3 Class
    CarIsPaceCar: 0
    IsSpectator: 0
+   IRating: 2450
+   LicString: A 3.45
+   LicColor: 0x0153db
+   CarClassID: 2708
+   CarClassColor: 0xffda59
 CarSetup:
  UpdateCount: 3
  TiresAero:
@@ -285,6 +324,11 @@ CarSetup:
         assert_eq!(me.car_number, 7);
         assert_eq!(s.incident_limit, Some(17));
         assert!(s.fast_repairs_unlimited);
+        assert_eq!((me.irating, me.license.as_str(), me.class_id), (Some(2450), "A 3.45", 2708));
+        assert_eq!(me.license_color.as_deref(), Some("#0153db"));
+        assert_eq!(me.car_number_str, "07");
+        assert_eq!(hex_color("0xundefined"), None);
+        assert_eq!(hex_color("0xffffff").as_deref(), Some("#ffffff"));
         let hot = s.hot_pressure_psi.unwrap();
         assert!((hot[0] - 23.06).abs() < 0.02 && (hot[3] - 26.11).abs() < 0.02, "{hot:?}");
         assert!((pressure_psi("1.6 bar").unwrap() - 23.2).abs() < 0.01);

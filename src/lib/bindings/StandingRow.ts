@@ -4,4 +4,20 @@ export type StandingRow = { id: number, position: number, race_number: number, d
 /**
  * Gap to player in seconds (+ = ahead), position-based timing.
  */
-gap_to_player_s: number | null, trend_s_per_lap: number | null, last_lap_ms: number | null, best_lap_ms: number | null, last_splits: [number | null, number | null, number | null], best_splits: [number | null, number | null, number | null], in_pits: boolean, pit_stops: number, tyre_age_laps: number | null, is_player: boolean, is_session_best_lap: boolean, };
+gap_to_player_s: number | null, trend_s_per_lap: number | null, last_lap_ms: number | null, best_lap_ms: number | null, last_splits: [number | null, number | null, number | null], best_splits: [number | null, number | null, number | null], in_pits: boolean, pit_stops: number, tyre_age_laps: number | null, is_player: boolean, is_session_best_lap: boolean, class_id: number, class_name: string, class_color?: string, class_position: number, number_text: string, irating?: number, 
+/**
+ * Estimated iRating change if the race ended now (races, all cars rated).
+ */
+irating_change?: number, license?: string, license_color?: string, start_position?: number, 
+/**
+ * Race: gap to the class leader; otherwise difference of best laps (s).
+ */
+gap_to_class_leader_s?: number, 
+/**
+ * Same, to the car ahead in the class.
+ */
+interval_s?: number, 
+/**
+ * Last sector times compared with the player's (s, + = slower than you).
+ */
+sector_delta_to_player_s: [number | null, number | null, number | null], is_class_best_lap: boolean, last_is_personal_best: boolean, };

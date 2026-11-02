@@ -42,6 +42,7 @@ mod engine_bits {
     pub const FUEL_PRESSURE: u32 = 0x0002;
     pub const OIL_PRESSURE: u32 = 0x0004;
     pub const STALLED: u32 = 0x0008;
+    pub const PIT_LIMITER: u32 = 0x0010;
     pub const OIL_TEMP: u32 = 0x0040;
 }
 
@@ -59,6 +60,12 @@ mod pace_bits {
     pub const FREE_PASS: u32 = 0x0002;
     pub const WAVED_AROUND: u32 = 0x0004;
 }
+
+/// iRacing raises `LapCompleted` at the line but writes `LapLastLapTime` a moment later (seen
+/// live: the previous lap's time was taken). The lap is reported once the time changed.
+const LAP_TIME_WAIT_S: f64 = 3.0;
+/// Delta sources in the order the in-game delta bar falls back to them.
+const DELTA_VARS: [&str; 3] = ["LapDeltaToBestLap", "LapDeltaToSessionBestLap", "LapDeltaToOptimalLap"];
 
 /// `FastRepairAvailable` value for "unlimited".
 const UNLIMITED_FAST_REPAIRS: i32 = 255;
@@ -105,6 +112,10 @@ pub struct IRacingProvider {
     last_hot: Option<[f32; 4]>,
     /// A new hot pressure measurement waiting for this stop's tyre check.
     pending_hot: Option<[f32; 4]>,
+    /// Completed laps as reported to the logic (see `LAP_TIME_WAIT_S`).
+    reported_laps: i32,
+    lap_hold_since: Option<f64>,
+    last_time_seen: f32,
 }
 
 impl Default for IRacingProvider {
@@ -260,6 +271,9 @@ impl IRacingProvider {
             map_saved: false,
             last_hot: None,
             pending_hot: None,
+            reported_laps: -1,
+            lap_hold_since: None,
+            last_time_seen: 0.0,
         }
     }
 
@@ -417,6 +431,25 @@ impl IRacingProvider {
         }
     }
 
+    /// Holds a new lap back until the sim has written its lap time.
+    fn gate_lap(&mut self, raw: i32, last_s: f32, t: f64) -> i32 {
+        if raw <= self.reported_laps || self.reported_laps < 0 {
+            // First value, reset or same lap: follow directly.
+            self.reported_laps = raw;
+            self.lap_hold_since = None;
+        } else {
+            let since = *self.lap_hold_since.get_or_insert(t);
+            if (last_s - self.last_time_seen).abs() > 0.0005 || t - since > LAP_TIME_WAIT_S {
+                self.reported_laps = raw;
+                self.lap_hold_since = None;
+            }
+        }
+        if self.lap_hold_since.is_none() {
+            self.last_time_seen = last_s;
+        }
+        self.reported_laps
+    }
+
     fn t_ms(&self) -> u64 {
         self.start.elapsed().as_millis() as u64
     }
@@ -430,7 +463,7 @@ impl IRacingProvider {
             let info = self.session_info();
             if info != self.session {
                 self.session = info.clone();
-                out.push(ProviderEvent::Session(info));
+                out.push(ProviderEvent::Session(Box::new(info)));
             }
         }
         if self.last_cars_emit.is_none_or(|t| t.elapsed() > Duration::from_millis(100)) {
@@ -466,6 +499,9 @@ impl IRacingProvider {
             dry_tyres: String::new(),
             wet_tyres: String::new(),
             incident_limit: d.incident_limit,
+            pit_speed_limit_kmh: d.pit_speed_limit_kmh,
+            pit_box_pct: d.pit_box_pct,
+            est_lap_s: (d.est_lap_s > 0.0).then_some(d.est_lap_s),
         }
     }
 
@@ -492,7 +528,7 @@ impl IRacingProvider {
         let p = self.map.player_pos(pct);
 
         // -1 until the car first crosses the line (out of the pits); the logic counts from 0.
-        let completed = self.i("LapCompleted").max(0);
+        let completed = self.gate_lap(self.i("LapCompleted").max(0), self.f("LapLastLapTime"), session_time);
         let current_lap_ms = (self.f("LapCurrentLapTime") * 1000.0) as i32;
         let (sector_index, last_sector_ms) = self.sectors.update(pct, completed, current_lap_ms);
         self.capture_tyres(completed, session_time, speed_ms);
@@ -550,6 +586,7 @@ impl IRacingProvider {
             oil_pressure_low: warn & engine_bits::OIL_PRESSURE != 0 && warn & engine_bits::STALLED == 0,
             fuel_pressure_low: warn & engine_bits::FUEL_PRESSURE != 0 && warn & engine_bits::STALLED == 0,
             stalled: warn & engine_bits::STALLED != 0,
+            pit_limiter: warn & engine_bits::PIT_LIMITER != 0,
         };
         let repair = self.vars.contains_key("PitRepairLeft").then(|| Repair {
             mandatory_s: self.f("PitRepairLeft"),
@@ -626,7 +663,8 @@ impl IRacingProvider {
             spline: pct.clamp(0.0, 1.0),
             sector_index,
             last_sector_ms,
-            delta_ms: if self.b("LapDeltaToBestLap_OK") { (self.f("LapDeltaToBestLap") * 1000.0) as i32 } else { 0 },
+            // Best lap first; without one the in-game bar shows session best / optimal.
+            delta_ms: DELTA_VARS.iter().find(|n| self.b(&format!("{n}_OK"))).map(|n| (self.f(n) * 1000.0) as i32).unwrap_or(0),
             in_pit_lane: on_pit_road,
             in_pit_box: self.b("PlayerCarInPitStall"),
             tyres_out: if surface == TRK_OFF_TRACK { 4 } else { 0 },
@@ -670,6 +708,7 @@ impl IRacingProvider {
             incidents,
             wet_tyres_allowed: self.vars.contains_key("WeatherDeclaredWet").then(|| self.b("WeatherDeclaredWet")),
             pacing,
+            pit_service_active: self.b("PitstopActive"),
         }
     }
 
@@ -780,6 +819,15 @@ impl IRacingProvider {
                 delta_ms: 0,
                 gap_to_leader_s,
                 wet_tyres,
+                class_id: d.class_id,
+                // Offline the class name is empty (seen live): the car name stands in.
+                class_name: if d.car_class.is_empty() { d.car_name_short.clone() } else { d.car_class.clone() },
+                class_color: d.class_color.clone(),
+                number_text: d.car_number_str.clone(),
+                irating: d.irating,
+                license: (!d.license.is_empty()).then(|| d.license.clone()),
+                license_color: d.license_color.clone(),
+                est_time_s: self.at("CarIdxEstTime", idx).filter(|v| *v >= 0.0).map(|v| v as f32),
             });
         }
         // Order on track: furthest round the lap first.
@@ -1027,6 +1075,30 @@ DriverInfo:
         p.process(&b.build(), &mut out).unwrap();
         let hot = p.tyre_check.unwrap().hot_pressure_psi.unwrap();
         assert!((hot[0] - 26.4).abs() < 0.05, "{hot:?}");
+    }
+
+    #[test]
+    fn lap_waits_for_its_lap_time() {
+        let mut p = IRacingProvider::new();
+        assert_eq!(p.gate_lap(4, 101.0, 10.0), 4);
+        // Line crossed, lap time still the old one: held back.
+        assert_eq!(p.gate_lap(5, 101.0, 10.1), 4);
+        assert_eq!(p.gate_lap(5, 101.0, 10.5), 4);
+        // Time written: the lap counts, with the right time.
+        assert_eq!(p.gate_lap(5, 99.4, 10.6), 5);
+        // Lap time never changes (e.g. identical or invalid): released after the wait.
+        assert_eq!(p.gate_lap(6, 99.4, 20.0), 5);
+        assert_eq!(p.gate_lap(6, 99.4, 23.5), 6);
+    }
+
+    #[test]
+    fn delta_falls_back_like_the_game() {
+        let mut b = base();
+        b.bool("LapDeltaToBestLap_OK", 0, 1, false).f32("LapDeltaToBestLap", 0, 1, 0.0);
+        b.bool("LapDeltaToSessionBestLap_OK", 0, 1, true).f32("LapDeltaToSessionBestLap", 0, 1, -0.42);
+        let (_, out) = run(&b);
+        let f = out.iter().find_map(|e| if let ProviderEvent::Frame(f) = e { Some(f) } else { None }).unwrap();
+        assert_eq!(f.delta_ms, -420);
     }
 
     #[test]

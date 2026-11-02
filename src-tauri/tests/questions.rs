@@ -79,7 +79,7 @@ async fn llm_chooses_expected_tools() {
         for e in out.drain(..) {
             match e {
                 ProviderEvent::Frame(f) => st.on_frame(*f, &settings, &mut sp, &mut ev),
-                ProviderEvent::Session(s) => st.on_session(s, &mut ev),
+                ProviderEvent::Session(s) => st.on_session(*s, &mut ev),
                 ProviderEvent::Cars(c) => st.on_cars(c, &mut ev),
                 _ => {}
             }

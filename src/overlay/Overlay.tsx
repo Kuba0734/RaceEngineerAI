@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import i18n from "@/i18n";
-import { api, inTauri, on, type RadioLogEntry, type Settings, type WidgetLayout } from "@/lib/ipc";
+import { api, inTauri, on, type GamesView, type RadioLogEntry, type RuntimeStatus, type Settings, type WidgetLayout } from "@/lib/ipc";
+import { clock } from "@/lib/format";
 import { useLive } from "@/hooks/useLive";
 import { cx } from "@/components/ui";
 import { TrackMap } from "./widgets/TrackMap";
@@ -16,8 +17,12 @@ import { Inputs } from "./widgets/Inputs";
 import { RecentLaps } from "./widgets/RecentLaps";
 import { Tyres } from "./widgets/Tyres";
 import { FlagBanner, activeFlag } from "./widgets/FlagBanner";
+import { ClassStandings } from "./widgets/ClassStandings";
+import { Relative } from "./widgets/Relative";
+import { PitHelper } from "./widgets/PitHelper";
+import { widgetAvailable } from "./available";
 
-function Widget({ layout, edit, onChange, children, title, hidden = false, panel }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean; panel: number }) {
+function Widget({ layout, edit, onChange, children, title, hidden = false, panel, globalScale }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean; panel: number; globalScale: number }) {
   const x = useMotionValue(layout.x);
   const y = useMotionValue(layout.y);
   useEffect(() => {
@@ -30,10 +35,10 @@ function Widget({ layout, edit, onChange, children, title, hidden = false, panel
       dragMomentum={false}
       onDragEnd={() => onChange({ ...layout, x: Math.round(x.get()), y: Math.round(y.get()) })}
       onWheel={(e) => edit && onChange({ ...layout, scale: Math.min(2.5, Math.max(0.4, layout.scale - Math.sign(e.deltaY) * 0.05)) })}
-      style={{ x, y, scale: layout.scale, opacity: hidden && !edit ? 0 : layout.opacity, transformOrigin: "top left", backgroundColor: `rgba(10,11,14,${edit ? Math.max(panel, 0.6) : panel})` }}
+      style={{ x, y, scale: layout.scale * globalScale, opacity: hidden && !edit ? 0 : layout.opacity, transformOrigin: "top left", backgroundColor: `rgba(10,11,14,${edit ? Math.max(panel, 0.6) : panel})` }}
       className={cx("absolute left-0 top-0 rounded-2xl border p-3 text-fg", edit ? "cursor-move border-accent/80 ring-2 ring-accent/30" : panel > 0.05 ? "border-line/60" : "border-transparent")}
     >
-      {edit && <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-accent">{title} · {Math.round(layout.scale * 100)} %</div>}
+      {edit && <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-accent">{title} · {Math.round(layout.scale * globalScale * 100)} %</div>}
       {children}
     </motion.div>
   );
@@ -47,12 +52,18 @@ export default function Overlay() {
   // Optimistic local edits while dragging; the saved layout comes back via the settings event.
   const [radarActive, setRadarActive] = useState(false);
   const [local, setLocal] = useState<WidgetLayout[] | null>(null);
+  const [games, setGames] = useState<GamesView | null>(null);
+  const [status, setStatus] = useState<RuntimeStatus | null>(null);
   const hz = settings?.overlay.update_hz ?? 20;
   const { ref, frame } = useLive(hz, Math.max(2, Math.round(hz / 2)), 4);
   const visibleRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (!inTauri) return;
+    void api.getGames().then((g) => {
+      setGames(g);
+      setStatus(g.status);
+    });
     void api.getSettings().then((s) => {
       setSettings(s);
       void i18n.changeLanguage(s.language);
@@ -64,6 +75,8 @@ export default function Overlay() {
         void i18n.changeLanguage(s.language);
       }),
       on<boolean>("overlay-edit", setEdit),
+      on<RuntimeStatus>("status", setStatus),
+      on<string[]>("games", () => void api.getGames().then(setGames)),
       on<RadioLogEntry>("radio", setLastRadio),
     ];
     return () => subs.forEach((p) => void p.then((f) => f()));
@@ -100,12 +113,36 @@ export default function Overlay() {
   const o = settings.overlay;
   const anim = o.animations;
   const flag = activeFlag(frame, o);
+  // Only widgets the running (else the selected) game can fill.
+  const gameId = status?.active_game ?? settings.selected_game;
+  const caps = games?.games.find((g) => g.id === gameId)?.capabilities;
+  const tod = frame && frame.clock_s > 0 ? `${String(Math.floor(frame.clock_s / 3600) % 24).padStart(2, "0")}:${String(Math.floor((frame.clock_s % 3600) / 60)).padStart(2, "0")}` : "";
+  const lapText = frame ? `${t("wd.lap")} ${frame.lap}${frame.laps_total_est != null ? `/≈${frame.laps_total_est.toFixed(1)}` : ""}` : "";
+  const total = frame?.session_total_ms ?? 0;
+  const raceText = frame ? (total > 0 ? `${clock(total - frame.time_left_ms)}/${clock(total)}` : clock(frame.time_left_ms)) : "";
+  const playerClass = frame?.player_class_id ?? 0;
+  const sof = frame?.classes?.find((c) => c.id === playerClass)?.sof;
+  const irChanges = new Map((frame?.standings ?? []).map((r) => [r.id, r.irating_change] as const));
   const content = (id: string): ReactNode => {
     switch (id) {
       case "map":
         return <TrackMap liveRef={ref} size={o.map_size} />;
       case "radar":
-        return <Radar liveRef={ref} size={o.radar_size} onActive={setRadarActive} />;
+        return <Radar liveRef={ref} size={o.radar_size} onActive={setRadarActive} showDistance={o.radar_show_distance} />;
+      case "class_standings":
+        return <ClassStandings rows={frame?.standings ?? []} classes={frame?.classes ?? []} playerClass={playerClass} o={o} lapText={lapText} timeText={raceText} trackTemp={frame?.track_temp_c ?? 0} />;
+      case "relative":
+        return (
+          <Relative
+            rows={frame?.relative ?? []}
+            o={o}
+            changes={irChanges}
+            header={{ trackTemp: frame?.track_temp_c ?? 0, sof: sof ?? undefined, incidents: frame?.incidents ?? undefined, incidentLimit: frame?.incident_limit ?? undefined, clock: tod }}
+            footer={{ lap: lapText, race: `${t("wd.race")} ${raceText}` }}
+          />
+        );
+      case "pit":
+        return <PitHelper pit={frame?.pit} speedKmh={frame?.speed ?? 0} showMenu={o.pit_show_menu} showExit={o.pit_show_exit} />;
       case "standings":
         return <div className="w-[360px]">{frame?.standings ? <Standings rows={frame.standings} compact max={o.standings_rows} animate={anim} /> : <span className="text-xs text-dim">{t("session.noStandings")}</span>}</div>;
       case "fuel":
@@ -142,8 +179,8 @@ export default function Overlay() {
           <button onClick={() => void api.setOverlayEdit(false)} className="rounded-full bg-accent px-4 py-1 font-semibold text-white hover:brightness-110">{t("ov.done")}</button>
         </div>
       )}
-      {layout.filter((l) => l.visible).map((l) => (
-        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} hidden={(l.id === "radar" && o.radar_auto_hide && !radarActive) || (l.id === "flag" && !flag)}>
+      {layout.filter((l) => l.visible && widgetAvailable(l.id, caps)).map((l) => (
+        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} globalScale={o.global_scale} hidden={(l.id === "radar" && o.radar_auto_hide && !radarActive) || (l.id === "flag" && !flag)}>
           {content(l.id)}
         </Widget>
       ))}

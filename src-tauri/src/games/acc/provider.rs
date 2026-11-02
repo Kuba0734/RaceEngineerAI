@@ -404,7 +404,7 @@ impl TelemetryProvider for AccProvider {
                     let info = self.session_from_static(&s, &g);
                     if info != self.session {
                         self.session = info.clone();
-                        out.push(ProviderEvent::Session(info));
+                        out.push(ProviderEvent::Session(Box::new(info)));
                     }
                 }
             }

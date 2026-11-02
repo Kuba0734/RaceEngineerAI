@@ -43,7 +43,8 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
             ctx.push(CallRequest::new("quali.traffic_gap").p("gap", format!("{}", desired as i32)));
         }
         let cold = crate::games::cars::class_def(&s.session.car_class).core_temp_cold;
-        let warm = f.wheels.iter().all(|w| w.core_temp_c > cold + 5.0);
+        // Without live tyre temperatures (iRacing) the end of the out-lap is the cue.
+        let warm = !s.has("hasTyreCoreTemps") || f.wheels.iter().all(|w| w.core_temp_c > cold + 5.0);
         if f.spline > 0.85 && warm && ahead_gap >= f64::from(desired) && mem.push_said_lap != Some(lap) {
             mem.push_said_lap = Some(lap);
             ctx.push(CallRequest::new("quali.push_now"));

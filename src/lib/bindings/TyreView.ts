@@ -11,4 +11,8 @@ from_pit: boolean,
 /**
  * Tread left of the most worn zone per wheel, % (0 = unknown).
  */
-wear_pct: [number, number, number, number], };
+wear_pct: [number, number, number, number], 
+/**
+ * The game reports live tyre values / brake temperatures at all.
+ */
+live: boolean, has_brakes: boolean, };

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, type AudioDevices, type KeyStatus, type KeyTest } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
+import { useExpert } from "./expert";
 import { useLive } from "@/hooks/useLive";
 import { Badge, Button, Card, Field, NumberInput, Segmented, Select, Slider, TextInput, Toggle, useAsync } from "@/components/ui";
 import type { Settings } from "@/lib/bindings/Settings";
@@ -18,6 +19,9 @@ export function GeneralSection() {
   const [s, up] = useSettings();
   return (
     <>
+      <Card title={t("onb.restartTitle")} actions={<Button small onClick={() => up((x) => ({ ...x, app: { ...x.app, onboarding_done: false } }))}>{t("onb.restart")}</Button>}>
+        <p className="text-sm text-dim">{t("onb.restartHint")}</p>
+      </Card>
       <Card title={t("settings.general.language")}>
         <Field label={t("settings.general.languageLabel")} hint={t("settings.general.languageHint")}>
           <Segmented value={s.language} onChange={(v) => up((x) => ({ ...x, language: v }))} options={[{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }]} />
@@ -133,7 +137,7 @@ export function AiSection() {
   );
 }
 
-function Meter() {
+export function Meter() {
   const { frame } = useLive(15, 100, 15);
   const lvl = Math.min(1, (frame?.mic_level ?? 0) * 3);
   return (
@@ -150,6 +154,7 @@ export function ListeningSection() {
   const set = (patch: Partial<typeof l>) => up((x) => ({ ...x, listening: { ...x.listening, ...patch } }));
   const [devices] = useAsync<AudioDevices>(() => api.audioDevices(), []);
   const [newWord, setNewWord] = useState("");
+  const expert = useExpert();
   return (
     <>
       <Card title={t("settings.listening.modes")}>
@@ -178,7 +183,7 @@ export function ListeningSection() {
         <Toggle checked={l.only_when_game_running} onChange={(v) => set({ only_when_game_running: v })} label={t("settings.listening.onlyGame")} />
         <Toggle checked={l.allow_interrupt} onChange={(v) => set({ allow_interrupt: v })} label={t("settings.listening.interrupt")} hint={t("settings.listening.interruptHint")} />
       </Card>
-      <Card title={t("settings.listening.wakeWords")}>
+      {(expert || l.wake_word) && <Card title={t("settings.listening.wakeWords")}>
         <div className="flex flex-wrap gap-2">
           {l.wake_words.map((w) => (
             <button key={w} onClick={() => set({ wake_words: l.wake_words.filter((x) => x !== w) })} className="rounded-full border border-data/40 bg-data/10 px-3 py-1 text-sm text-data hover:border-danger/60 hover:text-danger">
@@ -196,7 +201,7 @@ export function ListeningSection() {
         <Field label={t("settings.listening.sensitivity")}>
           <Slider value={l.wake_sensitivity} min={0} max={1} step={0.05} onChange={(v) => set({ wake_sensitivity: v })} format={(v) => `${Math.round(v * 100)} %`} />
         </Field>
-      </Card>
+      </Card>}
       <Card title={t("settings.listening.mic")}>
         <Field label={t("settings.listening.device")}>
           <Select value={l.input_device ?? ""} onChange={(v) => set({ input_device: v || null })} options={[{ value: "", label: t("common.default") }, ...(devices?.inputs ?? []).map((d) => ({ value: d, label: d }))]} />

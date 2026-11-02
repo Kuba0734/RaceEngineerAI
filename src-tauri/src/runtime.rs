@@ -19,7 +19,7 @@ use crate::games::provider::{Flag, ProviderEvent, SimStatus, TelemetryProvider};
 use crate::games::{self, mock};
 use crate::race::fuel::FuelStrategy;
 use crate::race::spotter::{RadarCar, Side, SpotterCall};
-use crate::race::state::{RaceEvent, StandingRow};
+use crate::race::state::{ClassSummary, RaceEvent, RelativeRow, StandingRow};
 use crate::storage::db::{DbJob, LapRow};
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -59,7 +59,40 @@ pub struct TyreView {
     pub from_pit: bool,
     /// Tread left of the most worn zone per wheel, % (0 = unknown).
     pub wear_pct: [f32; 4],
+    /// The game reports live tyre values / brake temperatures at all.
+    pub live: bool,
+    pub has_brakes: bool,
 }
+
+/// Everything the pit helper widget shows.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct PitView {
+    #[ts(optional)]
+    pub speed_limit_kmh: Option<f32>,
+    pub limiter_on: bool,
+    pub in_pit_lane: bool,
+    /// Distance along the track to the own pit box (m), when known and close.
+    #[ts(optional)]
+    pub box_in_m: Option<f32>,
+    pub service_active: bool,
+    /// Pit menu of the game (None = game has none).
+    #[ts(optional)]
+    pub menu: Option<crate::games::provider::PitMenu>,
+    pub refuel_needed_l: f32,
+    pub repair_mandatory_s: f32,
+    pub repair_optional_s: f32,
+    pub pit_loss_s: f32,
+    pub exit_position: i32,
+    pub mandatory_stops_left: i32,
+    #[ts(optional)]
+    pub window_open: Option<bool>,
+}
+
+/// Each side of the player in the relative list (the widget shows fewer if set).
+const RELATIVE_EACH_SIDE: usize = 6;
+/// The pit helper shows the box distance from this far out.
+const BOX_DISTANCE_SHOWN_M: f32 = 800.0;
 
 /// How many laps the live frame carries for the lap time widget.
 const RECENT_LAPS: usize = 20;
@@ -106,6 +139,26 @@ pub struct LiveFrame {
     pub recent_laps: Option<Vec<RecentLap>>,
     #[ts(optional)]
     pub tyres: Option<TyreView>,
+    #[ts(optional)]
+    pub relative: Option<Vec<RelativeRow>>,
+    #[ts(optional)]
+    pub classes: Option<Vec<ClassSummary>>,
+    #[ts(optional)]
+    pub pit: Option<PitView>,
+    pub player_class_id: i32,
+    #[ts(optional)]
+    pub incidents: Option<i32>,
+    #[ts(optional)]
+    pub incident_limit: Option<i32>,
+    /// Time of day in the sim (s since midnight; 0 = unknown).
+    pub clock_s: f32,
+    /// Laps of the whole session incl. the ones driven (estimate for timed races).
+    #[ts(optional)]
+    pub laps_total_est: Option<f32>,
+    pub session_total_ms: f64,
+    pub track_temp_c: f32,
+    /// The game decides the spotter sides itself (radar shows sides, not exact positions).
+    pub native_spotter: bool,
     pub speaking: bool,
     pub listening: crate::voice::ListenState,
     pub mic_level: f32,
@@ -192,6 +245,8 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
                     None => f.wheels.map(|w| w.pressure_psi),
                 },
                 from_pit: pit.is_some(),
+                live: st.has("hasTyreCoreTemps"),
+                has_brakes: st.has("hasBrakeWear"),
                 wear_pct: pit.map(|c| c.wear.map(|z| z.iter().copied().fold(1.0f32, f32::min) * 100.0)).unwrap_or([0.0; 4]),
                 brake_temp_c: f.wheels.map(|w| w.brake_temp_c),
                 temp_cold: c.core_temp_cold,
@@ -201,6 +256,17 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
                 brake_hot: c.brake_temp_hot,
             }
         }),
+        relative: heavy.then(|| st.relative(RELATIVE_EACH_SIDE)),
+        classes: heavy.then(|| st.class_summaries()),
+        pit: heavy.then(|| pit_view(&st, &settings)),
+        player_class_id: st.player_car().map(|c| c.class_id).unwrap_or(0),
+        incidents: f.incidents,
+        incident_limit: st.session.incident_limit,
+        clock_s: f.clock_s,
+        laps_total_est: heavy.then(|| f.completed_laps as f32 + st.fuel_strategy(&settings).laps_to_go).filter(|l| *l > 0.0),
+        session_total_ms: st.session.session_end_ms,
+        track_temp_c: f.weather.road_temp_c,
+        native_spotter: f.native_side.is_some(),
         recent_laps: heavy.then(|| st.laps.iter().rev().take(RECENT_LAPS).map(|l| RecentLap { lap: l.lap, time_ms: l.time_ms, valid: l.valid, in_lap: l.in_lap, out_lap: l.out_lap }).collect()),
         speaking: core.mixer_status.any_speaking(),
         listening: core.voice.state(),
@@ -210,6 +276,30 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         session: st.session.session_type,
         quiet,
         preset,
+    }
+}
+
+fn pit_view(st: &crate::race::state::RaceState, settings: &crate::storage::settings::Settings) -> PitView {
+    let f = &st.frame;
+    let fs = st.fuel_strategy(settings);
+    let pred = crate::race::pit::predict(st, settings, 0, 0.0);
+    let box_in_m = st.session.pit_box_pct.map(|b| (b - f.spline).rem_euclid(1.0) * st.track_m()).filter(|d| f.in_pit_lane || *d < BOX_DISTANCE_SHOWN_M);
+    let (start, end) = (st.session.pit_window_start_ms, st.session.pit_window_end_ms);
+    let elapsed = st.session.session_end_ms - f.session_time_left_ms;
+    PitView {
+        speed_limit_kmh: st.session.pit_speed_limit_kmh,
+        limiter_on: f.engine.pit_limiter,
+        in_pit_lane: f.in_pit_lane,
+        box_in_m,
+        service_active: f.pit_service_active,
+        menu: f.pit_menu,
+        refuel_needed_l: fs.refuel_l.max(0.0),
+        repair_mandatory_s: f.repair.map(|r| r.mandatory_s).unwrap_or(0.0),
+        repair_optional_s: f.repair.map(|r| r.optional_s).unwrap_or(0.0),
+        pit_loss_s: pred.pit_loss_s,
+        exit_position: pred.exit_position,
+        mandatory_stops_left: f.missing_mandatory_pits,
+        window_open: (end > start && st.session.session_end_ms > 0.0).then(|| elapsed >= f64::from(start) && elapsed < f64::from(end)),
     }
 }
 
@@ -421,7 +511,7 @@ fn run(core: Arc<Core>) {
                             st.on_frame(*f, &settings, &mut spotter_calls, &mut race_events);
                             triggers::on_frame(&st, &mut mem);
                         }
-                        ProviderEvent::Session(info) => st.on_session(info, &mut race_events),
+                        ProviderEvent::Session(info) => st.on_session(*info, &mut race_events),
                         ProviderEvent::Cars(c) => st.on_cars(c, &mut race_events),
                         ProviderEvent::Event(e) => st.on_game_event(e, &mut race_events),
                         ProviderEvent::SecondaryConnected(b) => st.secondary_connected = b,

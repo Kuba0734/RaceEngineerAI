@@ -12,6 +12,7 @@ import Analysis from "@/pages/Analysis";
 import SettingsPage from "@/pages/Settings";
 import OverlayPage from "@/pages/Overlay";
 import { UpdateBanner } from "./UpdateBanner";
+import { Onboarding } from "./Onboarding";
 
 export type Page = "dashboard" | "games" | "session" | "analysis" | "overlay" | "settings";
 
@@ -103,14 +104,14 @@ export default function App() {
       {selected && <div aria-hidden className="pointer-events-none absolute -bottom-10 right-4 select-none text-[220px] font-black leading-none tracking-tighter opacity-[0.035]" style={{ color: selected.accent }}>{selected.shortName}</div>}
       <TitleBar />
       <div className="flex min-h-0 flex-1">
-        <nav className="flex w-[76px] shrink-0 flex-col items-center gap-1 border-r border-line bg-bg/60 py-4">
+        <nav className="flex w-[84px] shrink-0 flex-col items-center gap-1 border-r border-line bg-bg/60 py-4">
           {NAV.map((n) => (
             <button key={n.id} onClick={() => setPage(n.id)} title={t(`nav.${n.id}`)} className={cx("group relative flex h-12 w-12 flex-col items-center justify-center rounded-xl transition-colors", page === n.id ? "text-accent" : "text-dim hover:text-fg")}>
               {page === n.id && <motion.span layoutId="nav-active" className="absolute inset-0 rounded-xl bg-accent/10 ring-1 ring-accent/40" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
               <svg className="relative" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d={n.icon} />
               </svg>
-              <span className="relative mt-0.5 text-[9px] font-medium">{t(`nav.${n.id}`)}</span>
+              <span className="relative mt-0.5 text-[10.5px] font-medium leading-tight">{t(`nav.${n.id}`)}</span>
             </button>
           ))}
         </nav>
@@ -128,6 +129,7 @@ export default function App() {
           </AnimatePresence>
         </main>
       </div>
+      {!settings.app.onboarding_done && <Onboarding onClose={() => setPage("dashboard")} />}
       <AnimatePresence>
         {detectedName && (
           <motion.div initial={{ opacity: 0, y: 40, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }} className="pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 rounded-2xl border border-accent/50 bg-surface/95 px-6 py-4 text-center shadow-2xl">

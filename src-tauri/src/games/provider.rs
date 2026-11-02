@@ -194,6 +194,8 @@ pub struct Engine {
     pub oil_pressure_low: bool,
     pub fuel_pressure_low: bool,
     pub stalled: bool,
+    #[serde(default)]
+    pub pit_limiter: bool,
 }
 
 /// Repair work the pit crew still has to do (games that report repair times).
@@ -360,6 +362,9 @@ pub struct TelemetryFrame {
     pub wet_tyres_allowed: Option<bool>,
     #[serde(default)]
     pub pacing: Pacing,
+    /// The crew is working on the car right now.
+    #[serde(default)]
+    pub pit_service_active: bool,
 }
 
 /// Data that changes rarely. Sent when it changes.
@@ -389,6 +394,17 @@ pub struct SessionInfo {
     #[serde(default)]
     #[ts(optional)]
     pub incident_limit: Option<i32>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub pit_speed_limit_kmh: Option<f32>,
+    /// Position of the player's pit box along the lap (0–1).
+    #[serde(default)]
+    #[ts(optional)]
+    pub pit_box_pct: Option<f32>,
+    /// Lap time estimate of the player's car (s), e.g. to wrap relative gaps.
+    #[serde(default)]
+    #[ts(optional)]
+    pub est_lap_s: Option<f32>,
 }
 
 /// Lower-rate state of one car (broadcasting API or equivalent).
@@ -428,6 +444,30 @@ pub struct CarState {
     #[serde(default)]
     #[ts(optional)]
     pub wet_tyres: Option<bool>,
+    /// Car class (multi-class races); 0 / empty = single class or unknown.
+    #[serde(default)]
+    pub class_id: i32,
+    #[serde(default)]
+    pub class_name: String,
+    #[serde(default)]
+    #[ts(optional)]
+    pub class_color: Option<String>,
+    /// Number as shown, with leading zeros.
+    #[serde(default)]
+    pub number_text: String,
+    #[serde(default)]
+    #[ts(optional)]
+    pub irating: Option<i32>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub license: Option<String>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub license_color: Option<String>,
+    /// Time the car needs from the line to its current spot (s): basis of relative gaps.
+    #[serde(default)]
+    #[ts(optional)]
+    pub est_time_s: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -446,7 +486,7 @@ pub enum GameEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProviderEvent {
     Frame(Box<TelemetryFrame>),
-    Session(SessionInfo),
+    Session(Box<SessionInfo>),
     Cars(Vec<CarState>),
     Event(GameEvent),
     /// Connection state of the secondary data source (e.g. ACC broadcasting).

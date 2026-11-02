@@ -7,6 +7,7 @@ use ts_rs::TS;
 
 use super::fuel::{self, FuelModel, FuelStrategy};
 use super::gaps::GapTracker;
+use super::irating;
 use super::lapcompare::{self, Corner, CornerDelta, Sample, Trace};
 use super::spotter::{Spotter, SpotterCall};
 use crate::games::provider::*;
@@ -54,6 +55,8 @@ pub struct RivalInfo {
     pub last_pit_lap: Option<i32>,
     pub in_pits: bool,
     pub last_location: CarLocation,
+    /// First position seen in the race (grid).
+    pub start_position: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -78,6 +81,70 @@ pub struct StandingRow {
     pub tyre_age_laps: Option<i32>,
     pub is_player: bool,
     pub is_session_best_lap: bool,
+    pub class_id: i32,
+    pub class_name: String,
+    #[ts(optional)]
+    pub class_color: Option<String>,
+    pub class_position: i32,
+    pub number_text: String,
+    #[ts(optional)]
+    pub irating: Option<i32>,
+    /// Estimated iRating change if the race ended now (races, all cars rated).
+    #[ts(optional)]
+    pub irating_change: Option<f32>,
+    #[ts(optional)]
+    pub license: Option<String>,
+    #[ts(optional)]
+    pub license_color: Option<String>,
+    #[ts(optional)]
+    pub start_position: Option<i32>,
+    /// Race: gap to the class leader; otherwise difference of best laps (s).
+    #[ts(optional)]
+    pub gap_to_class_leader_s: Option<f32>,
+    /// Same, to the car ahead in the class.
+    #[ts(optional)]
+    pub interval_s: Option<f32>,
+    /// Last sector times compared with the player's (s, + = slower than you).
+    pub sector_delta_to_player_s: [Option<f32>; 3],
+    pub is_class_best_lap: bool,
+    pub last_is_personal_best: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ClassSummary {
+    pub id: i32,
+    pub name: String,
+    #[ts(optional)]
+    pub color: Option<String>,
+    pub cars: i32,
+    #[ts(optional)]
+    pub sof: Option<i32>,
+}
+
+/// One line of the relative: cars around the player on track.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RelativeRow {
+    pub id: i32,
+    pub position: i32,
+    pub class_position: i32,
+    pub number_text: String,
+    pub driver: String,
+    #[ts(optional)]
+    pub class_color: Option<String>,
+    #[ts(optional)]
+    pub license: Option<String>,
+    #[ts(optional)]
+    pub license_color: Option<String>,
+    #[ts(optional)]
+    pub irating: Option<i32>,
+    /// Time gap on track (s, + = ahead).
+    pub gap_s: f32,
+    /// Laps ahead (+) or behind (−) in the race: colours lapping / lapped cars.
+    pub laps_ahead: i32,
+    pub in_pits: bool,
+    pub is_player: bool,
 }
 
 pub struct RaceState {
@@ -284,6 +351,9 @@ impl RaceState {
             }
             r.in_pits = in_pits;
             r.last_location = c.location;
+            if r.start_position.is_none() && c.position > 0 && self.session.session_type == SessionType::Race {
+                r.start_position = Some(c.position);
+            }
         }
         let mut cars = cars;
         self.apply_live_order(&mut cars);
@@ -664,13 +734,58 @@ impl RaceState {
     }
 
     pub fn standings(&self, trend_window: usize) -> Vec<StandingRow> {
+        let _ = trend_window;
         let me = self.frame.player_car_id;
+        let race = self.session.session_type == SessionType::Race;
+        let player = self.player_car();
+        let mut cars: Vec<&CarState> = self.cars.iter().collect();
+        cars.sort_by_key(|c| if c.position > 0 { c.position } else { i32::MAX });
+        // Per class: order, best lap, estimated iRating changes.
+        let mut classes: BTreeMap<i32, Vec<&CarState>> = BTreeMap::new();
+        for c in &cars {
+            classes.entry(c.class_id).or_default().push(c);
+        }
+        let mut class_pos: BTreeMap<i32, i32> = BTreeMap::new();
+        let mut ir_change: BTreeMap<i32, f32> = BTreeMap::new();
+        let mut gap_leader: BTreeMap<i32, f32> = BTreeMap::new();
+        let mut interval: BTreeMap<i32, f32> = BTreeMap::new();
+        let mut class_best: BTreeMap<i32, i32> = BTreeMap::new();
+        for (cid, list) in &classes {
+            for (k, c) in list.iter().enumerate() {
+                class_pos.insert(c.id, if c.class_position > 0 { c.class_position } else { k as i32 + 1 });
+            }
+            if let Some(b) = list.iter().filter_map(|c| c.best_lap_ms).min() {
+                class_best.insert(*cid, b);
+            }
+            // iRating estimate only when every car of the class has a rating.
+            let ratings: Option<Vec<f64>> = list.iter().map(|c| c.irating.map(f64::from)).collect();
+            if let Some(r) = ratings.filter(|r| r.len() > 1 && race) {
+                for (c, d) in list.iter().zip(irating::changes(&r)) {
+                    ir_change.insert(c.id, d as f32);
+                }
+            }
+            // Gap to the class leader and to the car ahead: official race gaps, else best laps.
+            let key = |c: &CarState| -> Option<f32> { if race { c.gap_to_leader_s } else { c.best_lap_ms.map(|ms| ms as f32 / 1000.0) } };
+            let lead = list.first().and_then(|c| key(c));
+            let mut prev: Option<f32> = None;
+            for c in list {
+                if let (Some(v), Some(l)) = (key(c), lead) {
+                    gap_leader.insert(c.id, v - l);
+                    if let Some(p) = prev {
+                        interval.insert(c.id, v - p);
+                    }
+                }
+                prev = key(c);
+            }
+        }
         let session_best = self.cars.iter().filter_map(|c| c.best_lap_ms).min();
-        let mut rows: Vec<StandingRow> = self
-            .cars
-            .iter()
+        cars.iter()
             .map(|c| {
                 let r = self.rivals.get(&c.id);
+                let sector_delta = std::array::from_fn(|k| {
+                    let mine = player.and_then(|p| p.last_splits[k])?;
+                    Some((c.last_splits[k]? - mine) as f32 / 1000.0)
+                });
                 StandingRow {
                     id: c.id,
                     position: c.position,
@@ -690,12 +805,87 @@ impl RaceState {
                     tyre_age_laps: r.and_then(|r| r.last_pit_lap).map(|l| c.laps - l).or(Some(c.laps)),
                     is_player: c.is_player,
                     is_session_best_lap: c.best_lap_ms.is_some() && c.best_lap_ms == session_best,
+                    class_id: c.class_id,
+                    class_name: c.class_name.clone(),
+                    class_color: c.class_color.clone(),
+                    class_position: class_pos.get(&c.id).copied().unwrap_or(0),
+                    number_text: if c.number_text.is_empty() { c.race_number.to_string() } else { c.number_text.clone() },
+                    irating: c.irating,
+                    irating_change: ir_change.get(&c.id).map(|d| d.round()),
+                    license: c.license.clone(),
+                    license_color: c.license_color.clone(),
+                    start_position: r.and_then(|r| r.start_position),
+                    gap_to_class_leader_s: gap_leader.get(&c.id).copied(),
+                    interval_s: interval.get(&c.id).copied(),
+                    sector_delta_to_player_s: if c.is_player { [None; 3] } else { sector_delta },
+                    is_class_best_lap: c.best_lap_ms.is_some() && c.best_lap_ms == class_best.get(&c.class_id).copied(),
+                    last_is_personal_best: c.last_lap_ms.is_some() && c.last_lap_ms == c.best_lap_ms,
                 }
             })
+            .collect()
+    }
+
+    /// Per class: name, colour, cars, strength of field.
+    pub fn class_summaries(&self) -> Vec<ClassSummary> {
+        let mut m: BTreeMap<i32, Vec<&CarState>> = BTreeMap::new();
+        for c in &self.cars {
+            m.entry(c.class_id).or_default().push(c);
+        }
+        m.into_values()
+            .map(|list| {
+                let ratings: Vec<f64> = list.iter().filter_map(|c| c.irating.map(f64::from)).collect();
+                ClassSummary {
+                    id: list[0].class_id,
+                    name: list[0].class_name.clone(),
+                    color: list[0].class_color.clone(),
+                    cars: list.len() as i32,
+                    sof: irating::sof(&ratings).map(|v| v.round() as i32),
+                }
+            })
+            .collect()
+    }
+
+    /// Cars around the player on track, ordered from furthest ahead to furthest behind, with the
+    /// time gap on track (from the game's estimated times).
+    pub fn relative(&self, each_side: usize) -> Vec<RelativeRow> {
+        let Some(me) = self.player_car() else { return Vec::new() };
+        let Some(my_t) = me.est_time_s else { return Vec::new() };
+        let lap = self.session.est_lap_s.filter(|l| *l > 10.0).unwrap_or(self.avg_lap_ms(5) as f32 / 1000.0);
+        if lap <= 10.0 {
+            return Vec::new();
+        }
+        let my_dist = me.laps as f32 + me.spline;
+        let mut rows: Vec<RelativeRow> = self
+            .cars
+            .iter()
+            .filter(|c| c.location != CarLocation::Unknown)
+            .filter_map(|c| {
+                let t = c.est_time_s?;
+                // + = ahead on track; wrapped into half a lap either way.
+                let mut d = t - my_t;
+                d -= (d / lap).round() * lap;
+                let laps_ahead = ((c.laps as f32 + c.spline) - my_dist).round() as i32;
+                Some(RelativeRow {
+                    id: c.id,
+                    position: c.position,
+                    class_position: c.class_position,
+                    number_text: if c.number_text.is_empty() { c.race_number.to_string() } else { c.number_text.clone() },
+                    driver: c.driver.clone(),
+                    class_color: c.class_color.clone(),
+                    license: c.license.clone(),
+                    license_color: c.license_color.clone(),
+                    irating: c.irating,
+                    gap_s: if c.is_player { 0.0 } else { d },
+                    laps_ahead: if c.is_player { 0 } else { laps_ahead },
+                    in_pits: c.location.in_pits(),
+                    is_player: c.is_player,
+                })
+            })
             .collect();
-        let _ = trend_window;
-        rows.sort_by_key(|r| if r.position > 0 { r.position } else { i32::MAX });
-        rows
+        rows.sort_by(|a, b| b.gap_s.total_cmp(&a.gap_s));
+        let Some(i) = rows.iter().position(|r| r.is_player) else { return rows };
+        let from = i.saturating_sub(each_side);
+        rows.into_iter().skip(from).take(i - from + 1 + each_side).collect()
     }
 
     /// Car directly ahead/behind in the race order.
@@ -799,5 +989,26 @@ mod tests {
         }
         assert!(s.track_outline.len() > 100, "{}", s.track_outline.len());
         assert!(s.outline_version > 0);
+    }
+
+    #[test]
+    fn relative_orders_by_track_gap_and_wraps_the_lap() {
+        let mut s = RaceState::new();
+        s.session.est_lap_s = Some(100.0);
+        let car = |id: i32, laps: i32, spline: f32, est: f32, me: bool| CarState { id, laps, spline, est_time_s: Some(est), is_player: me, location: CarLocation::Track, ..Default::default() };
+        s.cars = vec![
+            car(0, 5, 0.50, 50.0, true),
+            car(1, 5, 0.53, 53.0, false),       // 3 s ahead
+            car(2, 4, 0.45, 45.0, false),       // 5 s behind, a lap down
+            car(3, 6, 0.02, 2.0, false),        // across the line: 48 s behind on track
+        ];
+        let r = s.relative(5);
+        let ids: Vec<i32> = r.iter().map(|x| x.id).collect();
+        assert_eq!(ids, vec![1, 0, 2, 3]);
+        assert!((r[0].gap_s - 3.0).abs() < 1e-4 && (r[3].gap_s + 48.0).abs() < 1e-4);
+        // Car 2 is a lap down; car 3 is behind on track but a lap up (about to lap the player).
+        assert_eq!((r[2].laps_ahead, r[3].laps_ahead), (-1, 1));
+        // Only one car each side.
+        assert_eq!(s.relative(1).len(), 3);
     }
 }

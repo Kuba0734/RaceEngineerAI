@@ -5,10 +5,11 @@ import type { ButtonBinding } from "@/lib/bindings/ButtonBinding";
 import { Badge, Button, Card, Field, useAsync } from "@/components/ui";
 import { checkForUpdate } from "@/app/UpdateBanner";
 import { useSettings } from "./basic";
+import { useExpert } from "./expert";
 
 const QUICK = ["repeat", "quiet", "normal", "spotter_only", "fuel", "gap_ahead", "gap_behind", "time_left", "louder", "quieter"] as const;
 
-function Binder({ value, onChange }: { value: ButtonBinding; onChange: (b: ButtonBinding) => void }) {
+export function Binder({ value, onChange }: { value: ButtonBinding; onChange: (b: ButtonBinding) => void }) {
   const { t } = useTranslation();
   const [learning, setLearning] = useState(false);
   useEffect(() => {
@@ -44,6 +45,7 @@ function Binder({ value, onChange }: { value: ButtonBinding; onChange: (b: Butto
 export function InputSection() {
   const { t } = useTranslation();
   const [s, up] = useSettings();
+  const expert = useExpert();
   return (
     <>
       <Card title={t("input.ptt")}>
@@ -52,14 +54,14 @@ export function InputSection() {
           <Binder value={s.input.push_to_talk} onChange={(b) => up((x) => ({ ...x, input: { ...x.input, push_to_talk: b } }))} />
         </Field>
       </Card>
-      <Card title={t("input.quick")}>
+      {expert && <Card title={t("input.quick")}>
         <p className="mb-2 text-xs text-dim">{t("input.quickHint")}</p>
         {QUICK.map((id) => (
           <Field key={id} label={t(`quick.${id}`)}>
             <Binder value={s.input.quick_commands[id] ?? { binding: "", label: "" }} onChange={(b) => up((x) => ({ ...x, input: { ...x.input, quick_commands: { ...x.input.quick_commands, [id]: b } } }))} />
           </Field>
         ))}
-      </Card>
+      </Card>}
     </>
   );
 }

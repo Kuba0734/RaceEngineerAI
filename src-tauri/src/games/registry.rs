@@ -25,6 +25,23 @@ pub struct Capabilities {
     pub has_pit_menu: bool,
     #[serde(default)]
     pub has_pit_tyre_check: bool,
+    #[serde(default)]
+    pub has_lights_wipers: bool,
+    #[serde(default)]
+    pub has_stint_time: bool,
+    #[serde(default)]
+    pub has_tc_active: bool,
+    #[serde(default)]
+    pub has_wheel_slip: bool,
+    #[serde(default)]
+    pub has_engine_warnings: bool,
+    #[serde(default)]
+    pub has_safety_car_pacing: bool,
+    #[serde(default)]
+    pub has_wet_declared: bool,
+    /// Estimated times per car, ratings and classes: relative and class standings.
+    #[serde(default)]
+    pub has_relative: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -82,6 +99,14 @@ pub fn has_capability(c: &Capabilities, name: &str) -> bool {
         "hasRepairTimes" => c.has_repair_times,
         "hasPitMenu" => c.has_pit_menu,
         "hasPitTyreCheck" => c.has_pit_tyre_check,
+        "hasLightsWipers" => c.has_lights_wipers,
+        "hasStintTime" => c.has_stint_time,
+        "hasTcActive" => c.has_tc_active,
+        "hasWheelSlip" => c.has_wheel_slip,
+        "hasEngineWarnings" => c.has_engine_warnings,
+        "hasSafetyCarPacing" => c.has_safety_car_pacing,
+        "hasWetDeclared" => c.has_wet_declared,
+        "hasRelative" => c.has_relative,
         _ => false,
     }
 }

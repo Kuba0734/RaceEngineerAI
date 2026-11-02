@@ -12,4 +12,16 @@ gap_to_leader_s?: number,
 /**
  * On wet tyres (None = unknown).
  */
-wet_tyres?: boolean, };
+wet_tyres?: boolean, 
+/**
+ * Car class (multi-class races); 0 / empty = single class or unknown.
+ */
+class_id: number, class_name: string, class_color?: string, 
+/**
+ * Number as shown, with leading zeros.
+ */
+number_text: string, irating?: number, license?: string, license_color?: string, 
+/**
+ * Time the car needs from the line to its current spot (s): basis of relative gaps.
+ */
+est_time_s?: number, };

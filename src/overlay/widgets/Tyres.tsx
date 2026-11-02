@@ -14,6 +14,8 @@ function band(value: number, low: number, high: number): string {
 export function Tyres({ tyres, units, showBrakes }: { tyres: TyreView | undefined; units: UnitSettings; showBrakes: boolean }) {
   const { t } = useTranslation();
   if (!tyres) return <div className="w-52 text-xs text-dim">{t("wd.noData")}</div>;
+  // Games without live tyre data: nothing to show until the first stop.
+  if (!tyres.live && !tyres.from_pit) return <div className="w-52 text-xs text-dim">{t("wd.tyresAfterStop")}</div>;
   const temp = (c: number) => (units.temperature === "fahrenheit" ? `${Math.round((c * 9) / 5 + 32)}°F` : `${Math.round(c)}°C`);
   const press = (psi: number) => (units.pressure === "bar" ? (psi * 0.0689476).toFixed(2) : psi.toFixed(1));
   return (
@@ -29,7 +31,7 @@ export function Tyres({ tyres, units, showBrakes }: { tyres: TyreView | undefine
               <div className={cx("num text-lg font-semibold leading-tight", band(c, tyres.temp_cold, tyres.temp_hot))}>{c > 0 ? temp(c) : "–"}</div>
               {(!tyres.from_pit || p > 0) && <div className={cx("num text-sm", band(p, tyres.pressure_min, tyres.pressure_max))}>{p > 0 ? press(p) : "–"}</div>}
               {tyres.from_pit && <div className="num text-[11px] text-dim">{(tyres.wear_pct[i] ?? 0) > 0 ? `${Math.round(tyres.wear_pct[i] ?? 0)}%` : "–"}</div>}
-              {showBrakes && (
+              {showBrakes && tyres.has_brakes && (
                 <div className={cx("num mt-0.5 text-[11px]", b > tyres.brake_hot ? "text-danger" : "text-dim")}>
                   {t("wd.brake")} {b > 0 ? temp(b) : "–"}
                 </div>

@@ -353,7 +353,7 @@ impl TelemetryProvider for MockProvider {
         self.last_t = t;
         if !self.sent_session {
             self.sent_session = true;
-            out.push(ProviderEvent::Session(SessionInfo {
+            out.push(ProviderEvent::Session(Box::new(SessionInfo {
                 game_id: "mock".into(),
                 track: "Testring".into(),
                 track_length_m: self.track_len,
@@ -377,7 +377,7 @@ impl TelemetryProvider for MockProvider {
                 dry_tyres: "DHF".into(),
                 wet_tyres: "WH".into(),
                 ..Default::default()
-            }));
+            })));
             out.push(ProviderEvent::SecondaryConnected(true));
         }
         out.push(ProviderEvent::Frame(Box::new(self.frame(t))));

@@ -3,7 +3,9 @@
     "id": "acc",
     "name": "Assetto Corsa Competizione",
     "shortName": "ACC",
-    "processNames": ["AC2-Win64-Shipping.exe"],
+    "processNames": [
+      "AC2-Win64-Shipping.exe"
+    ],
     "provider": "acc",
     "support": "supported",
     "accent": "#FF5A1F",
@@ -20,7 +22,15 @@
       "hasIncidents": false,
       "hasRepairTimes": false,
       "hasPitMenu": false,
-      "hasPitTyreCheck": false
+      "hasPitTyreCheck": false,
+      "hasLightsWipers": true,
+      "hasStintTime": true,
+      "hasTcActive": true,
+      "hasWheelSlip": true,
+      "hasEngineWarnings": false,
+      "hasSafetyCarPacing": false,
+      "hasWetDeclared": false,
+      "hasRelative": false
     },
     "setupHintsDe": [
       "Broadcasting-API aktivieren: RaceEngineerAI kann broadcasting.json automatisch einrichten (Backup wird angelegt). Danach ACC neu starten.",
@@ -35,22 +45,44 @@
     "id": "lmu",
     "name": "Le Mans Ultimate",
     "shortName": "LMU",
-    "processNames": ["Le Mans Ultimate.exe"],
+    "processNames": [
+      "Le Mans Ultimate.exe"
+    ],
     "provider": "none",
     "support": "planned",
     "accent": "#22D3EE",
     "capabilities": {
-      "hasNativeSpotter": false, "hasWeatherForecast": false, "hasBroadcastTiming": false, "hasTyreCoreTemps": false,
-      "hasBrakeWear": false, "hasPitWindow": false, "hasTrackLimits": false, "hasCarCoordinates": false
+      "hasNativeSpotter": false,
+      "hasWeatherForecast": false,
+      "hasBroadcastTiming": false,
+      "hasTyreCoreTemps": false,
+      "hasBrakeWear": false,
+      "hasPitWindow": false,
+      "hasTrackLimits": false,
+      "hasCarCoordinates": false,
+      "hasLightsWipers": false,
+      "hasStintTime": false,
+      "hasTcActive": false,
+      "hasWheelSlip": false,
+      "hasEngineWarnings": false,
+      "hasSafetyCarPacing": false,
+      "hasWetDeclared": false,
+      "hasRelative": false
     },
-    "setupHintsDe": ["Unterstützung folgt. Schnittstelle (eingebautes Shared Memory) wird vor der Umsetzung recherchiert."],
-    "setupHintsEn": ["Support coming. The interface (built-in shared memory) will be researched before implementation."]
+    "setupHintsDe": [
+      "Unterstützung folgt. Schnittstelle (eingebautes Shared Memory) wird vor der Umsetzung recherchiert."
+    ],
+    "setupHintsEn": [
+      "Support coming. The interface (built-in shared memory) will be researched before implementation."
+    ]
   },
   {
     "id": "iracing",
     "name": "iRacing",
     "shortName": "iRacing",
-    "processNames": ["iRacingSim64DX11.exe"],
+    "processNames": [
+      "iRacingSim64DX11.exe"
+    ],
     "provider": "iracing",
     "support": "supported",
     "accent": "#3B82F6",
@@ -67,7 +99,15 @@
       "hasIncidents": true,
       "hasRepairTimes": true,
       "hasPitMenu": true,
-      "hasPitTyreCheck": true
+      "hasPitTyreCheck": true,
+      "hasLightsWipers": false,
+      "hasStintTime": false,
+      "hasTcActive": false,
+      "hasWheelSlip": false,
+      "hasEngineWarnings": true,
+      "hasSafetyCarPacing": true,
+      "hasWetDeclared": true,
+      "hasRelative": true
     },
     "setupHintsDe": [
       "Keine Einrichtung nötig: iRacing stellt seine Telemetrie (SDK) automatisch bereit, sobald du im Auto sitzt.",
@@ -84,15 +124,35 @@
     "id": "ace",
     "name": "Assetto Corsa EVO",
     "shortName": "AC EVO",
-    "processNames": ["AssettoCorsaEVO.exe"],
+    "processNames": [
+      "AssettoCorsaEVO.exe"
+    ],
     "provider": "none",
     "support": "planned",
     "accent": "#A855F7",
     "capabilities": {
-      "hasNativeSpotter": false, "hasWeatherForecast": false, "hasBroadcastTiming": false, "hasTyreCoreTemps": false,
-      "hasBrakeWear": false, "hasPitWindow": false, "hasTrackLimits": false, "hasCarCoordinates": false
+      "hasNativeSpotter": false,
+      "hasWeatherForecast": false,
+      "hasBroadcastTiming": false,
+      "hasTyreCoreTemps": false,
+      "hasBrakeWear": false,
+      "hasPitWindow": false,
+      "hasTrackLimits": false,
+      "hasCarCoordinates": false,
+      "hasLightsWipers": false,
+      "hasStintTime": false,
+      "hasTcActive": false,
+      "hasWheelSlip": false,
+      "hasEngineWarnings": false,
+      "hasSafetyCarPacing": false,
+      "hasWetDeclared": false,
+      "hasRelative": false
     },
-    "setupHintsDe": ["Unterstützung folgt. Schnittstelle wird vor der Umsetzung recherchiert."],
-    "setupHintsEn": ["Support coming. The interface will be researched before implementation."]
+    "setupHintsDe": [
+      "Unterstützung folgt. Schnittstelle wird vor der Umsetzung recherchiert."
+    ],
+    "setupHintsEn": [
+      "Support coming. The interface will be researched before implementation."
+    ]
   }
 ]
