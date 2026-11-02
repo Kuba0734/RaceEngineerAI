@@ -362,7 +362,9 @@ pub fn say_call(core: CoreState, call_id: String) -> AppResult<()> {
 #[tauri::command]
 pub fn list_sessions(core: CoreState) -> Vec<SessionRow> {
     let (tx, rx) = crossbeam_channel::bounded(1);
-    core.db.send(DbJob::ListSessions { reply: tx });
+    // Only the selected game's sessions.
+    let game = core.settings.read().selected_game.clone();
+    core.db.send(DbJob::ListSessions { game, reply: tx });
     rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap_or_default()
 }
 

@@ -11,7 +11,7 @@
  "analysis.biggestLosses": "Biggest time losses",
  "analysis.corner": "Turn {{n}}",
  "analysis.delete": "Delete session",
- "analysis.empty": "No saved sessions yet.",
+ "analysis.empty": "No saved sessions for {{game}} yet.",
  "analysis.fuel": "Fuel",
  "analysis.lap": "Lap",
  "analysis.lapTimes": "Lap times",

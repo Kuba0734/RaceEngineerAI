@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, type LapRow, type RadioLogEntry, type SessionRow } from "@/lib/ipc";
+import { useApp } from "@/stores/app";
 import type { CornerDelta } from "@/lib/bindings/CornerDelta";
 import { Badge, Button, Card, Empty, cx, useAsync } from "@/components/ui";
 import { date, lapTime } from "@/lib/format";
@@ -130,14 +131,16 @@ function Report({ s }: { s: SessionRow }) {
 
 export default function Analysis() {
   const { t, i18n } = useTranslation();
-  const [sessions, reload] = useAsync<SessionRow[]>(() => api.listSessions(), []);
+  const selected = useApp((s) => s.settings?.selected_game);
+  const gameName = useApp((s) => s.games?.games.find((g) => g.id === s.settings?.selected_game)?.name ?? "");
+  const [sessions, reload] = useAsync<SessionRow[]>(() => api.listSessions(), [selected]);
   const [sel, setSel] = useState<number | null>(null);
   const current = sessions?.find((s) => s.id === sel) ?? sessions?.[0];
   return (
     <div>
       <h1 className="mb-5 text-2xl font-semibold">{t("analysis.title")}</h1>
       {!sessions || sessions.length === 0 ? (
-        <Empty>{t("analysis.empty")}</Empty>
+        <Empty>{t("analysis.empty", { game: gameName })}</Empty>
       ) : (
         <div className="grid grid-cols-12 gap-5">
           <div className="col-span-12 space-y-2 lg:col-span-4">

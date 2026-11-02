@@ -11,7 +11,7 @@
  "analysis.biggestLosses": "Größte Zeitverluste",
  "analysis.corner": "Kurve {{n}}",
  "analysis.delete": "Session löschen",
- "analysis.empty": "Noch keine gespeicherten Sessions.",
+ "analysis.empty": "Noch keine gespeicherten Sessions für {{game}}.",
  "analysis.fuel": "Sprit",
  "analysis.lap": "Runde",
  "analysis.lapTimes": "Rundenzeiten",

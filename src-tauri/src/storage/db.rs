@@ -128,16 +128,17 @@ pub fn insert_lap(c: &Connection, session_id: i64, lap: &LapRow) -> AppResult<()
     Ok(())
 }
 
-pub fn list_sessions(c: &Connection, limit: u32) -> AppResult<Vec<SessionRow>> {
+pub fn list_sessions(c: &Connection, game: &str, limit: u32) -> AppResult<Vec<SessionRow>> {
     let mut st = c.prepare(
         "SELECT s.id, s.game, s.track, s.car, s.session_type, s.started_at, s.ended_at, s.summary_json,
                 COUNT(l.id), MIN(CASE WHEN l.valid = 1 THEN l.time_ms END)
          FROM sessions s LEFT JOIN laps l ON l.session_id = s.id
+         WHERE s.game = ?1
          GROUP BY s.id
          HAVING COUNT(l.id) > 0 OR s.summary_json LIKE '%\"from\":\"crew\"%' OR s.summary_json LIKE '%\"from\":\"driver\"%'
-         ORDER BY s.started_at DESC LIMIT ?1",
+         ORDER BY s.started_at DESC LIMIT ?2",
     )?;
-    let rows = st.query_map([limit], |r| {
+    let rows = st.query_map(params![game, limit], |r| {
         Ok(SessionRow {
             id: r.get(0)?,
             game: r.get(1)?,
@@ -226,8 +227,9 @@ mod tests {
         for (i, t) in [(1, 140_000), (2, 138_500), (3, 139_000)] {
             insert_lap(&c, id, &LapRow { lap: i, time_ms: t, sectors: [Some(40_000), None, None], valid: i != 3, fuel_used: Some(2.9), position: Some(4) }).unwrap();
         }
-        let s = list_sessions(&c, 10).unwrap();
+        let s = list_sessions(&c, "acc", 10).unwrap();
         assert_eq!(s[0].lap_count, 3);
+        assert!(list_sessions(&c, "lmu", 10).unwrap().is_empty(), "sessions are separate per game");
         assert_eq!(s[0].best_lap_ms, Some(138_500));
         assert_eq!(session_laps(&c, id).unwrap().len(), 3);
     }
@@ -252,7 +254,7 @@ pub enum DbJob {
     LoadReference { game: String, track: String, car: String, reply: crossbeam_channel::Sender<Option<(u32, Vec<u8>)>> },
     SavePitLoss { game: String, track: String, loss: f32 },
     LoadPitLoss { game: String, track: String, reply: crossbeam_channel::Sender<Option<f32>> },
-    ListSessions { reply: crossbeam_channel::Sender<Vec<SessionRow>> },
+    ListSessions { game: String, reply: crossbeam_channel::Sender<Vec<SessionRow>> },
     SessionLaps { session_id: i64, reply: crossbeam_channel::Sender<Vec<LapRow>> },
     DeleteSession { session_id: i64 },
     Prune { days: u32 },
@@ -292,7 +294,7 @@ impl DbHandle {
                     DbJob::LoadPitLoss { game, track, reply } => load_pit_loss(&conn, &game, &track).map(|r| {
                         let _ = reply.send(r);
                     }),
-                    DbJob::ListSessions { reply } => list_sessions(&conn, 200).map(|r| {
+                    DbJob::ListSessions { game, reply } => list_sessions(&conn, &game, 200).map(|r| {
                         let _ = reply.send(r);
                     }),
                     DbJob::SessionLaps { session_id, reply } => session_laps(&conn, session_id).map(|r| {
@@ -328,7 +330,7 @@ mod empty_session_tests {
         end_session(&c, empty, r#"{"radio":[]}"#).unwrap();
         let talked = insert_session(&c, "acc", "spa", "car", "practice").unwrap();
         end_session(&c, talked, r#"{"radio":[{"from":"crew","text":"Radio check"}]}"#).unwrap();
-        let ids: Vec<i64> = list_sessions(&c, 10).unwrap().into_iter().map(|s| s.id).collect();
+        let ids: Vec<i64> = list_sessions(&c, "acc", 10).unwrap().into_iter().map(|s| s.id).collect();
         assert_eq!(ids, vec![talked]);
     }
 }
