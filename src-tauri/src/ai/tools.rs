@@ -255,6 +255,9 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
                 "unit": fu,
             })
         }
+        "get_tyres" if !state.has("hasTyreCoreTemps") => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),
+        "get_brakes" if !state.has("hasBrakeWear") => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),
+        "get_damage" if !state.has("hasCarDamage") => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),
         "get_tyres" => {
             let w = &state.frame.wheels;
             let class = crate::games::cars::class_def(&state.session.car_class);
@@ -293,7 +296,8 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
         }
         "get_weather" => {
             let w = state.frame.weather;
-            json!({ "rain_now": w.rain_now, "rain_in_10_min": w.rain_10min, "rain_in_30_min": w.rain_30min, "track_grip": w.grip, "air_temp_c": w.air_temp_c.round(), "track_temp_c": w.road_temp_c.round(), "track_temp_trend_c_per_10min": state.road_temp_trend_c_per_10min().map(round1), "wet_tyres_on": state.frame.rain_tyres })
+            let fc = state.has("hasWeatherForecast");
+            json!({ "rain_now": w.rain_now, "rain_in_10_min": fc.then_some(w.rain_10min), "rain_in_30_min": fc.then_some(w.rain_30min), "forecast_available": fc, "track_grip": w.grip, "air_temp_c": w.air_temp_c.round(), "track_temp_c": w.road_temp_c.round(), "track_temp_trend_c_per_10min": state.road_temp_trend_c_per_10min().map(round1), "wet_tyres_on": state.frame.rain_tyres })
         }
         "get_session_info" => {
             let s = &state.session;
@@ -302,6 +306,7 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
                 "game": s.game_id, "track": s.track, "track_length_m": s.track_length_m.round(),
                 "session": s.session_type, "phase": s.phase, "car": s.car_model, "class": s.car_class,
                 "time_left_min": (state.frame.session_time_left_ms / 60_000.0 * 10.0).round() / 10.0,
+                "laps_left": state.frame.laps_left.map(|l| l.ceil()),
                 "completed_laps": state.frame.completed_laps, "position": state.player_position(),
                 "best_lap_s": lap_s(state.best_valid_lap().map(|l| l.time_ms)), "last_lap_s": lap_s(Some(state.frame.last_lap_ms)),
                 "mandatory_pit_done": state.frame.mandatory_pit_done, "missing_mandatory_pits": state.frame.missing_mandatory_pits,

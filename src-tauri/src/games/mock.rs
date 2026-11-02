@@ -271,6 +271,9 @@ impl MockProvider {
                     CarPos { id: c.id, x: pp[0], z: pp[1] }
                 })
                 .collect(),
+            native_side: None,
+            near_cars: Vec::new(),
+            laps_left: None,
         }
     }
 

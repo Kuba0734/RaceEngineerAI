@@ -27,7 +27,8 @@ function CallRow({ def, eff }: { def: CallDef; eff: EffectiveCall }) {
   const [preview, setPreview] = useState<string | null>(null);
   const spotter = def.priority === "spotter";
   const caps = useApp((s) => s.games?.games.find((g) => g.id === s.status?.active_game)?.capabilities);
-  const unavailable = def.requires && caps ? !(caps as unknown as Record<string, boolean>)[def.requires] : false;
+  // "a|b" = any of the capabilities is enough.
+  const unavailable = def.requires && caps ? !def.requires.split("|").some((r) => (caps as unknown as Record<string, boolean>)[r]) : false;
   const setO = (patch: Partial<CallOverride>) =>
     up((x) => {
       const cur: CallOverride = x.calls.overrides[def.id] ?? { thresholds: {} };

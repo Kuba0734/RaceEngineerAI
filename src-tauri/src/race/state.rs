@@ -106,6 +106,8 @@ pub struct RaceState {
     pub stint_start_t: f64,
     pub race_start_position: Option<i32>,
     pub weather_at_start: Option<Weather>,
+    /// What the running game provides (None = everything, e.g. demo/replay).
+    pub caps: Option<crate::games::registry::Capabilities>,
     // Internal edge detection.
     last_completed_laps: i32,
     last_sector_index: i32,
@@ -166,6 +168,7 @@ impl RaceState {
             stint_start_t: 0.0,
             race_start_position: None,
             weather_at_start: None,
+            caps: None,
             last_completed_laps: -1,
             last_sector_index: -1,
             sector_times: [None; 3],
@@ -213,6 +216,7 @@ impl RaceState {
         let reference = self.reference.take();
         let corners = std::mem::take(&mut self.corners);
         let pit_loss = self.pit_loss_s;
+        let caps = self.caps.take();
         let outline = (std::mem::take(&mut self.track_outline), std::mem::take(&mut self.outline_bins), self.outline_filled, self.outline_version);
         *self = Self::new();
         (self.track_outline, self.outline_bins, self.outline_filled, self.outline_version) = outline;
@@ -220,6 +224,12 @@ impl RaceState {
         self.reference = reference;
         self.corners = corners;
         self.pit_loss_s = pit_loss;
+        self.caps = caps;
+    }
+
+    /// Capability check for data the game may not deliver (unknown game → available).
+    pub fn has(&self, name: &str) -> bool {
+        self.caps.as_ref().is_none_or(|c| crate::games::registry::has_capability(c, name))
     }
 
     pub fn on_session(&mut self, info: SessionInfo, events: &mut Vec<RaceEvent>) {
@@ -573,7 +583,8 @@ impl RaceState {
             None => (self.frame.game_fuel_per_lap_l, 0),
         };
         let avg = self.avg_lap_ms(window);
-        let laps_to_go = fuel::laps_to_go_timed(self.frame.session_time_left_ms, self.frame.spline, avg);
+        // Races over a fixed number of laps report the laps left; timed races are estimated.
+        let laps_to_go = self.frame.laps_left.unwrap_or_else(|| fuel::laps_to_go_timed(self.frame.session_time_left_ms, self.frame.spline, avg));
         fuel::strategy(self.frame.fuel_l, per_lap, clean, avg, laps_to_go, st.fuel_reserve_laps, st.fuel_reserve_liters, st.max_save_fraction)
     }
 

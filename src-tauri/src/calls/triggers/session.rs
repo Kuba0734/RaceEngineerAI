@@ -162,7 +162,10 @@ pub fn briefing(ctx: &mut Ctx) {
     let fs = s.fuel_strategy(ctx.settings);
     let avg = s.avg_lap_ms(st.clean_laps_window as usize);
     let minutes = s.frame.session_time_left_ms as f32 / 60_000.0;
-    let fuel = crate::race::fuel::start_fuel(minutes, fs.per_lap_l, avg, st.formation_lap, st.fuel_reserve_laps, st.fuel_reserve_liters, s.session.max_fuel_l);
+    let fuel = match s.frame.laps_left {
+        Some(laps) => crate::race::fuel::start_fuel_laps(laps.ceil(), fs.per_lap_l, st.formation_lap, st.fuel_reserve_laps, st.fuel_reserve_liters, s.session.max_fuel_l),
+        None => crate::race::fuel::start_fuel(minutes, fs.per_lap_l, avg, st.formation_lap, st.fuel_reserve_laps, st.fuel_reserve_liters, s.session.max_fuel_l),
+    };
     let fuel_txt = if fuel > 0.0 { ctx.fmt.fuel(fuel) } else { ctx.fmt.fuel(s.frame.fuel_l) };
     let wp = weather_part(ctx);
     ctx.push(CallRequest::new("prerace.briefing").p("fuel", fuel_txt).p("weather_part", wp));

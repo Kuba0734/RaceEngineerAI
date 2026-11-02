@@ -1,6 +1,7 @@
 pub mod acc;
 pub mod cars;
 pub mod detector;
+pub mod iracing;
 pub mod mock;
 pub mod provider;
 pub mod registry;
@@ -16,6 +17,7 @@ pub fn create_provider(provider: &str, settings: &crate::storage::settings::Sett
             let password = gs.map(|g| g.broadcasting_password.clone()).filter(|p| !p.is_empty()).unwrap_or_else(|| acc::config::DEFAULT_PASSWORD.into());
             Some(Box::new(acc::provider::AccProvider::new(port, password)))
         }
+        "iracing" => Some(Box::new(iracing::provider::IRacingProvider::new())),
         "mock" => Some(Box::new(mock::MockProvider::new(mock::MockScenario::Race))),
         _ => None,
     }

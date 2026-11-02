@@ -183,6 +183,27 @@ pub struct CarPos {
     pub z: f32,
 }
 
+/// Side-by-side state reported by games with their own spotter (iRacing `CarLeftRight`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum NativeSide {
+    /// The game's spotter is inactive (e.g. not in the car).
+    Off,
+    Clear,
+    Left,
+    Right,
+    ThreeWide,
+}
+
+/// Another car near the player measured along the track (+ = ahead), in metres.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct NearCar {
+    pub id: i32,
+    pub lon_m: f32,
+}
+
 /// One high-rate frame of the player's car. Produced at ≥60 Hz.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TelemetryFrame {
@@ -236,7 +257,9 @@ pub struct TelemetryFrame {
     pub session_time_left_ms: f64,
     pub clock_s: f32,
     pub weather: Weather,
+    /// -1 = the game does not report it.
     pub lights_stage: i32,
+    /// -1 = the game does not report it.
     pub wiper_level: i32,
     pub rain_tyres: bool,
     pub stint_time_left_ms: i32,
@@ -246,6 +269,15 @@ pub struct TelemetryFrame {
     pub game_gap_behind_ms: Option<i32>,
     pub player_car_id: i32,
     pub cars: Vec<CarPos>,
+    /// Set by games with their own spotter; the spotter then trusts it instead of `cars`.
+    #[serde(default)]
+    pub native_side: Option<NativeSide>,
+    /// Nearby cars along the track, for radar and "closing fast" without world coordinates.
+    #[serde(default)]
+    pub near_cars: Vec<NearCar>,
+    /// Laps still to drive incl. the current one, for races limited by laps (None = timed/open).
+    #[serde(default)]
+    pub laps_left: Option<f32>,
 }
 
 /// Data that changes rarely. Sent when it changes.

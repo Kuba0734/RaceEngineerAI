@@ -40,7 +40,10 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
     { ok: !!key?.set, label: t("dash.check.key"), page: "settings" as Page },
     { ok: voicesOk, label: t("dash.check.voices"), page: "settings" as Page },
     { ok: vadOk, label: t("dash.check.vad"), page: "settings" as Page },
-    { ok: !!bc?.matches_app || !!status?.secondary_connected || !!status?.demo, label: t("dash.check.broadcast"), page: "games" as Page },
+    // Only ACC needs a second data channel that the user has to set up.
+    ...((status?.active_game ?? settings?.selected_game) === "acc"
+      ? [{ ok: !!bc?.matches_app || !!status?.secondary_connected || !!status?.demo, label: t("dash.check.broadcast"), page: "games" as Page }]
+      : []),
   ];
   const listening = frame?.listening ?? "off";
 

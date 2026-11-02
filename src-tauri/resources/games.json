@@ -15,7 +15,8 @@
       "hasBrakeWear": true,
       "hasPitWindow": true,
       "hasTrackLimits": true,
-      "hasCarCoordinates": true
+      "hasCarCoordinates": true,
+      "hasCarDamage": true
     },
     "setupHintsDe": [
       "Broadcasting-API aktivieren: RaceEngineerAI kann broadcasting.json automatisch einrichten (Backup wird angelegt). Danach ACC neu starten.",
@@ -46,15 +47,30 @@
     "name": "iRacing",
     "shortName": "iRacing",
     "processNames": ["iRacingSim64DX11.exe"],
-    "provider": "none",
-    "support": "planned",
+    "provider": "iracing",
+    "support": "supported",
     "accent": "#3B82F6",
     "capabilities": {
-      "hasNativeSpotter": false, "hasWeatherForecast": false, "hasBroadcastTiming": false, "hasTyreCoreTemps": false,
-      "hasBrakeWear": false, "hasPitWindow": false, "hasTrackLimits": false, "hasCarCoordinates": false
+      "hasNativeSpotter": true,
+      "hasWeatherForecast": false,
+      "hasBroadcastTiming": true,
+      "hasTyreCoreTemps": false,
+      "hasBrakeWear": false,
+      "hasPitWindow": false,
+      "hasTrackLimits": false,
+      "hasCarCoordinates": false,
+      "hasCarDamage": false
     },
-    "setupHintsDe": ["Unterstützung folgt (iRacing SDK). Prozessname ist noch nicht auf einem Rechner verifiziert."],
-    "setupHintsEn": ["Support coming (iRacing SDK). Process name not yet verified on a machine."]
+    "setupHintsDe": [
+      "Keine Einrichtung nötig: iRacing stellt seine Telemetrie (SDK) automatisch bereit, sobald du im Auto sitzt.",
+      "Die Streckenkarte entsteht während deiner ersten sauberen Runde (iRacing liefert live keine Koordinaten).",
+      "Für das Overlay iRacing im Modus „Randloses Fenster“ oder „Fenster“ betreiben – im exklusiven Vollbild ist kein Overlay möglich."
+    ],
+    "setupHintsEn": [
+      "No setup needed: iRacing provides its telemetry (SDK) automatically as soon as you are in the car.",
+      "The track map is built during your first clean lap (iRacing does not provide live coordinates).",
+      "Run iRacing in borderless or windowed mode for the overlay – exclusive fullscreen cannot show overlays."
+    ]
   },
   {
     "id": "ace",

@@ -134,6 +134,11 @@ pub fn start_fuel(race_minutes: f32, per_lap_l: f32, avg_lap_ms: i32, formation_
         return 0.0;
     }
     let laps = (race_minutes * 60_000.0 / avg_lap_ms as f32).ceil() + 1.0;
+    start_fuel_laps(laps, per_lap_l, formation_lap, reserve_laps, reserve_l, max_fuel_l)
+}
+
+/// Start fuel for a race over a fixed number of laps.
+pub fn start_fuel_laps(laps: f32, per_lap_l: f32, formation_lap: bool, reserve_laps: f32, reserve_l: f32, max_fuel_l: f32) -> f32 {
     let formation = if formation_lap { 1.0 } else { 0.0 };
     let f = (laps + formation + reserve_laps) * per_lap_l + reserve_l;
     if max_fuel_l > 0.0 {

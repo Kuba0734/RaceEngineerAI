@@ -95,6 +95,11 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
           <div className="mt-3 border-t border-line pt-3">
             <Toggle checked={gs.enabled} onChange={(v) => set((x) => ({ ...x, enabled: v }))} label={t("games.enabled")} />
             {g.id === "acc" && <AccSetup />}
+            {g.id !== "acc" && hints.length > 0 && (
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-dim">
+                {hints.map((h) => <li key={h}>{h}</li>)}
+              </ul>
+            )}
           </div>
         )}
       </Card>

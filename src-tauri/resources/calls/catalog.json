@@ -85,7 +85,7 @@
     "race"
    ],
    "enabled": true,
-   "requires": "hasCarCoordinates"
+   "requires": "hasCarCoordinates|hasNativeSpotter"
   },
   {
    "id": "spotter.right",
@@ -103,7 +103,7 @@
     "race"
    ],
    "enabled": true,
-   "requires": "hasCarCoordinates"
+   "requires": "hasCarCoordinates|hasNativeSpotter"
   },
   {
    "id": "spotter.three_wide",
@@ -121,7 +121,7 @@
     "race"
    ],
    "enabled": true,
-   "requires": "hasCarCoordinates"
+   "requires": "hasCarCoordinates|hasNativeSpotter"
   },
   {
    "id": "spotter.clear",
@@ -139,7 +139,7 @@
     "race"
    ],
    "enabled": true,
-   "requires": "hasCarCoordinates"
+   "requires": "hasCarCoordinates|hasNativeSpotter"
   },
   {
    "id": "spotter.closing_fast",
@@ -157,7 +157,7 @@
     "race"
    ],
    "enabled": false,
-   "requires": "hasCarCoordinates"
+   "requires": "hasCarCoordinates|hasNativeSpotter"
   },
   {
    "id": "spotter.still_there",
@@ -175,7 +175,7 @@
     "race"
    ],
    "enabled": true,
-   "requires": "hasCarCoordinates"
+   "requires": "hasCarCoordinates|hasNativeSpotter"
   },
   {
    "id": "flag.blue_leader",

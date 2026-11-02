@@ -73,7 +73,7 @@ RaceEngineerAI ist eine Windows-Desktop-App, die wie eine echte Pit Crew über F
 |---|---|---|---|
 | Assetto Corsa Competizione | **zuerst, jetzt** | `AC2-Win64-Shipping.exe` | Shared Memory + Broadcasting-UDP-API |
 | Le Mans Ultimate | später | `Le Mans Ultimate.exe` | eingebaute Shared Memory (recherchieren) |
-| iRacing | später | `iRacingSim64DX11.exe` | iRacing SDK Memory-Mapped File |
+| iRacing | umgesetzt (live noch prüfen) | `iRacingSim64DX11.exe` | iRacing SDK Memory-Mapped File, Details `docs/iracing.md` |
 | Assetto Corsa EVO | später | recherchieren | recherchieren |
 
 **Prozessnamen und Schnittstellen der späteren Spiele vor der Umsetzung recherchieren und verifizieren, nicht raten.**

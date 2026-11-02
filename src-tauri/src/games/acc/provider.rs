@@ -256,6 +256,9 @@ pub fn build_frame(p: &SPageFilePhysics, g: &SPageFileGraphic, t_ms: u64) -> Tel
         game_gap_behind_ms: (g.gapBehind > 0).then_some(g.gapBehind),
         player_car_id: player,
         cars,
+        native_side: None,
+        near_cars: Vec::new(),
+        laps_left: None,
     }
 }
 

@@ -19,6 +19,7 @@ Manuelle Live-Tests:
 
 ```bash
 cargo test --test acc_live -- --ignored --nocapture        # ACC muss laufen
+cargo test --test iracing_live -- --ignored --nocapture    # iRacing, im Auto sitzen
 cargo test --test questions -- --ignored --nocapture       # GROQ_API_KEY setzen
 ```
 
