@@ -182,6 +182,9 @@ pub fn run() {
             commands::get_overlay_edit,
             commands::list_monitors,
             commands::reset_overlay_layout,
+            commands::select_game,
+            commands::models_rescan,
+            commands::open_models_folder,
             commands::app_info,
         ])
         .run(tauri::generate_context!())

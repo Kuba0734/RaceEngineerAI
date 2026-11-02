@@ -129,6 +129,24 @@ impl Core {
         }
     }
 
+    /// Loads the profile of another game and applies everything that depends on it.
+    pub fn select_game(&self, id: &str) {
+        let s = {
+            let mut w = self.settings.write();
+            if w.selected_game == id {
+                return;
+            }
+            w.switch_profile(id);
+            w.clone()
+        };
+        tracing::info!("profile: {id}");
+        self.engine.lock().refresh(&s);
+        self.tts.send(TtsJob::Reload);
+        self.tts.send(TtsJob::RenderSpotter(self.engine.lock().spotter_phrases()));
+        crate::input::hotkeys::register_all(&self.app, &s);
+        self.save_settings();
+    }
+
     pub fn demo_source(&self) -> Option<DemoSource> {
         self.demo.lock().clone()
     }

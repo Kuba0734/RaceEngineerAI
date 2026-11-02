@@ -7,7 +7,7 @@ import { Badge, Button, Card, Field, NumberInput, Segmented, Select, Slider, Tex
 import { bytes } from "@/lib/format";
 import { useSettings } from "./basic";
 
-function useModels(): [ModelStatus[], Record<string, DownloadProgress>, () => void] {
+function useModels(): [ModelStatus[], Record<string, DownloadProgress>, (m: ModelStatus[]) => void] {
   const [models, setModels] = useState<ModelStatus[]>([]);
   const [progress, setProgress] = useState<Record<string, DownloadProgress>>({});
   const reload = () => void api.modelsStatus().then(setModels);
@@ -19,7 +19,25 @@ function useModels(): [ModelStatus[], Record<string, DownloadProgress>, () => vo
     });
     return () => void un.then((f) => f());
   }, []);
-  return [models, progress, reload];
+  return [models, progress, setModels];
+}
+
+function CustomVoices({ onDone }: { onDone: (m: ModelStatus[]) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mb-3 rounded-xl border border-line bg-surface-2/50 p-3 text-sm">
+      <div className="font-medium">{t("models.customTitle")}</div>
+      <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-xs text-dim">
+        <li>{t("models.customStep1")}</li>
+        <li>{t("models.customStep2")}</li>
+        <li>{t("models.customStep3")}</li>
+      </ol>
+      <div className="mt-2 flex gap-2">
+        <Button small onClick={() => void api.openModelsFolder()}>{t("models.openFolder")}</Button>
+        <Button small variant="primary" onClick={() => void api.modelsRescan().then(onDone)}>{t("models.rescan")}</Button>
+      </div>
+    </div>
+  );
 }
 
 function ModelRow({ m, p }: { m: ModelStatus; p?: DownloadProgress }) {
@@ -42,7 +60,7 @@ function ModelRow({ m, p }: { m: ModelStatus; p?: DownloadProgress }) {
         {p?.error && <div className="text-xs text-danger">{p.error}</div>}
       </div>
       <div className="flex items-center gap-2">
-        <span className="num text-xs text-dim">{bytes(m.size)}</span>
+        {m.size > 0 && <span className="num text-xs text-dim">{bytes(m.size)}</span>}
         {m.installed ? (
           <>
             <Badge tone="ok">{t("models.installed")}</Badge>
@@ -58,11 +76,12 @@ function ModelRow({ m, p }: { m: ModelStatus; p?: DownloadProgress }) {
 
 export function ModelsCard() {
   const { t } = useTranslation();
-  const [models, progress] = useModels();
+  const [models, progress, setModels] = useModels();
   const missing = models.filter((m) => !m.installed && (m.kind !== "voice"));
   return (
     <Card title={t("models.title")} actions={missing.length > 0 && <Button small variant="primary" onClick={() => missing.forEach((m) => void api.modelInstall(m.id))}>{t("models.downloadBasics")}</Button>}>
       <p className="mb-2 text-xs text-dim">{t("models.hint")}</p>
+      <CustomVoices onDone={setModels} />
       {models.map((m) => <ModelRow key={m.id} m={m} p={progress[m.id]} />)}
     </Card>
   );

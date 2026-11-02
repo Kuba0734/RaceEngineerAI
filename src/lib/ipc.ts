@@ -77,10 +77,13 @@ export const api = {
   wheelLearn: () => invoke<void>("wheel_learn"),
   ptt: (pressed: boolean) => invoke<void>("ptt", { pressed }),
   setOverlayEdit: (edit: boolean) => invoke<void>("set_overlay_edit", { edit }),
-  saveOverlayLayout: (game: string | null, layout: WidgetLayout[]) => invoke<void>("save_overlay_layout", { game, layout }),
+  saveOverlayLayout: (layout: WidgetLayout[]) => invoke<void>("save_overlay_layout", { layout }),
   getOverlayEdit: () => invoke<boolean>("get_overlay_edit"),
   listMonitors: () => invoke<string[]>("list_monitors"),
-  resetOverlayLayout: (game: string | null) => invoke<void>("reset_overlay_layout", { game }),
+  resetOverlayLayout: () => invoke<void>("reset_overlay_layout"),
+  selectGame: (id: string) => invoke<Settings>("select_game", { id }),
+  modelsRescan: () => invoke<ModelStatus[]>("models_rescan"),
+  openModelsFolder: () => invoke<void>("open_models_folder"),
   appInfo: () => invoke<Record<string, string>>("app_info"),
 };
 

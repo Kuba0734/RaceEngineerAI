@@ -282,6 +282,9 @@ fn run(core: Arc<Core>) {
                     provider_game = Some(id.clone());
                     tracing::info!("game detected: {id}");
                     let _ = core.app.emit("game-detected", id);
+                    // The detected game's settings and overlay apply (saving must not block here).
+                    let (c, gid) = (core.clone(), id.clone());
+                    let _ = std::thread::Builder::new().name("profile".into()).spawn(move || c.select_game(&gid));
                     core.engine.lock().caps = core.games.iter().find(|g| &g.id == id).map(|g| g.capabilities.clone());
                     if settings.storage.record_replays {
                         recorder = crate::replay::Recorder::create(&crate::storage::paths::replays_dir(), id).ok();

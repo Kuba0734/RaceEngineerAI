@@ -13,6 +13,8 @@ interface AppStore {
   /** Immutable update + debounced save to the backend. */
   update: (fn: (s: Settings) => Settings) => void;
   reloadCatalog: () => Promise<void>;
+  /** Loads the settings and overlay of another game. */
+  selectGame: (id: string) => Promise<void>;
 }
 
 let saveTimer: number | undefined;
@@ -34,7 +36,11 @@ export const useApp = create<AppStore>((set, get) => ({
     void on<Settings>("settings", (s) => {
       // Backend-side changes (voice command volume etc.). Ignored while local edits are
       // pending or being saved, otherwise a slider would jump back to an older value.
-      if (!get().dirty && saveTimer === undefined) set({ settings: s });
+      if (!get().dirty && saveTimer === undefined) {
+        const switched = s.selected_game !== get().settings?.selected_game;
+        set({ settings: s });
+        if (switched) void get().reloadCatalog();
+      }
     });
   },
   update: (fn) => {
@@ -54,4 +60,15 @@ export const useApp = create<AppStore>((set, get) => ({
     }, 350);
   },
   reloadCatalog: async () => set({ catalog: await api.getCatalog() }),
+  selectGame: async (id) => {
+    // Pending edits belong to the game they were made for.
+    const cur = get().settings;
+    if (saveTimer !== undefined && cur) {
+      window.clearTimeout(saveTimer);
+      saveTimer = undefined;
+      await api.saveSettings(cur);
+    }
+    set({ settings: await api.selectGame(id), dirty: false });
+    await get().reloadCatalog();
+  },
 }));

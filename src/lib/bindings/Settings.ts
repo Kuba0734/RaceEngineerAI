@@ -2,6 +2,7 @@
 import type { AppSettings } from "./AppSettings";
 import type { CallSettings } from "./CallSettings";
 import type { ConversationSettings } from "./ConversationSettings";
+import type { GameProfile } from "./GameProfile";
 import type { GameSettings } from "./GameSettings";
 import type { GroqSettings } from "./GroqSettings";
 import type { InputSettings } from "./InputSettings";
@@ -17,4 +18,12 @@ import type { UnitSettings } from "./UnitSettings";
 import type { VoiceCommandSettings } from "./VoiceCommandSettings";
 import type { VoiceSettings } from "./VoiceSettings";
 
-export type Settings = { version: number, language: Language, groq: GroqSettings, listening: ListeningSettings, voices: VoiceSettings, spotter: SpotterSettings, conversation: ConversationSettings, commands: VoiceCommandSettings, personality: PersonalitySettings, units: UnitSettings, strategy: StrategySettings, session_start: SessionStartSettings, calls: CallSettings, overlay: OverlaySettings, input: InputSettings, storage: StorageSettings, app: AppSettings, games: { [key in string]: GameSettings }, };
+export type Settings = { version: number, language: Language, groq: GroqSettings, listening: ListeningSettings, voices: VoiceSettings, spotter: SpotterSettings, conversation: ConversationSettings, commands: VoiceCommandSettings, personality: PersonalitySettings, units: UnitSettings, strategy: StrategySettings, session_start: SessionStartSettings, calls: CallSettings, overlay: OverlaySettings, input: InputSettings, storage: StorageSettings, app: AppSettings, games: { [key in string]: GameSettings }, 
+/**
+ * Game whose profile is loaded into the fields above.
+ */
+selected_game: string, 
+/**
+ * Stored profiles of the other games.
+ */
+profiles: { [key in string]: GameProfile }, };

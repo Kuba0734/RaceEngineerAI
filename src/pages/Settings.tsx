@@ -19,7 +19,8 @@ export default function SettingsPage() {
   return (
     <div className="flex gap-6">
       <aside className="sticky top-0 w-52 shrink-0 self-start">
-        <h1 className="mb-4 text-2xl font-semibold">{t("settings.title")}</h1>
+        <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
+        <p className="mb-4 mt-1 text-xs text-dim">{t("settings.profileHint")}</p>
         <Tabs tabs={TABS.map((id) => ({ id, label: t(`settings.tab.${id}`) }))} value={tab} onChange={setTab} />
         <div className="mt-4 h-5 text-xs text-dim">{dirty ? t("settings.saving") : t("settings.saved")}</div>
       </aside>

@@ -11,7 +11,7 @@ use ts_rs::TS;
 
 use crate::error::AppResult;
 
-pub const SETTINGS_VERSION: u32 = 2;
+pub const SETTINGS_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "snake_case")]
@@ -53,6 +53,71 @@ pub struct Settings {
     pub storage: StorageSettings,
     pub app: AppSettings,
     pub games: BTreeMap<String, GameSettings>,
+    /// Game whose profile is loaded into the fields above.
+    pub selected_game: String,
+    /// Stored profiles of the other games.
+    pub profiles: BTreeMap<String, GameProfile>,
+}
+
+/// Everything that can differ per game. The selected game's values live directly in
+/// `Settings`, so the rest of the app reads them without knowing about profiles.
+/// Shared by all games: language, Groq, microphone/listening, buttons, storage, app.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(default)]
+#[ts(export)]
+pub struct GameProfile {
+    pub voices: VoiceSettings,
+    pub spotter: SpotterSettings,
+    pub conversation: ConversationSettings,
+    pub commands: VoiceCommandSettings,
+    pub personality: PersonalitySettings,
+    pub units: UnitSettings,
+    pub strategy: StrategySettings,
+    pub session_start: SessionStartSettings,
+    pub calls: CallSettings,
+    pub overlay: OverlaySettings,
+}
+
+impl Settings {
+    fn current_profile(&self) -> GameProfile {
+        GameProfile {
+            voices: self.voices.clone(),
+            spotter: self.spotter.clone(),
+            conversation: self.conversation.clone(),
+            commands: self.commands.clone(),
+            personality: self.personality.clone(),
+            units: self.units.clone(),
+            strategy: self.strategy.clone(),
+            session_start: self.session_start.clone(),
+            calls: self.calls.clone(),
+            overlay: self.overlay.clone(),
+        }
+    }
+
+    /// Stores the current values for the old game and loads the new game's profile.
+    /// A game without a profile starts as a copy of the current one.
+    pub fn switch_profile(&mut self, id: &str) {
+        if self.selected_game == id {
+            return;
+        }
+        let current = self.current_profile();
+        let next = self.profiles.remove(id).unwrap_or_else(|| current.clone());
+        let old = std::mem::replace(&mut self.selected_game, id.to_string());
+        self.profiles.insert(old, current);
+        // The audio device belongs to the PC, not to a game.
+        let device = self.voices.output_device.take();
+        self.voices = next.voices;
+        self.voices.output_device = device;
+        self.spotter = next.spotter;
+        self.conversation = next.conversation;
+        self.commands = next.commands;
+        self.personality = next.personality;
+        self.units = next.units;
+        self.strategy = next.strategy;
+        self.session_start = next.session_start;
+        self.calls = next.calls;
+        self.overlay = next.overlay;
+    }
 }
 
 impl Default for Settings {
@@ -76,6 +141,8 @@ impl Default for Settings {
             storage: StorageSettings::default(),
             app: AppSettings::default(),
             games: BTreeMap::new(),
+            selected_game: "acc".into(),
+            profiles: BTreeMap::new(),
         }
     }
 }
@@ -690,7 +757,6 @@ pub struct OverlaySettings {
     pub standings_rows: u32,
     pub delta_show_laps: bool,
     pub radio_show_text: bool,
-    /// Default layout; per-game layouts live in `games.<id>.overlay_layout`.
     pub layout: Vec<WidgetLayout>,
 }
 
@@ -794,17 +860,13 @@ impl Default for AppSettings {
 #[ts(export)]
 pub struct GameSettings {
     pub enabled: bool,
-    #[ts(optional)]
-    pub default_preset: Option<String>,
-    #[ts(optional)]
-    pub overlay_layout: Option<Vec<WidgetLayout>>,
     pub broadcasting_port: u16,
     pub broadcasting_password: String,
 }
 
 impl Default for GameSettings {
     fn default() -> Self {
-        Self { enabled: true, default_preset: None, overlay_layout: None, broadcasting_port: 0, broadcasting_password: String::new() }
+        Self { enabled: true, broadcasting_port: 0, broadcasting_password: String::new() }
     }
 }
 
@@ -823,6 +885,13 @@ pub fn migrate(mut v: serde_json::Value) -> serde_json::Value {
         // v2: the engineer gets quieter (ducking) while the spotter talks instead of pausing.
         if let Some(sp) = v.get_mut("spotter").and_then(|s| s.as_object_mut()) {
             sp.insert("pause_crew".into(), false.into());
+        }
+    }
+    if version < 3 {
+        // v3: profiles per game; the ACC overlay layout becomes the layout of the ACC profile.
+        let acc_layout = v.pointer("/games/acc/overlay_layout").filter(|l| l.is_array()).cloned();
+        if let (Some(layout), Some(overlay)) = (acc_layout, v.get_mut("overlay").and_then(|o| o.as_object_mut())) {
+            overlay.insert("layout".into(), layout);
         }
     }
     if let Some(obj) = v.as_object_mut() {
@@ -884,6 +953,35 @@ mod tests {
         let v = serde_json::json!({"version": 1, "spotter": {"pause_crew": true}});
         let s: Settings = serde_json::from_value(migrate(v)).unwrap();
         assert!(!s.spotter.pause_crew);
+    }
+
+    #[test]
+    fn migrates_acc_layout_into_profile() {
+        let v = serde_json::json!({"version": 2, "overlay": {"layout": []}, "games": {"acc": {"overlay_layout": [{"id": "map", "x": 5.0}]}}});
+        let s: Settings = serde_json::from_value(migrate(v)).unwrap();
+        assert_eq!(s.overlay.layout[0].x, 5.0);
+        assert_eq!(s.selected_game, "acc");
+    }
+
+    #[test]
+    fn profiles_are_separate_per_game() {
+        let mut s = Settings::default();
+        s.spotter.name = "Mia".into();
+        s.voices.output_device = Some("Headset".into());
+        // New game starts as a copy.
+        s.switch_profile("lmu");
+        assert_eq!(s.selected_game, "lmu");
+        assert_eq!(s.spotter.name, "Mia");
+        s.spotter.name = "Tom".into();
+        s.calls.preset = "minimal".into();
+        // Back to ACC: its own values again, device untouched.
+        s.switch_profile("acc");
+        assert_eq!(s.spotter.name, "Mia");
+        assert_eq!(s.calls.preset, "full");
+        assert_eq!(s.voices.output_device.as_deref(), Some("Headset"));
+        s.switch_profile("lmu");
+        assert_eq!(s.spotter.name, "Tom");
+        assert_eq!(s.calls.preset, "minimal");
     }
 
     #[test]

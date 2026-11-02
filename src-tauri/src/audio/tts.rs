@@ -79,11 +79,11 @@ fn sentences(text: &str) -> Vec<String> {
 impl Synth {
     fn engine(&mut self, voice_id: &str) -> Option<&sherpa_onnx::OfflineTts> {
         if !self.engines.contains_key(voice_id) {
-            let v = models::voice(voice_id)?;
-            if !models::voice_installed(v) {
+            let v = models::find_voice(voice_id)?;
+            if !models::voice_installed(&v) {
                 return None;
             }
-            let f = models::voice_files(v);
+            let f = models::voice_files(&v);
             let config = sherpa_onnx::OfflineTtsConfig {
                 model: sherpa_onnx::OfflineTtsModelConfig {
                     vits: sherpa_onnx::OfflineTtsVitsModelConfig {

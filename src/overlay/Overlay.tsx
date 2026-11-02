@@ -38,11 +38,10 @@ export default function Overlay() {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [edit, setEdit] = useState(false);
-  const [game, setGame] = useState<string | null>(null);
   const [lastRadio, setLastRadio] = useState<RadioLogEntry | null>(null);
   // Optimistic local edits while dragging; the saved layout comes back via the settings event.
   const [radarActive, setRadarActive] = useState(false);
-  const [local, setLocal] = useState<{ game: string | null; layout: WidgetLayout[] } | null>(null);
+  const [local, setLocal] = useState<WidgetLayout[] | null>(null);
   const hz = settings?.overlay.update_hz ?? 20;
   const { ref, frame } = useLive(hz, Math.max(2, Math.round(hz / 2)), 4);
   const visibleRef = useRef<boolean | null>(null);
@@ -53,22 +52,19 @@ export default function Overlay() {
       setSettings(s);
       void i18n.changeLanguage(s.language);
     });
-    void api.getStatus().then((st) => setGame(st.active_game ?? null));
     const subs = [
       on<Settings>("settings", (s) => {
         setSettings(s);
+        setLocal(null);
         void i18n.changeLanguage(s.language);
       }),
       on<boolean>("overlay-edit", setEdit),
       on<RadioLogEntry>("radio", setLastRadio),
-      on<{ active_game: string | null }>("status", (st) => setGame(st.active_game ?? null)),
     ];
     return () => subs.forEach((p) => void p.then((f) => f()));
   }, []);
 
-  // Per-game layout, falling back to the default.
-  const saved = settings ? (game && settings.games[game]?.overlay_layout) || settings.overlay.layout : [];
-  const layout = local && local.game === game ? local.layout : saved;
+  const layout = local ?? settings?.overlay.layout ?? [];
 
   // Escape ends edit mode.
   useEffect(() => {
@@ -93,8 +89,8 @@ export default function Overlay() {
 
   const change = (l: WidgetLayout) => {
     const next = layout.map((x) => (x.id === l.id ? l : x));
-    setLocal({ game, layout: next });
-    void api.saveOverlayLayout(game, next);
+    setLocal(next);
+    void api.saveOverlayLayout(next);
   };
   const o = settings.overlay;
   const anim = o.animations;

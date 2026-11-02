@@ -9,8 +9,4 @@ radar_auto_hide: boolean,
 /**
  * Background opacity of the widget panels (0 = transparent).
  */
-panel_opacity: number, map_size: number, radar_size: number, standings_rows: number, delta_show_laps: boolean, radio_show_text: boolean, 
-/**
- * Default layout; per-game layouts live in `games.<id>.overlay_layout`.
- */
-layout: Array<WidgetLayout>, };
+panel_opacity: number, map_size: number, radar_size: number, standings_rows: number, delta_show_laps: boolean, radio_show_text: boolean, layout: Array<WidgetLayout>, };

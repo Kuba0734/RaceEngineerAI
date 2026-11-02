@@ -2,7 +2,6 @@ import { motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { api, on } from "@/lib/ipc";
-import { useApp } from "@/stores/app";
 import type { WidgetLayout } from "@/lib/bindings/WidgetLayout";
 import type { OverlaySettings } from "@/lib/bindings/OverlaySettings";
 import { Badge, Button, Card, Field, Select, Slider, TextInput, Toggle, cx, useAsync } from "@/components/ui";
@@ -55,7 +54,6 @@ function WidgetCard({ id, w, onW, children }: { id: WidgetId; w: WidgetLayout; o
 export default function OverlayPage() {
   const { t } = useTranslation();
   const [s, up] = useSettings();
-  const status = useApp((x) => x.status);
   const o = s.overlay;
   const set = (patch: Partial<OverlaySettings>) => up((x) => ({ ...x, overlay: { ...x.overlay, ...patch } }));
   const [editing, setEditing] = useState(false);
@@ -68,17 +66,10 @@ export default function OverlayPage() {
     return () => void un.then((f) => f());
   }, []);
 
-  const game = status?.active_game ?? null;
-  const gameLayout = game ? s.games[game]?.overlay_layout : undefined;
-  const layout = gameLayout ?? o.layout;
+  const layout = o.layout;
   const widget = (id: WidgetId): WidgetLayout => layout.find((x) => x.id === id) ?? { id, visible: false, x: 40, y: 40, scale: 1, opacity: 0.9 };
   const setW = (id: WidgetId, patch: Partial<WidgetLayout>) => {
-    const next = [...layout.filter((x) => x.id !== id), { ...widget(id), ...patch }];
-    if (gameLayout && game) {
-      up((x) => ({ ...x, games: { ...x.games, [game]: { ...x.games[game]!, overlay_layout: next } } }));
-    } else {
-      set({ layout: next });
-    }
+    set({ layout: [...layout.filter((x) => x.id !== id), { ...widget(id), ...patch }] });
   };
 
   return (
@@ -101,10 +92,9 @@ export default function OverlayPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="primary" onClick={() => void api.setOverlayEdit(!editing)}>{editing ? t("ov.stopEdit") : t("ov.edit")}</Button>
-            <Button variant="ghost" onClick={() => void api.resetOverlayLayout(gameLayout ? game : null)}>{t("ov.resetLayout")}</Button>
+            <Button variant="ghost" onClick={() => void api.resetOverlayLayout()}>{t("ov.resetLayout")}</Button>
           </div>
         </div>
-        {game && <div className="mt-2 text-xs text-dim">{gameLayout ? t("ov.layoutGame", { game }) : t("ov.layoutDefault")}</div>}
       </Card>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

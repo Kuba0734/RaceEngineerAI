@@ -5,7 +5,7 @@ import { api, type BroadcastingStatus } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
 import type { GameDef } from "@/lib/bindings/GameDef";
 import type { GameSettings } from "@/lib/bindings/GameSettings";
-import { Badge, Button, Card, Field, NumberInput, Select, TextInput, Toggle, useAsync } from "@/components/ui";
+import { Badge, Button, Card, Field, NumberInput, TextInput, Toggle, cx, useAsync } from "@/components/ui";
 
 const DEFAULT_GAME: GameSettings = { enabled: true, broadcasting_port: 0, broadcasting_password: "" };
 
@@ -53,8 +53,10 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
   const { t, i18n } = useTranslation();
   const status = useApp((s) => s.status);
   const settings = useApp((s) => s.settings);
-  const catalog = useApp((s) => s.catalog);
   const update = useApp((s) => s.update);
+  const selectGame = useApp((s) => s.selectGame);
+  const isSelected = settings?.selected_game === g.id;
+  const otherRunning = !!status?.connected && !status.demo && status.active_game !== g.id;
   const running = status?.running_games.includes(g.id);
   const active = status?.active_game === g.id;
   const gs = settings?.games[g.id] ?? DEFAULT_GAME;
@@ -63,7 +65,7 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
   const caps = Object.entries(g.capabilities).filter(([, v]) => v);
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-      <Card className="h-full">
+      <Card className={cx("h-full", isSelected && "border-accent/60")}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold" style={{ background: `${g.accent}22`, color: g.accent }}>{g.shortName.slice(0, 3)}</div>
@@ -77,6 +79,9 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
             {active && status?.connected ? <Badge tone="accent">{t("games.connected")}</Badge> : running ? <Badge tone="data">{t("games.running")}</Badge> : null}
           </div>
         </div>
+        <div className="mt-3">
+          {isSelected ? <Badge tone="accent">{t("games.selected")}</Badge> : <Button small variant="primary" disabled={otherRunning} title={otherRunning ? t("games.lockedHint") : undefined} onClick={() => void selectGame(g.id)}>{t("games.select")}</Button>}
+        </div>
         {caps.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {caps.map(([k]) => <Badge key={k} tone="data">{t(`games.cap.${k}`)}</Badge>)}
@@ -88,9 +93,6 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
         {g.support === "supported" && (
           <div className="mt-3 border-t border-line pt-3">
             <Toggle checked={gs.enabled} onChange={(v) => set((x) => ({ ...x, enabled: v }))} label={t("games.enabled")} />
-            <Field label={t("games.defaultPreset")}>
-              <Select value={gs.default_preset ?? ""} onChange={(v) => set((x) => ({ ...x, default_preset: v || undefined }))} options={[{ value: "", label: t("games.globalPreset") }, ...(catalog?.presets ?? []).map((p) => ({ value: p.id, label: i18n.language === "de" ? p.name.de : p.name.en }))]} />
-            </Field>
             {g.id === "acc" && (
               <>
                 <Field label={t("games.acc.port")} hint={t("games.acc.portHint")}>

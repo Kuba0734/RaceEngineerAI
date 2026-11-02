@@ -27,12 +27,19 @@ const NAV: { id: Page; icon: string }[] = [
 function TitleBar() {
   const { t } = useTranslation();
   const status = useApp((s) => s.status);
+  const selected = useApp((s) => s.games?.games.find((g) => g.id === s.settings?.selected_game));
   const w = inTauri ? getCurrentWindow() : null;
   return (
     <div data-tauri-drag-region className="flex h-10 shrink-0 items-center justify-between border-b border-line bg-bg/80 pl-4">
       <div data-tauri-drag-region className="flex items-center gap-3">
         <span className="h-2.5 w-2.5 rounded-full bg-accent" />
         <span data-tauri-drag-region className="text-[13px] font-semibold tracking-wide">RaceEngineer<span className="text-accent">AI</span></span>
+        {selected && (
+          <span data-tauri-drag-region className="flex items-center gap-2 rounded-full border border-line px-3 py-0.5 text-xs font-semibold" style={{ color: selected.accent }}>
+            <span className="h-2 w-2 rounded-full" style={{ background: selected.accent }} />
+            {selected.name}
+          </span>
+        )}
         {status?.live && <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ok">{t("status.live")}</span>}
         {status?.demo && <span className="rounded-full bg-data/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-data">{t("status.demo")}</span>}
       </div>
@@ -60,6 +67,7 @@ export default function App() {
   const status = useApp((s) => s.status);
   const [page, setPage] = useState<Page>("dashboard");
   const [detected, setDetected] = useState<string | null>(null);
+  const games = useApp((s) => s.games);
 
   useEffect(() => {
     if (inTauri) void init();
@@ -87,11 +95,12 @@ export default function App() {
     );
   }
 
-  const games = useApp.getState().games;
+  const selected = games?.games.find((g) => g.id === settings.selected_game);
   const detectedName = detected ? games?.games.find((g) => g.id === detected)?.name ?? detected : null;
 
   return (
-    <div className={cx("backdrop flex h-full flex-col", reduce && "reduce-motion")}>
+    <div className={cx("backdrop relative flex h-full flex-col overflow-hidden", reduce && "reduce-motion")} style={{ ["--game-accent" as string]: selected?.accent ?? "var(--accent)" }}>
+      {selected && <div aria-hidden className="pointer-events-none absolute -bottom-10 right-4 select-none text-[220px] font-black leading-none tracking-tighter opacity-[0.035]" style={{ color: selected.accent }}>{selected.shortName}</div>}
       <TitleBar />
       <div className="flex min-h-0 flex-1">
         <nav className="flex w-[76px] shrink-0 flex-col items-center gap-1 border-r border-line bg-bg/60 py-4">

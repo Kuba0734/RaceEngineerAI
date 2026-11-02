@@ -405,33 +405,46 @@ pub fn list_monitors(core: CoreState) -> Vec<String> {
 }
 
 #[tauri::command]
-pub fn reset_overlay_layout(core: CoreState, game: Option<String>) {
-    {
-        let mut s = core.settings.write();
-        match game {
-            Some(g) => {
-                if let Some(gs) = s.games.get_mut(&g) {
-                    gs.overlay_layout = None;
-                }
-            }
-            None => s.overlay.layout = crate::storage::settings::default_layout(),
-        }
-    }
+pub fn reset_overlay_layout(core: CoreState) {
+    core.settings.write().overlay.layout = crate::storage::settings::default_layout();
     core.save_settings();
 }
 
 #[tauri::command]
-pub fn save_overlay_layout(core: CoreState, game: Option<String>, layout: Vec<WidgetLayout>) {
-    {
-        let mut s = core.settings.write();
-        match game {
-            Some(g) => s.games.entry(g).or_default().overlay_layout = Some(layout),
-            None => s.overlay.layout = layout,
-        }
-    }
+pub fn save_overlay_layout(core: CoreState, layout: Vec<WidgetLayout>) {
+    core.settings.write().overlay.layout = layout;
     core.save_settings();
 }
 
+/// Selects the game whose settings and overlay are edited. While a game runs, its profile stays.
+#[tauri::command]
+pub fn select_game(core: CoreState, id: String) -> AppResult<Settings> {
+    let running = core.status.read().active_game.clone().filter(|g| g != "mock" && g != "replay");
+    if running.is_some_and(|g| g != id) {
+        return Err(AppError::Invalid("another game is running".into()));
+    }
+    if !core.games.iter().any(|g| g.id == id) {
+        return Err(AppError::NotFound(id));
+    }
+    core.select_game(&id);
+    Ok(core.settings.read().clone())
+}
+
+/// Unpacks voice archives placed in the models folder and lists all models.
+#[tauri::command]
+pub async fn models_rescan(core: CoreState<'_>) -> AppResult<Vec<ModelStatus>> {
+    tokio::task::spawn_blocking(models::import_archives).await.map_err(|e| AppError::Other(e.to_string()))??;
+    core.tts.send(TtsJob::Reload);
+    // Refreshes the voice lists on the page.
+    let _ = core.app.emit("model-progress", DownloadProgress { id: "custom".into(), done: 0, total: 0, finished: true, error: None });
+    Ok(models::status())
+}
+
+#[tauri::command]
+pub fn open_models_folder() -> AppResult<()> {
+    std::process::Command::new("explorer").arg(paths::models_dir()).spawn()?;
+    Ok(())
+}
 
 #[tauri::command]
 pub fn app_info() -> BTreeMap<String, String> {

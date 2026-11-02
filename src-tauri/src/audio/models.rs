@@ -89,6 +89,66 @@ pub fn voice(id: &str) -> Option<&'static VoiceDef> {
     catalog().voices.iter().find(|v| v.id == id)
 }
 
+/// Catalog voice or a voice the user added to the models folder.
+pub fn find_voice(id: &str) -> Option<VoiceDef> {
+    voice(id).cloned().or_else(|| custom_voices().into_iter().find(|v| v.id == id))
+}
+
+/// Voices in the models folder that are not in the catalog: a folder `vits-piper-<id>`
+/// with `<id>.onnx`, `tokens.txt` and `espeak-ng-data`.
+pub fn custom_voices() -> Vec<VoiceDef> {
+    let Ok(dir) = std::fs::read_dir(paths::models_dir()) else { return Vec::new() };
+    let mut out: Vec<VoiceDef> = dir
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            let folder = e.file_name().to_string_lossy().into_owned();
+            let id = folder.strip_prefix("vits-piper-")?.to_string();
+            // fp16 models do not load with the bundled runtime (see docs/audio.md).
+            if id.ends_with("-fp16") || voice(&id).is_some() {
+                return None;
+            }
+            let v = VoiceDef {
+                lang: id.chars().take(2).collect::<String>().to_lowercase(),
+                name: id.clone(),
+                gender: String::new(),
+                license: "custom".into(),
+                tag: String::new(),
+                archive: format!("{folder}.tar.bz2"),
+                sha256: String::new(),
+                size: 0,
+                speakers: speaker_count(&e.path().join(format!("{id}.onnx.json"))),
+                id,
+            };
+            voice_installed(&v).then_some(v)
+        })
+        .collect();
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    out
+}
+
+fn speaker_count(config: &Path) -> i32 {
+    std::fs::read_to_string(config)
+        .ok()
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v.get("num_speakers")?.as_i64())
+        .map_or(1, |n| n.max(1) as i32)
+}
+
+/// Unpacks `vits-piper-*.tar.bz2` archives the user put into the models folder.
+pub fn import_archives() -> AppResult<Vec<String>> {
+    let dir = paths::models_dir();
+    let mut imported = Vec::new();
+    for e in std::fs::read_dir(&dir)?.filter_map(|e| e.ok()) {
+        let name = e.file_name().to_string_lossy().into_owned();
+        if name.starts_with("vits-piper-") && name.ends_with(".tar.bz2") {
+            extract_tar_bz2(&e.path(), &dir)?;
+            std::fs::remove_file(e.path())?;
+            imported.push(name);
+        }
+    }
+    Ok(imported)
+}
+
 pub fn voice_installed(v: &VoiceDef) -> bool {
     let f = voice_files(v);
     f.model.is_file() && f.tokens.is_file() && f.data_dir.is_dir()
@@ -142,6 +202,7 @@ pub fn status() -> Vec<ModelStatus> {
         .iter()
         .map(|v| ModelStatus { id: v.id.clone(), kind: "voice".into(), name: v.name.clone(), lang: v.lang.clone(), license: v.license.clone(), size: v.size, installed: voice_installed(v), speakers: v.speakers })
         .collect();
+    v.extend(custom_voices().into_iter().map(|x| ModelStatus { id: x.id, kind: "voice".into(), name: x.name, lang: x.lang, license: x.license, size: 0, installed: true, speakers: x.speakers }));
     v.push(ModelStatus { id: c.vad.id.clone(), kind: "vad".into(), name: "Silero VAD".into(), lang: String::new(), license: "MIT".into(), size: c.vad.size, installed: vad_path().is_file(), speakers: 0 });
     v.push(ModelStatus { id: c.kws.id.clone(), kind: "kws".into(), name: "Keyword spotter (EN)".into(), lang: "en".into(), license: "Apache-2.0".into(), size: c.kws.size, installed: kws_installed(), speakers: 0 });
     v
@@ -209,7 +270,7 @@ pub async fn install(id: &str, progress: &(dyn Fn(u64, u64) + Send + Sync)) -> A
 }
 
 pub fn remove(id: &str) -> AppResult<()> {
-    let v = voice(id).ok_or_else(|| AppError::NotFound(id.into()))?;
+    let v = find_voice(id).ok_or_else(|| AppError::NotFound(id.into()))?;
     let dir = paths::models_dir().join(stem(&v.archive));
     if dir.starts_with(paths::models_dir()) && dir.is_dir() {
         std::fs::remove_dir_all(dir)?;
