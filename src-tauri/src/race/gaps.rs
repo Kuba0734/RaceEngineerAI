@@ -19,8 +19,15 @@ impl CarTiming {
     }
 
     /// `progress` = laps + spline (monotonic).
-    fn update(&mut self, progress: f64, t: f64) {
+    fn update(&mut self, raw: f64, t: f64) {
+        let mut progress = raw;
         if let Some(prev) = self.last_progress {
+            // At the line the lap counter and the spline don't flip in the same packet:
+            // that looks like a jump of exactly one lap and is no teleport.
+            let wrap = (progress - prev).round();
+            if wrap.abs() == 1.0 && (progress - prev - wrap).abs() < 0.05 {
+                progress -= wrap;
+            }
             let d = progress - prev;
             // Teleports (back to pits, session restart) reset the timing.
             if !(0.0..0.5).contains(&d) {
@@ -121,6 +128,22 @@ impl GapTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn line_crossing_with_late_lap_counter_keeps_timing() {
+        let mut gt = GapTracker::default();
+        gt.update(1, 3, 0.99, 0.0);
+        gt.update(1, 3, 0.005, 0.1); // spline wrapped, lap counter still old
+        assert!((gt.progress(1).unwrap() - 4.005).abs() < 1e-3);
+        assert!(gt.cars[&1].crossings[0][0].is_some(), "timing must survive the line");
+        gt.update(1, 4, 0.02, 0.2); // counter caught up
+        assert!((gt.progress(1).unwrap() - 4.02).abs() < 1e-3);
+        gt.update(2, 5, 0.99, 0.0);
+        gt.update(2, 6, 0.995, 0.1); // counter first, spline still old
+        assert!((gt.progress(2).unwrap() - 5.995).abs() < 1e-3);
+        gt.update(2, 6, 0.01, 0.2);
+        assert!((gt.progress(2).unwrap() - 6.01).abs() < 1e-3);
+    }
 
     /// Simulates two cars at constant speeds (laps per second).
     fn sim(gt: &mut GapTracker, speeds: &[(i32, f64, f64)], t_end: f64) {

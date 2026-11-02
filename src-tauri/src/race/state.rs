@@ -280,7 +280,50 @@ impl RaceState {
             r.in_pits = in_pits;
             r.last_location = c.location;
         }
+        let mut cars = cars;
+        self.apply_live_order(&mut cars);
         self.cars = cars;
+    }
+
+    /// The game updates the official position only at timing points, so an overtake would
+    /// show up at the finish line. While the race runs the order comes from the distance
+    /// driven instead. Not on the first lap (cars on the grid are still before the line,
+    /// their spline looks like a nearly finished lap) and not after the flag (the official
+    /// classification counts then).
+    fn apply_live_order(&self, cars: &mut [CarState]) {
+        if !self.race_running() || self.frame.flag == Flag::Checkered || !cars.iter().any(|c| c.laps >= 1) {
+            return;
+        }
+        let mut order: Vec<(usize, f64, i32)> = cars
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (i, self.gaps.progress(c.id).unwrap_or(f64::from(c.laps) + f64::from(c.spline)), c.position))
+            .collect();
+        order.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.2.cmp(&b.2)));
+        for (rank, (i, _, _)) in order.into_iter().enumerate() {
+            cars[i].position = rank as i32 + 1;
+        }
+    }
+
+    /// The driver sits in the car and the game delivers real data. In menus the physics
+    /// page is still empty (no fuel, track at 0 degrees).
+    pub fn in_car(&self) -> bool {
+        let f = &self.frame;
+        f.status == SimStatus::Live && !f.setup_menu && (f.fuel_l > 0.0 || f.speed_kmh > 1.0 || f.completed_laps > 0)
+    }
+
+    /// The race has really started (green flag), not just loaded.
+    pub fn race_running(&self) -> bool {
+        use crate::storage::settings::SessionKind;
+        let f = &self.frame;
+        self.session.session_type.kind() == SessionKind::Race
+            && f.status == SimStatus::Live
+            && match self.session.phase {
+                SessionPhase::Session => true,
+                // Without a phase from the game only a driven lap proves it.
+                SessionPhase::Unknown => f.completed_laps > 0,
+                _ => false,
+            }
     }
 
     pub fn player_car(&self) -> Option<&CarState> {
@@ -648,6 +691,63 @@ impl RaceState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn car(id: i32, position: i32, laps: i32, spline: f32, is_player: bool) -> CarState {
+        CarState { id, position, laps, spline, is_player, location: CarLocation::Track, ..Default::default() }
+    }
+
+    fn running_race() -> RaceState {
+        let mut s = RaceState::new();
+        s.session.session_type = SessionType::Race;
+        s.session.phase = SessionPhase::Session;
+        s.frame.status = SimStatus::Live;
+        s.frame.player_car_id = 1;
+        s
+    }
+
+    #[test]
+    fn overtake_counts_immediately_not_at_the_line() {
+        let mut s = running_race();
+        let mut ev = Vec::new();
+        // Official order is stale: the player (id 1) is P3 but already passed the car officially P2.
+        s.on_cars(vec![car(0, 1, 3, 0.70, false), car(2, 2, 3, 0.40, false), car(1, 3, 3, 0.42, true)], &mut ev);
+        assert_eq!(s.player_position(), 2);
+        assert_eq!(s.neighbour(-1).map(|c| c.id), Some(0));
+        assert_eq!(s.neighbour(1).map(|c| c.id), Some(2));
+    }
+
+    #[test]
+    fn official_order_on_first_lap_and_after_the_flag() {
+        let mut ev = Vec::new();
+        // Grid: the leader already crossed the line (spline small), the others are before it.
+        let grid = || vec![car(0, 1, 0, 0.01, false), car(1, 2, 0, 0.99, true), car(2, 3, 0, 0.98, false)];
+        let mut s = running_race();
+        s.on_cars(grid(), &mut ev);
+        assert_eq!(s.player_position(), 2);
+        // After the flag cars stop at different distances, the classification decides.
+        let mut s = running_race();
+        s.frame.flag = Flag::Checkered;
+        s.on_cars(vec![car(0, 1, 10, 0.05, false), car(1, 2, 10, 0.50, true)], &mut ev);
+        assert_eq!(s.player_position(), 2);
+    }
+
+    #[test]
+    fn readiness_needs_car_and_green() {
+        let mut s = running_race();
+        assert!(!s.in_car(), "no fuel and standing still: still in the menu");
+        s.frame.fuel_l = 40.0;
+        assert!(s.in_car());
+        s.frame.setup_menu = true;
+        assert!(!s.in_car());
+        assert!(s.race_running());
+        s.session.phase = SessionPhase::PreSession;
+        assert!(!s.race_running());
+        // Empty tank in the race must not silence the crew.
+        s.frame.setup_menu = false;
+        s.frame.fuel_l = 0.0;
+        s.frame.completed_laps = 5;
+        assert!(s.in_car());
+    }
 
     #[test]
     fn outline_from_other_cars() {

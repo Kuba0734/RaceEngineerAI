@@ -40,7 +40,7 @@ Rules:\n\
 - If data is missing or a tool returns an error, say plainly that you don't have that data. Never invent.\n\
 - If the question is ambiguous (e.g. 'P3' vs 'number 3'), ask one short clarifying question.\n\
 - Driver commands (quiet, presets, reminders, plan, volume, repeat, every-lap info) → call the matching action tool, then confirm in a few words.\n\
-- {numbers} {units} Times as m:ss.t. Gaps in seconds or tenths.\n\
+- {numbers} {units} Lap times as m:ss.t like 1:47.9, never as a plain number of seconds. Gaps in seconds or tenths.\n\
 - Summarise like an engineer: for tyres, brakes, standings or anything with many values give the overall picture in one sentence and name only what stands out (e.g. \"Tyres fine, rear left a bit hot\"). Never list every wheel or every car.\n\
 - Plain sentences only: no semicolons, brackets, lists or symbols.\n\
 - Your text is read aloud: write units as words (\"Grad\" / \"degrees\", never °C, km/h or psi symbols), no abbreviations.\n\
@@ -85,7 +85,7 @@ pub fn snapshot(state: &RaceState, crew: &CrewState) -> String {
         "track_limits": state.track_limits,
         "rain": [f.weather.rain_now, f.weather.rain_10min, f.weather.rain_30min],
         "grip": f.weather.grip,
-        "track_c": f.weather.road_temp_c.round(),
+        "track_c": (f.weather.road_temp_c > 0.0).then(|| f.weather.road_temp_c.round()),
         "wet_tyres": f.rain_tyres,
         "best_lap_ms": state.best_valid_lap().map(|l| l.time_ms),
         "last_lap_ms": f.last_lap_ms,

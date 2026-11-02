@@ -259,6 +259,7 @@ pub fn build_frame(p: &SPageFilePhysics, g: &SPageFileGraphic, t_ms: u64) -> Tel
         native_side: None,
         near_cars: Vec::new(),
         laps_left: None,
+        setup_menu: g.isSetupMenuVisible != 0,
     }
 }
 

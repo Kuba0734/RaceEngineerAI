@@ -138,7 +138,7 @@ fn biggest_sector_diff(a: &[Option<i32>; 3], b: &[Option<i32>; 3]) -> Option<(us
 }
 
 pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
-    if ctx.kind != SessionKind::Race {
+    if !ctx.state.race_running() {
         return;
     }
     let left = ctx.state.frame.session_time_left_ms;
@@ -151,10 +151,19 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
             continue;
         }
         let mark_ms = m * 60_000.0;
+        // A mark as long as the race itself is no news ("10 minutes left" in a 10 minute race).
+        if mem.session_duration_ms.is_some_and(|total| mark_ms >= total - 30_000.0) {
+            mem.time_marks[i] = true;
+            continue;
+        }
         // Fire once when crossing the mark (only if we were above it at some point).
         if left <= mark_ms && left > mark_ms - 30_000.0 {
             mem.time_marks[i] = true;
             let laps = ctx.state.fuel_strategy(ctx.settings).laps_to_go;
+            // Without a known pace there is no lap count to report.
+            if laps <= 0.0 {
+                continue;
+            }
             ctx.push(CallRequest::new("race.time_left").p("minutes", format!("{}", m as i32)).p("laps", ctx.fmt.laps(laps)));
         } else if left < mark_ms - 30_000.0 {
             mem.time_marks[i] = true;

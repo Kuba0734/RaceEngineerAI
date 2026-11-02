@@ -445,6 +445,7 @@ impl IRacingProvider {
             native_side: Some(if status == SimStatus::Live { native_side(self.i("CarLeftRight")) } else { NativeSide::Off }),
             near_cars,
             laps_left,
+            setup_menu: false,
         }
     }
 

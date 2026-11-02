@@ -274,6 +274,7 @@ impl MockProvider {
             native_side: None,
             near_cars: Vec::new(),
             laps_left: None,
+            setup_menu: false,
         }
     }
 

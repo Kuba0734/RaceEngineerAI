@@ -45,16 +45,17 @@ fn weather_part(ctx: &Ctx) -> String {
     } else {
         rain_word(ctx, w.rain_now)
     };
-    let road = ctx.fmt.temp(w.road_temp_c);
     let fc = if w.rain_30min > w.rain_now {
         if de { format!(" In 30 Minuten {}.", rain_word(ctx, w.rain_30min)) } else { format!(" {} expected in 30 minutes.", rain_word(ctx, w.rain_30min)) }
     } else {
         String::new()
     };
-    if de {
-        format!(" {now}, Strecke {road}.{fc}")
-    } else {
-        format!(" {now}, track {road}.{fc}")
+    // The track temperature is 0 until the game delivers it: rather no number than a wrong one.
+    let road = (w.road_temp_c > 0.0).then(|| ctx.fmt.temp(w.road_temp_c));
+    match (road, de) {
+        (Some(road), true) => format!(" {now}, Strecke {road}.{fc}"),
+        (Some(road), false) => format!(" {now}, track {road}.{fc}"),
+        (None, _) => format!(" {now}.{fc}"),
     }
 }
 
@@ -149,8 +150,8 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
             }
         }
     }
-    // Race briefing before the start (pre-session phases).
-    if ctx.kind == SessionKind::Race && !mem.briefing_done && matches!(ctx.state.session.phase, SessionPhase::PreFormation | SessionPhase::PreSession | SessionPhase::Starting) {
+    // Race briefing before the start (pre-session phases), after the radio check and greeting.
+    if ctx.kind == SessionKind::Race && !mem.briefing_done && mem.radio_check_done && mem.greeting_at.is_none() && matches!(ctx.state.session.phase, SessionPhase::PreFormation | SessionPhase::PreSession | SessionPhase::Starting) {
         mem.briefing_done = true;
         briefing(ctx);
     }

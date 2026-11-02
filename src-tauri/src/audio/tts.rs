@@ -155,16 +155,60 @@ pub fn speakable(text: &str, lang: Language) -> String {
         (" l/", if de { " Liter pro " } else { " litres per " }),
         ("±", if de { "plus minus " } else { "plus or minus " }),
     ];
-    let mut out = text.to_string();
+    let mut out = speak_times(text, de);
     for (a, b) in pairs {
         out = out.replace(a, b);
     }
     // Symbols the voice would read out literally (markdown, semicolons, brackets, dashes).
-    for (a, b) in [(";", ","), ("–", ","), ("—", ","), ("(", ", "), (")", ", "), ("*", ""), ("#", ""), ("_", " "), ("`", ""), ("\n", ". "), ("|", ","), ("~", "")] {
+    for (a, b) in [(";", ","), (":", ","), ("–", ","), ("—", ","), ("(", ", "), (")", ", "), ("*", ""), ("#", ""), ("_", " "), ("`", ""), ("\n", ". "), ("|", ","), ("~", "")] {
         out = out.replace(a, b);
     }
     let out = out.split_whitespace().collect::<Vec<_>>().join(" ");
     out.replace(" ,", ",").replace(",,", ",").replace(", .", ".").trim_matches([',', ' ']).to_string()
+}
+
+/// Lap times like 1:47,9 or 1:05.3 the way an engineer says them, so the voice never reads
+/// the colon out loud: "1 47 point 9", "1 oh 5 point 3", "58 point 3".
+fn speak_times(text: &str, de: bool) -> String {
+    let c: Vec<char> = text.chars().collect();
+    let digits_from = |i: usize| c[i..].iter().take_while(|x| x.is_ascii_digit()).count();
+    let mut out = String::with_capacity(text.len() + 16);
+    let mut i = 0;
+    while i < c.len() {
+        let starts_number = c[i].is_ascii_digit() && (i == 0 || !(c[i - 1].is_ascii_digit() || matches!(c[i - 1], ':' | '.' | ',')));
+        if starts_number {
+            let minutes = digits_from(i);
+            let colon = i + minutes;
+            if minutes <= 2 && c.get(colon) == Some(&':') && digits_from(colon + 1) == 2 {
+                let sec_at = colon + 1;
+                let mut end = sec_at + 2;
+                let m: String = c[i..colon].iter().collect();
+                let (s1, s2) = (c[sec_at], c[sec_at + 1]);
+                if m.chars().any(|d| d != '0') {
+                    out.push_str(&m);
+                    out.push(' ');
+                }
+                if s1 == '0' {
+                    out.push_str(if de { "null " } else { "oh " });
+                    out.push(s2);
+                } else {
+                    out.push(s1);
+                    out.push(s2);
+                }
+                if matches!(c.get(end), Some('.' | ',')) && digits_from(end + 1) > 0 {
+                    let n = digits_from(end + 1);
+                    out.push_str(if de { " Komma " } else { " point " });
+                    out.extend(&c[end + 1..end + 1 + n]);
+                    end += 1 + n;
+                }
+                i = end;
+                continue;
+            }
+        }
+        out.push(c[i]);
+        i += 1;
+    }
+    out
 }
 
 /// Fallback tones when no voice is installed: the spotter still works.
@@ -275,6 +319,18 @@ mod tests {
     #[test]
     fn splits_sentences_not_numbers() {
         assert_eq!(sentences("Gap 1.4 behind. Fuel is fine! Ok"), vec!["Gap 1.4 behind.", "Fuel is fine!", "Ok"]);
+    }
+
+    #[test]
+    fn times_are_spoken_without_colon() {
+        assert_eq!(speakable("Best lap 1:47,9.", Language::En), "Best lap 1 47 point 9.");
+        assert_eq!(speakable("Beste Runde 1:47,9.", Language::De), "Beste Runde 1 47 Komma 9.");
+        assert_eq!(speakable("Last 1:05.3 now", Language::En), "Last 1 oh 5 point 3 now");
+        assert_eq!(speakable("Runde 1:05,3", Language::De), "Runde 1 null 5 Komma 3");
+        assert_eq!(speakable("0:58.3", Language::En), "58 point 3");
+        assert_eq!(speakable("Kurve 3: zu früh gebremst", Language::De), "Kurve 3, zu früh gebremst");
+        // Ordinary numbers stay untouched.
+        assert_eq!(speakable("Gap 1.4 behind, 12 laps", Language::En), "Gap 1.4 behind, 12 laps");
     }
 
     #[test]

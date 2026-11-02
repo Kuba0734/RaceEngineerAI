@@ -278,6 +278,9 @@ pub struct TelemetryFrame {
     /// Laps still to drive incl. the current one, for races limited by laps (None = timed/open).
     #[serde(default)]
     pub laps_left: Option<f32>,
+    /// The game's setup/start menu is open: the driver is not driving yet.
+    #[serde(default)]
+    pub setup_menu: bool,
 }
 
 /// Data that changes rarely. Sent when it changes.

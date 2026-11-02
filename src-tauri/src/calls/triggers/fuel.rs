@@ -116,7 +116,8 @@ fn stint_summary(ctx: &mut Ctx, mem: &mut Memory) {
 pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
     let s = ctx.state;
     let f = &s.frame;
-    if ctx.kind != SessionKind::Race || f.in_pit_lane {
+    // Before the green flag there is no pace and no consumption worth warning about.
+    if !s.race_running() || f.in_pit_lane {
         return;
     }
     let fs = s.fuel_strategy(ctx.settings);
