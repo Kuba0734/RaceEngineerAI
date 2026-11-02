@@ -27,11 +27,8 @@ export function Tyres({ tyres, units, showBrakes }: { tyres: TyreView | undefine
           return (
             <div key={i} className="rounded-lg bg-surface-2/70 p-2 text-center">
               <div className={cx("num text-lg font-semibold leading-tight", band(c, tyres.temp_cold, tyres.temp_hot))}>{c > 0 ? temp(c) : "–"}</div>
-              {tyres.from_pit ? (
-                <div className="num text-sm text-dim">{(tyres.wear_pct[i] ?? 0) > 0 ? `${Math.round(tyres.wear_pct[i] ?? 0)}%` : "–"}</div>
-              ) : (
-                <div className={cx("num text-sm", band(p, tyres.pressure_min, tyres.pressure_max))}>{p > 0 ? press(p) : "–"}</div>
-              )}
+              {(!tyres.from_pit || p > 0) && <div className={cx("num text-sm", band(p, tyres.pressure_min, tyres.pressure_max))}>{p > 0 ? press(p) : "–"}</div>}
+              {tyres.from_pit && <div className="num text-[11px] text-dim">{(tyres.wear_pct[i] ?? 0) > 0 ? `${Math.round(tyres.wear_pct[i] ?? 0)}%` : "–"}</div>}
               {showBrakes && (
                 <div className={cx("num mt-0.5 text-[11px]", b > tyres.brake_hot ? "text-danger" : "text-dim")}>
                   {t("wd.brake")} {b > 0 ? temp(b) : "–"}

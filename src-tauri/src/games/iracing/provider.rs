@@ -101,6 +101,10 @@ pub struct IRacingProvider {
     /// Saved map being loaded in the background (file IO never runs on this thread).
     map_load: Option<mpsc::Receiver<Vec<u8>>>,
     map_saved: bool,
+    /// Hot pressures last seen in the car setup; the first value is only a baseline.
+    last_hot: Option<[f32; 4]>,
+    /// A new hot pressure measurement waiting for this stop's tyre check.
+    pending_hot: Option<[f32; 4]>,
 }
 
 impl Default for IRacingProvider {
@@ -254,6 +258,8 @@ impl IRacingProvider {
             stall_captured: false,
             map_load: None,
             map_saved: false,
+            last_hot: None,
+            pending_hot: None,
         }
     }
 
@@ -315,6 +321,7 @@ impl IRacingProvider {
                 }
                 self.data = data;
                 self.last_session_check = None;
+                self.note_hot_pressures();
             }
         }
         // Cheap check first: the sim writes every 16 ms, the loop polls more often.
@@ -367,6 +374,17 @@ impl IRacingProvider {
         }
     }
 
+    /// The sim rewrites `LastHotPressure` in the setup after a stint. Only a change counts as a
+    /// new measurement: the value seen first may be old or just the starting pressure.
+    fn note_hot_pressures(&mut self) {
+        let Some(hot) = self.data.hot_pressure_psi else { return };
+        match self.last_hot {
+            Some(prev) if prev.iter().zip(hot).any(|(a, b)| (a - b).abs() > 0.05) => self.pending_hot = Some(hot),
+            _ => {}
+        }
+        self.last_hot = Some(hot);
+    }
+
     /// Tyre values while standing in the pit stall (the sim only updates them there).
     fn capture_tyres(&mut self, completed: i32, session_time: f64, speed_ms: f32) {
         if !self.b("PlayerCarInPitStall") {
@@ -382,7 +400,7 @@ impl IRacingProvider {
             return;
         }
         self.stall_captured = true;
-        let mut c = TyreCheck { lap: completed, ..Default::default() };
+        let mut c = TyreCheck { lap: completed, hot_pressure_psi: self.pending_hot.take(), ..Default::default() };
         for (k, w) in ["LF", "RF", "LR", "RR"].iter().enumerate() {
             let zones = |kind: &str| -> [f32; 3] {
                 let v = |side: &str| self.num(&format!("{w}{kind}{side}")).unwrap_or(0.0) as f32;
@@ -478,6 +496,12 @@ impl IRacingProvider {
         let current_lap_ms = (self.f("LapCurrentLapTime") * 1000.0) as i32;
         let (sector_index, last_sector_ms) = self.sectors.update(pct, completed, current_lap_ms);
         self.capture_tyres(completed, session_time, speed_ms);
+        // Hot pressures that arrive after the tyre values of this stop.
+        if let Some(c) = self.tyre_check.as_mut().filter(|c| c.lap == completed) {
+            if let Some(hot) = self.pending_hot.take() {
+                c.hot_pressure_psi = Some(hot);
+            }
+        }
         // Four wheels off the track = track limits; the rest of the lap is invalid.
         if status == SimStatus::Live && surface == TRK_OFF_TRACK && !on_pit_road {
             self.invalid_lap = Some(completed);
@@ -969,6 +993,40 @@ DriverInfo:
         let f = out.iter().find_map(|e| if let ProviderEvent::Frame(f) = e { Some(f) } else { None }).unwrap();
         assert!(f.engine.stalled && !f.engine.oil_pressure_low && !f.engine.fuel_pressure_low);
         assert!(!f.pacing.green_next_lap);
+    }
+
+    #[test]
+    fn hot_pressures_only_when_newly_measured() {
+        let setup = |lf: u32| format!("CarSetup:
+ Tires:
+  LeftFront:
+   LastHotPressure: {lf} kPa
+  RightFront:
+   LastHotPressure: 170 kPa
+  LeftRear:
+   LastHotPressure: 170 kPa
+  RightRear:
+   LastHotPressure: 170 kPa
+");
+        let mut b = base();
+        b.bool("PlayerCarInPitStall", 0, 1, true).f32("Speed", 0, 1, 0.0).f32("LFtempCM", 0, 1, 80.0);
+        b.yaml = format!("{YAML}{}", setup(159));
+        let mem = b.build();
+        let mut p = IRacingProvider::new();
+        let mut out = Vec::new();
+        p.process(&mem, &mut out).unwrap();
+        // Baseline only, then 2 s standing in the stall: tyre check without hot pressures.
+        b.f64("SessionTime", 102.0);
+        b.tick += 1;
+        p.process(&b.build(), &mut out).unwrap();
+        assert_eq!(p.tyre_check.unwrap().hot_pressure_psi, None);
+        // The setup is rewritten with measured values: attached to this stop.
+        b.yaml = format!("{YAML}{}", setup(182));
+        b.session_update += 1;
+        b.tick += 1;
+        p.process(&b.build(), &mut out).unwrap();
+        let hot = p.tyre_check.unwrap().hot_pressure_psi.unwrap();
+        assert!((hot[0] - 26.4).abs() < 0.05, "{hot:?}");
     }
 
     #[test]

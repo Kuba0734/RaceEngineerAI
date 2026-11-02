@@ -186,7 +186,11 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
                     Some(c) => c.temp_c.map(|z| z[1]),
                     None => f.wheels.map(|w| w.core_temp_c),
                 },
-                pressure_psi: if pit.is_some() { [0.0; 4] } else { f.wheels.map(|w| w.pressure_psi) },
+                // Hot pressures measured after the stint, if the game reported them for this stop.
+                pressure_psi: match pit {
+                    Some(c) => c.hot_pressure_psi.unwrap_or([0.0; 4]),
+                    None => f.wheels.map(|w| w.pressure_psi),
+                },
                 from_pit: pit.is_some(),
                 wear_pct: pit.map(|c| c.wear.map(|z| z.iter().copied().fold(1.0f32, f32::min) * 100.0)).unwrap_or([0.0; 4]),
                 brake_temp_c: f.wheels.map(|w| w.brake_temp_c),

@@ -15,4 +15,8 @@ temp_c: [[number, number, number], [number, number, number], [number, number, nu
 /**
  * Tread left per wheel and zone (inner, middle, outer), 0–1.
  */
-wear: [[number, number, number], [number, number, number], [number, number, number], [number, number, number]], cold_pressure_psi: [number, number, number, number], };
+wear: [[number, number, number], [number, number, number], [number, number, number], [number, number, number]], cold_pressure_psi: [number, number, number, number], 
+/**
+ * Hot pressures measured by the game after the stint (None = not measured for this stop).
+ */
+hot_pressure_psi: [number, number, number, number] | null, };

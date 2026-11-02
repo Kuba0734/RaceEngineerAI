@@ -265,16 +265,22 @@ pub fn query(name: &str, args: &Value, state: &RaceState, settings: &Settings) -
         }
         "get_tyres" if !state.has("hasTyreCoreTemps") => match state.frame.tyre_check {
             // No live values: the last measurement in the pit stall is all there is.
-            Some(c) if c.lap > 0 => json!({
-                "live_values_available": false,
-                "measured_in_pits_after_lap": c.lap,
-                "note": "values from the last pit stop, not live – say that",
-                "order": "FL, FR, RL, RR",
-                "temp_inner_middle_outer_c": c.temp_c.map(|w| w.map(|t| t.round())),
-                "tread_left_pct_inner_middle_outer": c.wear.map(|w| w.map(|x| (x * 100.0).round())),
-                "cold_pressure_psi": c.cold_pressure_psi.map(round1),
-                "wet_tyres_on": state.frame.rain_tyres,
-            }),
+            Some(c) if c.lap > 0 => {
+                let class = crate::games::cars::class_def(&state.session.car_class);
+                let window = if state.frame.rain_tyres { class.wet } else { class.dry };
+                json!({
+                    "live_values_available": false,
+                    "measured_in_pits_after_lap": c.lap,
+                    "note": "values from the last pit stop, not live – say that",
+                    "order": "FL, FR, RL, RR",
+                    "temp_inner_middle_outer_c": c.temp_c.map(|w| w.map(|t| t.round())),
+                    "tread_left_pct_inner_middle_outer": c.wear.map(|w| w.map(|x| (x * 100.0).round())),
+                    "cold_pressure_psi": c.cold_pressure_psi.map(round1),
+                    "hot_pressure_psi_last_stint": c.hot_pressure_psi.map(|p| p.map(round1)),
+                    "target_hot_pressure_psi": window,
+                    "wet_tyres_on": state.frame.rain_tyres,
+                })
+            }
             _ => json!({ "available": false, "note": "the game has no live tyre data; values come only after a pit stop – say so, do not guess" }),
         },
         "get_brakes" if !state.has("hasBrakeWear") => json!({ "available": false, "note": "the game does not provide this data – say so, do not guess" }),

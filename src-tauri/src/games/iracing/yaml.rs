@@ -138,6 +138,15 @@ impl Node {
         leading_number(self.str(path)?)
     }
 
+    /// First node named `key` anywhere below this one (depth first).
+    pub fn find(&self, key: &str) -> Option<&Node> {
+        match self {
+            Node::Map(m) => m.iter().find(|(k, _)| k == key).map(|(_, v)| v).or_else(|| m.iter().find_map(|(_, v)| v.find(key))),
+            Node::List(l) => l.iter().find_map(|v| v.find(key)),
+            Node::Scalar(_) => None,
+        }
+    }
+
     pub fn list(&self, path: &str) -> &[Node] {
         match self.get(path) {
             Some(Node::List(l)) => l,

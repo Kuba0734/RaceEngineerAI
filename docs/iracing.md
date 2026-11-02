@@ -59,6 +59,7 @@ Wagenabhängig, nur wenn vorhanden: `dcTractionControl`, `dcABS`, `[LF|RF|LR|RR]
 | Track Limits | `PlayerTrackSurface` | Vier Räder neben der Strecke (`irsdk_OffTrack`) = Track Limit, die Runde gilt als ungültig. `hasTrackLimits=true`. |
 | Incidents | `PlayerCarMyIncidentCount` (Team: `PlayerCarTeamIncidentCount`), YAML `WeekendOptions.IncidentLimit` | Meldung `penalty.incidents`. |
 | Reifen | `tempCL/CM/CR`, `wearL/M/R`, `coldPressure` | iRacing gibt **keine Live-Reifenwerte** heraus; die Werte ändern sich nur in der Box. Der Provider hält sie 1 s nach dem Anhalten in der Box fest (`TyreCheck`, innen/mitte/außen – bei linken Rädern ist „L“ außen). Overlay zeigt sie als „Stand letzter Boxenstopp“, Meldung `tyre.after_stop`. Live-Drücke: nicht vorhanden. |
+| Heißdrücke | YAML `CarSetup.*.{LeftFront,…}.LastHotPressure` | Werden gesucht, egal wie das Setup des Autos verschachtelt ist (kPa, psi oder bar). Eine neue Messung wird an den Reifencheck des Stopps gehängt → Meldung `tyre.pressure_next_stint` (Abweichung vom Zielfenster aus `cars.json`), Overlay zeigt die Heißdrücke. |
 | Bremsen | – | iRacing gibt weder Bremstemperatur noch Verschleiß heraus (nur `brakeLinePress`). |
 | Schaden | `PitRepairLeft`, `PitOptRepairLeft`, `FastRepairAvailable`, `EngineWarnings` (mandRepNeeded) | Keine Schadenszonen, aber die echte Reparaturzeit → Meldung `damage.repair` und Abwägung in `damage.report`. |
 | Motor | `EngineWarnings`, `WaterTemp`, `OilTemp` | Meldung `car.engine`. |
@@ -104,7 +105,7 @@ iRacing teilt Strecken in viele Zeitsektoren (`SplitTimeInfo`). Die Logik arbeit
 | `SessionFlags` | `0x10040200`: „one lap to green“ auch im Test ohne Pace Car → nur zusammen mit `PaceMode` ≠ 4 (NotPacing) |
 | Reifenwerte in der Box | `tempCL/CM/CR` und `wearL/M/R` plausibel (z. B. LF 86/81/71 °C, 94–97 % Profil) |
 | `IsReplayPlaying` | `1` außerhalb des Autos → Status „Replay“, keine Ansagen |
-| `CarSetup.TiresAero.*.LastHotPressure` | in der YAML vorhanden (z. B. `159 kPa`) – möglicher Weg zu Heißdrücken nach dem Stint, noch nicht genutzt |
+| `CarSetup.TiresAero.*.LastHotPressure` | vorhanden (`159 kPa`), aber nach 4 Runden **noch gleich dem Startdruck** und `LastTempsOMI` noch `40C` – iRacing hat sie nicht sofort aktualisiert. Genutzt wird deshalb nur eine **Änderung** gegenüber dem ersten gesehenen Wert. **Live prüfen:** Wann aktualisiert iRacing die Werte (normale Boxeneinfahrt vs. Zurücksetzen)? |
 
 ### Noch offen
 

@@ -53,6 +53,34 @@ pub struct SessionData {
     pub wet_compounds: Vec<i32>,
     /// `WeekendOptions.FastRepairsLimit: unlimited`.
     pub fast_repairs_unlimited: bool,
+    /// `CarSetup.*.{LeftFront,RightFront,LeftRear,RightRear}.LastHotPressure` in psi (FL, FR, RL, RR).
+    pub hot_pressure_psi: Option<[f32; 4]>,
+}
+
+const PSI_PER_KPA: f64 = 1.0 / 6.894_757;
+const PSI_PER_BAR: f64 = 14.503_77;
+
+/// "159 kPa" / "23.1 psi" / "1.6 bar" → psi.
+fn pressure_psi(v: &str) -> Option<f32> {
+    let n = yaml::leading_number(v)?;
+    let unit = v.to_lowercase();
+    let psi = if unit.contains("psi") {
+        n
+    } else if unit.contains("bar") {
+        n * PSI_PER_BAR
+    } else {
+        n * PSI_PER_KPA
+    };
+    Some(psi as f32)
+}
+
+/// Hot pressures of the last stint from the car setup (its layout differs per car).
+fn hot_pressures(setup: &Node) -> Option<[f32; 4]> {
+    let mut out = [0.0; 4];
+    for (i, wheel) in ["LeftFront", "RightFront", "LeftRear", "RightRear"].iter().enumerate() {
+        out[i] = pressure_psi(setup.find(wheel)?.str("LastHotPressure")?)?;
+    }
+    Some(out)
 }
 
 /// `SessionType` strings as written by the sim.
@@ -127,6 +155,7 @@ pub fn parse(src: &str) -> SessionData {
         drivers,
         incident_limit: limit(&y, "WeekendInfo.WeekendOptions.IncidentLimit").map(|v| v as i32).filter(|v| *v > 0),
         team_racing: flag(&y, "WeekendInfo.TeamRacing"),
+        hot_pressure_psi: y.get("CarSetup").and_then(hot_pressures),
         fast_repairs_unlimited: y.str("WeekendInfo.WeekendOptions.FastRepairsLimit").is_some_and(|v| v.eq_ignore_ascii_case("unlimited")),
         wet_compounds: y
             .list("DriverInfo.DriverTires")
@@ -225,6 +254,18 @@ DriverInfo:
    CarClassShortName: GT3 Class
    CarIsPaceCar: 0
    IsSpectator: 0
+CarSetup:
+ UpdateCount: 3
+ TiresAero:
+  LeftFront:
+   StartingPressure: 159 kPa
+   LastHotPressure: 159 kPa
+  LeftRear:
+   LastHotPressure: 175 kPa
+  RightFront:
+   LastHotPressure: 162 kPa
+  RightRear:
+   LastHotPressure: 180 kPa
 ";
 
     #[test]
@@ -244,6 +285,9 @@ DriverInfo:
         assert_eq!(me.car_number, 7);
         assert_eq!(s.incident_limit, Some(17));
         assert!(s.fast_repairs_unlimited);
+        let hot = s.hot_pressure_psi.unwrap();
+        assert!((hot[0] - 23.06).abs() < 0.02 && (hot[3] - 26.11).abs() < 0.02, "{hot:?}");
+        assert!((pressure_psi("1.6 bar").unwrap() - 23.2).abs() < 0.01);
         assert!(!s.team_racing);
         assert_eq!(s.wet_compounds, vec![1]);
         assert!(me.races());

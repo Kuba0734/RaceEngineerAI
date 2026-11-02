@@ -99,6 +99,7 @@ pub struct Memory {
     /// Real repair time from the game, replaces the estimate in the damage decision.
     pub repair_estimate_s: Option<f32>,
     pub tyre_check_said: Option<i32>,
+    pub hot_pressure_said: Option<i32>,
     // race control
     pub last_incidents: Option<i32>,
     pub last_pacing: crate::games::provider::Pacing,
@@ -283,6 +284,21 @@ mod tests {
         // Counting down in the pits is not new damage.
         s.frame.repair = Some(crate::games::provider::Repair { mandatory_s: 5.0, optional_s: 35.0, fast_repairs_left: Some(1) });
         assert!(!calls(&s, &mut mem, car::tick).iter().any(|c| c.starts_with("damage.repair")));
+    }
+
+    #[test]
+    fn pressure_advice_from_measured_hot_pressures() {
+        let mut s = loaded_race();
+        s.session.car_class = "GT3".into();
+        let mut mem = Memory::new();
+        let mut check = crate::games::provider::TyreCheck { lap: 8, ..Default::default() };
+        s.frame.tyre_check = Some(check);
+        assert!(!calls(&s, &mut mem, car::tick).iter().any(|c| c == "tyre.pressure_next_stint"), "no hot pressures yet");
+        // GT3 window 26–27 psi: front left far too high, the rest fine.
+        check.hot_pressure_psi = Some([28.4, 26.5, 26.4, 26.6]);
+        s.frame.tyre_check = Some(check);
+        assert!(calls(&s, &mut mem, car::tick).iter().any(|c| c == "tyre.pressure_next_stint"));
+        assert!(!calls(&s, &mut mem, car::tick).iter().any(|c| c == "tyre.pressure_next_stint"), "once per stop");
     }
 
     #[test]

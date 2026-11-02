@@ -132,6 +132,28 @@ fn tyre_after_stop(ctx: &mut Ctx, mem: &mut Memory) {
     ctx.push(CallRequest::new("tyre.after_stop").p("wheel", ctx.fmt.wheel(worn).to_string()).p("wear", format!("{wear}")).p("spread", spread));
 }
 
+/// Games without live pressures (iRacing) report hot pressures after the stint: advise the
+/// change for the next stint as soon as this stop's measurement is there.
+fn pit_pressures(ctx: &mut Ctx, mem: &mut Memory) {
+    let Some(c) = ctx.state.frame.tyre_check else { return };
+    let Some(hot) = c.hot_pressure_psi else { return };
+    if c.lap <= 0 || mem.hot_pressure_said == Some(c.lap) {
+        return;
+    }
+    mem.hot_pressure_said = Some(c.lap);
+    let w = target_window(ctx);
+    let centre = (w[0] + w[1]) / 2.0;
+    let min_delta = ctx.th("tyre.pressure_next_stint", "min_delta_psi") as f32;
+    let parts: Vec<String> = (0..4)
+        .map(|i| (i, ((centre - hot[i]) * 10.0).round() / 10.0))
+        .filter(|(_, d)| d.abs() >= min_delta)
+        .map(|(i, d)| format!("{} {}", ctx.fmt.wheel(i), ctx.fmt.pressure_delta(d)))
+        .collect();
+    if !parts.is_empty() {
+        ctx.push(CallRequest::new("tyre.pressure_next_stint").p("deltas", parts.join(", ")));
+    }
+}
+
 /// Engine warning lights (rising edge only).
 fn engine(ctx: &mut Ctx, mem: &mut Memory) {
     let e = ctx.state.frame.engine;
@@ -212,6 +234,7 @@ pub fn on_frame(state: &RaceState, mem: &mut Memory) {
 
 pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
     repair(ctx, mem);
+    pit_pressures(ctx, mem);
     let s = ctx.state;
     let f = &s.frame;
     if f.in_pit_lane || f.speed_kmh < 30.0 {

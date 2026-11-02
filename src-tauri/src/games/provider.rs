@@ -230,6 +230,9 @@ pub struct TyreCheck {
     /// Tread left per wheel and zone (inner, middle, outer), 0–1.
     pub wear: [[f32; 3]; 4],
     pub cold_pressure_psi: [f32; 4],
+    /// Hot pressures measured by the game after the stint (None = not measured for this stop).
+    #[serde(default)]
+    pub hot_pressure_psi: Option<[f32; 4]>,
 }
 
 /// Safety car / pace car situation of the player.

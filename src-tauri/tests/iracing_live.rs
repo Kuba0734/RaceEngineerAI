@@ -25,7 +25,7 @@ fn reads_live_sdk() {
         println!("session YAML written to {}", dump.display());
     }
     let data = session::parse(&yaml);
-    println!("incidentLimit={:?} teamRacing={} wetCompounds={:?}", data.incident_limit, data.team_racing, data.wet_compounds);
+    println!("incidentLimit={:?} teamRacing={} wetCompounds={:?} hotPressurePsi={:?}", data.incident_limit, data.team_racing, data.wet_compounds, data.hot_pressure_psi);
     println!("track={} ({}) len={}m online={} player={} fuelMax={} redline={} drivers={}", data.track_name, data.track_display_name, data.track_length_m, data.online, data.player_car_idx, data.fuel_max_l, data.redline_rpm, data.drivers.len());
     for s in &data.sessions {
         println!("session {} {:?} laps={:?} time={:?}", s.num, s.kind, s.laps, s.time_s);
