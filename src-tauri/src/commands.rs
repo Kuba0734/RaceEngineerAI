@@ -390,6 +390,16 @@ pub fn ptt(core: CoreState, pressed: bool) {
     core.set_ptt(pressed);
 }
 
+/// Plays the press and release sound one after the other.
+#[tauri::command]
+pub fn preview_ptt_sound(core: CoreState, style: crate::storage::settings::PttSoundStyle) {
+    use crate::audio::radio_fx::ptt_clip;
+    let mut clip = ptt_clip(true, style, core.out_sr);
+    clip.extend(std::iter::repeat_n(0.0, (core.out_sr / 3) as usize));
+    clip.extend(ptt_clip(false, style, core.out_sr));
+    let _ = core.mixer.try_send(crate::audio::mixer::MixerCmd::Spotter(clip.into()));
+}
+
 #[tauri::command]
 pub async fn set_overlay_edit(core: CoreState<'_>, edit: bool) -> AppResult<()> {
     crate::input::hotkeys::set_overlay_edit(&core.app, &core, edit);

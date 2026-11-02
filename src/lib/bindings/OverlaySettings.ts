@@ -9,4 +9,12 @@ radar_auto_hide: boolean,
 /**
  * Background opacity of the widget panels (0 = transparent).
  */
-panel_opacity: number, map_size: number, radar_size: number, standings_rows: number, delta_show_laps: boolean, radio_show_text: boolean, layout: Array<WidgetLayout>, };
+panel_opacity: number, map_size: number, radar_size: number, standings_rows: number, delta_show_laps: boolean, delta_bar: boolean, 
+/**
+ * Delta at which the bar is full (seconds).
+ */
+delta_range_s: number, radio_show_text: boolean, dash_show_assists: boolean, 
+/**
+ * Time span of the input graph (seconds).
+ */
+inputs_seconds: number, inputs_show_steer: boolean, laps_rows: number, layout: Array<WidgetLayout>, };

@@ -4,6 +4,7 @@ import type { FuelStrategy } from "./FuelStrategy";
 import type { ListenState } from "./ListenState";
 import type { MapCar } from "./MapCar";
 import type { RadarCar } from "./RadarCar";
+import type { RecentLap } from "./RecentLap";
 import type { SessionType } from "./SessionType";
 import type { Side } from "./Side";
 import type { StandingRow } from "./StandingRow";
@@ -11,4 +12,4 @@ import type { StandingRow } from "./StandingRow";
 /**
  * Throttled live data for the windows. Heavy parts are optional and sent at a lower rate.
  */
-export type LiveFrame = { live: boolean, speed: number, gear: number, rpm: number, throttle: number, brake: number, fuel_l: number, lap: number, position: number, cars_total: number, spline: number, current_lap_ms: number, last_lap_ms: number, best_lap_ms: number, delta_ms: number, time_left_ms: number, flag: Flag, in_pits: boolean, spotter: Side, radar: Array<RadarCar>, map: Array<MapCar>, outline_version: number, standings?: Array<StandingRow>, fuel?: FuelStrategy, speaking: boolean, listening: ListenState, mic_level: number, out_level: number, track: string, session: SessionType, quiet: boolean, preset: string, };
+export type LiveFrame = { live: boolean, speed: number, gear: number, rpm: number, throttle: number, brake: number, steer: number, max_rpm: number, tc_level: number, abs_level: number, tc_active: boolean, abs_active: boolean, fuel_l: number, lap: number, position: number, cars_total: number, spline: number, current_lap_ms: number, last_lap_ms: number, best_lap_ms: number, delta_ms: number, time_left_ms: number, flag: Flag, in_pits: boolean, spotter: Side, radar: Array<RadarCar>, map: Array<MapCar>, outline_version: number, standings?: Array<StandingRow>, fuel?: FuelStrategy, recent_laps?: Array<RecentLap>, speaking: boolean, listening: ListenState, mic_level: number, out_level: number, track: string, session: SessionType, quiet: boolean, preset: string, };

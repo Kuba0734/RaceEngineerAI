@@ -158,6 +158,14 @@ export function ListeningSection() {
         <Toggle checked={l.wake_word} onChange={(v) => set({ wake_word: v })} label={t("settings.listening.wake")} hint={t("settings.listening.wakeHint")} />
         <Toggle checked={l.push_to_talk} onChange={(v) => set({ push_to_talk: v })} label={t("settings.listening.ptt")} hint={t("settings.listening.pttHint")} />
         <Toggle checked={l.ptt_sound} onChange={(v) => set({ ptt_sound: v })} label={t("settings.listening.pttSound")} hint={t("settings.listening.pttSoundHint")} />
+        {l.ptt_sound && (
+          <Field label={t("settings.listening.pttStyle")}>
+            <div className="flex items-center gap-2">
+              <Segmented value={l.ptt_sound_style} onChange={(v) => set({ ptt_sound_style: v })} options={[{ value: "static", label: t("settings.listening.pttStatic") }, { value: "beep", label: t("settings.listening.pttBeep") }, { value: "click", label: t("settings.listening.pttClick") }]} />
+              <Button small onClick={() => void api.previewPttSound(l.ptt_sound_style)}>{t("common.preview")}</Button>
+            </div>
+          </Field>
+        )}
         <Field label={t("settings.listening.sttLanguage")} hint={t("settings.listening.sttLanguageHint")}>
           <Segmented value={l.stt_language} onChange={(v) => set({ stt_language: v })} options={[{ value: "app", label: t("settings.listening.sttApp") }, { value: "auto", label: t("settings.listening.sttAuto") }, { value: "de", label: "DE" }, { value: "en", label: "EN" }]} />
         </Field>

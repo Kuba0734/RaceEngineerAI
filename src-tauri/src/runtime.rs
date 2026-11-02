@@ -33,6 +33,19 @@ pub struct MapCar {
     pub pit: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RecentLap {
+    pub lap: i32,
+    pub time_ms: i32,
+    pub valid: bool,
+    pub in_lap: bool,
+    pub out_lap: bool,
+}
+
+/// How many laps the live frame carries for the lap time widget.
+const RECENT_LAPS: usize = 20;
+
 /// Throttled live data for the windows. Heavy parts are optional and sent at a lower rate.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -43,6 +56,12 @@ pub struct LiveFrame {
     pub rpm: i32,
     pub throttle: f32,
     pub brake: f32,
+    pub steer: f32,
+    pub max_rpm: i32,
+    pub tc_level: i32,
+    pub abs_level: i32,
+    pub tc_active: bool,
+    pub abs_active: bool,
     pub fuel_l: f32,
     pub lap: i32,
     pub position: i32,
@@ -63,6 +82,8 @@ pub struct LiveFrame {
     pub standings: Option<Vec<StandingRow>>,
     #[ts(optional)]
     pub fuel: Option<FuelStrategy>,
+    #[ts(optional)]
+    pub recent_laps: Option<Vec<RecentLap>>,
     pub speaking: bool,
     pub listening: crate::voice::ListenState,
     pub mic_level: f32,
@@ -107,6 +128,12 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         rpm: f.rpm,
         throttle: f.throttle,
         brake: f.brake,
+        steer: f.steer,
+        max_rpm: st.session.max_rpm,
+        tc_level: f.tc_level,
+        abs_level: f.abs_level,
+        tc_active: f.tc_active,
+        abs_active: f.abs_active,
         fuel_l: f.fuel_l,
         lap: f.completed_laps + 1,
         position: st.player_position(),
@@ -125,6 +152,7 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         outline_version: st.outline_version,
         standings: heavy.then(|| st.standings(5)),
         fuel: heavy.then(|| st.fuel_strategy(&settings)),
+        recent_laps: heavy.then(|| st.laps.iter().rev().take(RECENT_LAPS).map(|l| RecentLap { lap: l.lap, time_ms: l.time_ms, valid: l.valid, in_lap: l.in_lap, out_lap: l.out_lap }).collect()),
         speaking: core.mixer_status.any_speaking(),
         listening: core.voice.state(),
         mic_level: core.voice.level(),

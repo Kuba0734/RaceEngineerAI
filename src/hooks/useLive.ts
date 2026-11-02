@@ -16,6 +16,7 @@ export function useLive(hz: number, heavyEvery: number, renderHz = 5) {
       const prev = ref.current;
       if (prev && !f.standings) f.standings = prev.standings;
       if (prev && !f.fuel) f.fuel = prev.fuel;
+      if (prev && !f.recent_laps) f.recent_laps = prev.recent_laps;
       ref.current = f;
       const now = performance.now();
       if (renderHz > 0 && now - last > 1000 / renderHz && document.visibilityState === "visible") {

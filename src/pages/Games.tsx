@@ -5,33 +5,36 @@ import { api, type BroadcastingStatus } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
 import type { GameDef } from "@/lib/bindings/GameDef";
 import type { GameSettings } from "@/lib/bindings/GameSettings";
-import { Badge, Button, Card, Field, NumberInput, TextInput, Toggle, cx, useAsync } from "@/components/ui";
+import { Badge, Button, Card, Toggle, cx, useAsync } from "@/components/ui";
 
 const DEFAULT_GAME: GameSettings = { enabled: true, broadcasting_port: 0, broadcasting_password: "" };
 
 function AccSetup() {
   const { t } = useTranslation();
+  const connected = useApp((s) => s.status?.secondary_connected);
   const [st, reload] = useAsync<BroadcastingStatus>(() => api.accBroadcastingStatus(), []);
   const [confirm, setConfirm] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const apply = async () => {
     setConfirm(false);
     try {
-      const backup = await api.accBroadcastingApply();
-      setMsg(backup ? t("games.acc.appliedBackup", { path: backup }) : t("games.acc.applied"));
+      await api.accBroadcastingApply();
+      setMsg(t("games.acc.applied"));
     } catch (e) {
       setMsg(String(e));
     }
     reload();
   };
+  const ready = !!st?.matches_app;
   return (
     <div className="mt-3 rounded-xl border border-line bg-surface-2/50 p-3 text-sm">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="font-medium">{t("games.acc.broadcasting")}</div>
-          <div className="text-xs text-dim">{st?.path}</div>
-        </div>
-        {st?.matches_app ? <Badge tone="ok">{t("games.acc.ready")}</Badge> : <Button small variant="primary" onClick={() => setConfirm(true)}>{t("games.acc.setup")}</Button>}
+        {!ready ? (
+          <Button small variant="primary" onClick={() => setConfirm(true)}>{t("games.acc.setup")}</Button>
+        ) : (
+          <span className="font-medium">{t("games.acc.setupDone")}</span>
+        )}
+        {connected ? <Badge tone="ok">{t("games.acc.live")}</Badge> : ready ? <Badge tone="data">{t("games.acc.ready")}</Badge> : <Badge tone="warn">{t("games.acc.notSetup")}</Badge>}
       </div>
       <AnimatePresence>
         {confirm && (
@@ -87,23 +90,11 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
             {caps.map(([k]) => <Badge key={k} tone="data">{t(`games.cap.${k}`)}</Badge>)}
           </div>
         )}
-        <ul className="mt-3 space-y-1 text-sm text-dim">
-          {hints.map((h) => <li key={h}>• {h}</li>)}
-        </ul>
+        {g.support === "planned" && <p className="mt-3 text-sm text-dim">{hints.join(" ")}</p>}
         {g.support === "supported" && (
           <div className="mt-3 border-t border-line pt-3">
             <Toggle checked={gs.enabled} onChange={(v) => set((x) => ({ ...x, enabled: v }))} label={t("games.enabled")} />
-            {g.id === "acc" && (
-              <>
-                <Field label={t("games.acc.port")} hint={t("games.acc.portHint")}>
-                  <NumberInput value={gs.broadcasting_port || 9000} min={1024} max={65535} onChange={(v) => set((x) => ({ ...x, broadcasting_port: v }))} />
-                </Field>
-                <Field label={t("games.acc.password")}>
-                  <TextInput value={gs.broadcasting_password || "asd"} onChange={(v) => set((x) => ({ ...x, broadcasting_password: v }))} className="w-32" />
-                </Field>
-                <AccSetup />
-              </>
-            )}
+            {g.id === "acc" && <AccSetup />}
           </div>
         )}
       </Card>

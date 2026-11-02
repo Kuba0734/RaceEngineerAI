@@ -11,6 +11,7 @@ import type { KeyTest } from "./bindings/KeyTest";
 import type { LapRow } from "./bindings/LapRow";
 import type { LiveFrame } from "./bindings/LiveFrame";
 import type { ModelStatus } from "./bindings/ModelStatus";
+import type { PttSoundStyle } from "./bindings/PttSoundStyle";
 import type { RadioLogEntry } from "./bindings/RadioLogEntry";
 import type { RateLimits } from "./bindings/RateLimits";
 import type { RuntimeStatus } from "./bindings/RuntimeStatus";
@@ -76,6 +77,7 @@ export const api = {
   deleteSession: (id: number) => invoke<void>("delete_session", { id }),
   wheelLearn: () => invoke<void>("wheel_learn"),
   ptt: (pressed: boolean) => invoke<void>("ptt", { pressed }),
+  previewPttSound: (style: PttSoundStyle) => invoke<void>("preview_ptt_sound", { style }),
   setOverlayEdit: (edit: boolean) => invoke<void>("set_overlay_edit", { edit }),
   saveOverlayLayout: (layout: WidgetLayout[]) => invoke<void>("save_overlay_layout", { layout }),
   getOverlayEdit: () => invoke<boolean>("get_overlay_edit"),

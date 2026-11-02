@@ -223,7 +223,8 @@ pub fn build_frame(p: &SPageFilePhysics, g: &SPageFileGraphic, t_ms: u64) -> Tel
         spline: g.normalizedCarPosition,
         sector_index: g.currentSectorIndex,
         last_sector_ms: g.lastSectorTime,
-        delta_ms: g.iDeltaLapTime,
+        // Sign comes from a separate flag in the documentation (isDeltaPositive).
+        delta_ms: if g.isDeltaPositive != 0 { { g.iDeltaLapTime }.abs() } else { -{ g.iDeltaLapTime }.abs() },
         in_pit_lane: g.isInPitLane != 0,
         in_pit_box: g.isInPit != 0,
         tyres_out: p.numberOfTyresOut,
@@ -273,6 +274,7 @@ impl AccProvider {
             car_model: car_key,
             car_class,
             max_fuel_l: s.maxFuel,
+            max_rpm: s.maxRpm,
             sector_count: s.sectorCount,
             pit_window_start_ms: s.PitWindowStart,
             pit_window_end_ms: s.PitWindowEnd,

@@ -60,6 +60,8 @@ Hinweis: Shared-Memory-Version des Spiels ist **1.9**, die Doku beschreibt 1.8.1
 
 ## Offene Punkte (live mit ACC prüfen)
 
+- `iDeltaLapTime` + `isDeltaPositive`: Das Vorzeichen des Deltas wird laut Doku aus dem Flag genommen.
+
 - Update-Rate von `carCoordinates` (Grafik-Schritt, also an die FPS gekoppelt?) – entscheidend für die Spotter-Latenz.
 - `trackConfiguration`-Länge (siehe oben).
 - Ob `gapAhead`/`gapBehind` in allen Session-Typen gefüllt sind.

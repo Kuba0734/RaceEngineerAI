@@ -1,7 +1,7 @@
 //! Team-radio effect, applied offline when a clip is rendered (never in the audio callback).
 //! `strength` 0..=1 scales band limiting, saturation and noise together.
 
-use crate::storage::settings::RadioFx;
+use crate::storage::settings::{PttSoundStyle, RadioFx};
 
 #[derive(Clone, Copy)]
 struct Biquad {
@@ -91,35 +91,61 @@ pub fn apply(input: &[f32], sr: u32, fx: &RadioFx) -> Vec<f32> {
     out
 }
 
-/// Push-to-talk feedback: press = short rising key-up chirp, release = squelch tail with click.
-pub fn ptt_clip(pressed: bool, sr: u32) -> Vec<f32> {
+/// Band-limited radio static fading from `level` to silence.
+fn static_burst(out: &mut Vec<f32>, srf: f32, ms: f32, low: f32, high: f32, level: f32, rng: &mut Lcg) {
+    let n = (srf * ms / 1000.0) as usize;
+    let mut lp = Biquad::new('l', high, srf, 0.7);
+    let mut hp = Biquad::new('h', low, srf, 0.7);
+    for i in 0..n {
+        let env = (1.0 - i as f32 / n as f32).powi(2);
+        out.push(hp.run(lp.run(rng.next())) * level * env);
+    }
+}
+
+/// Short thump of the transmit key.
+fn key_thump(out: &mut Vec<f32>, srf: f32, freq: f32, ms: f32, level: f32) {
+    let n = (srf * ms / 1000.0) as usize;
+    for i in 0..n {
+        let env = (1.0 - i as f32 / n as f32).powi(3);
+        out.push((i as f32 * freq * std::f32::consts::TAU / srf).sin() * level * env);
+    }
+}
+
+/// Push-to-talk feedback for press and release.
+pub fn ptt_clip(pressed: bool, style: PttSoundStyle, sr: u32) -> Vec<f32> {
     let srf = sr as f32;
     let mut rng = Lcg(if pressed { 0xBEEF } else { 0xF00D });
     let mut out = Vec::new();
-    if pressed {
-        // Two quick tones (classic "roger beep" in reverse), ~110 ms.
-        for (f0, f1, ms) in [(900.0f32, 1300.0f32, 45.0f32), (1500.0, 1600.0, 55.0)] {
-            let n = (srf * ms / 1000.0) as usize;
-            let mut phase = 0.0f32;
-            for i in 0..n {
-                let k = i as f32 / n as f32;
-                phase += (f0 + (f1 - f0) * k) * std::f32::consts::TAU / srf;
-                let env = (k * 12.0).min(1.0) * (1.0 - k).powf(0.6);
-                out.push(phase.sin() * 0.22 * env);
+    match (style, pressed) {
+        // Key-up: click, then a bright, very short "tsch".
+        (PttSoundStyle::Static, true) => {
+            click(&mut out, srf, 0.45, &mut rng);
+            static_burst(&mut out, srf, 80.0, 1400.0, 4200.0, 0.5, &mut rng);
+        }
+        // Release: darker, longer squelch tail that closes with a click.
+        (PttSoundStyle::Static, false) => {
+            static_burst(&mut out, srf, 190.0, 500.0, 2600.0, 0.5, &mut rng);
+            click(&mut out, srf, 0.3, &mut rng);
+        }
+        (PttSoundStyle::Beep, true) => {
+            for (f0, f1, ms) in [(900.0f32, 1300.0f32, 45.0f32), (1500.0, 1600.0, 55.0)] {
+                let n = (srf * ms / 1000.0) as usize;
+                let mut phase = 0.0f32;
+                for i in 0..n {
+                    let k = i as f32 / n as f32;
+                    phase += (f0 + (f1 - f0) * k) * std::f32::consts::TAU / srf;
+                    let env = (k * 12.0).min(1.0) * (1.0 - k).powf(0.6);
+                    out.push(phase.sin() * 0.22 * env);
+                }
+                out.extend(std::iter::repeat_n(0.0, (srf * 0.012) as usize));
             }
-            out.extend(std::iter::repeat_n(0.0, (srf * 0.012) as usize));
         }
-    } else {
-        // Squelch: band-limited noise burst fading out, then a click.
-        let n = (srf * 0.16) as usize;
-        let mut lp = Biquad::new('l', 2600.0, srf, 0.7);
-        let mut hp = Biquad::new('h', 400.0, srf, 0.7);
-        for i in 0..n {
-            let k = i as f32 / n as f32;
-            let env = (1.0 - k).powi(2);
-            out.push(hp.run(lp.run(rng.next())) * 0.35 * env);
+        (PttSoundStyle::Beep, false) => {
+            static_burst(&mut out, srf, 160.0, 400.0, 2600.0, 0.35, &mut rng);
+            click(&mut out, srf, 0.3, &mut rng);
         }
-        click(&mut out, srf, 0.3, &mut rng);
+        (PttSoundStyle::Click, true) => key_thump(&mut out, srf, 210.0, 28.0, 0.6),
+        (PttSoundStyle::Click, false) => key_thump(&mut out, srf, 320.0, 20.0, 0.45),
     }
     out
 }
@@ -168,10 +194,12 @@ mod tests {
 
     #[test]
     fn ptt_clips_are_short_and_bounded() {
-        for p in [true, false] {
-            let c = ptt_clip(p, 48_000);
-            assert!(!c.is_empty() && c.len() < 48_000 / 4);
-            assert!(c.iter().all(|x| x.abs() <= 1.0));
+        for style in [PttSoundStyle::Static, PttSoundStyle::Beep, PttSoundStyle::Click] {
+            for p in [true, false] {
+                let c = ptt_clip(p, style, 48_000);
+                assert!(!c.is_empty() && c.len() < 48_000 / 3);
+                assert!(c.iter().all(|x| x.abs() <= 1.0));
+            }
         }
     }
 

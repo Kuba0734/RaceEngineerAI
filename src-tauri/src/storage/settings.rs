@@ -190,12 +190,23 @@ pub struct ListeningSettings {
     pub only_when_game_running: bool,
     /// Radio sound when the push-to-talk button is pressed and released.
     pub ptt_sound: bool,
+    pub ptt_sound_style: PttSoundStyle,
     /// Language for speech recognition (may differ from the app language).
     pub stt_language: SttLanguage,
     /// Pause (s) that ends a sentence in always-on / wake word mode.
     pub end_silence_s: f32,
     /// Utterances with fewer words are ignored unless the fast path knows them (noise filter).
     pub min_words: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum PttSoundStyle {
+    /// Key click with a short burst of radio static.
+    Static,
+    Beep,
+    Click,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -225,6 +236,7 @@ impl Default for ListeningSettings {
             allow_interrupt: false,
             only_when_game_running: true,
             ptt_sound: true,
+            ptt_sound_style: PttSoundStyle::Static,
             // Follows Settings → General → language; Auto/DE/EN only as an exception.
             stt_language: SttLanguage::App,
             end_silence_s: 0.8,
@@ -756,7 +768,15 @@ pub struct OverlaySettings {
     pub radar_size: u32,
     pub standings_rows: u32,
     pub delta_show_laps: bool,
+    pub delta_bar: bool,
+    /// Delta at which the bar is full (seconds).
+    pub delta_range_s: f32,
     pub radio_show_text: bool,
+    pub dash_show_assists: bool,
+    /// Time span of the input graph (seconds).
+    pub inputs_seconds: f32,
+    pub inputs_show_steer: bool,
+    pub laps_rows: u32,
     pub layout: Vec<WidgetLayout>,
 }
 
@@ -792,7 +812,13 @@ impl Default for OverlaySettings {
             radar_size: 180,
             standings_rows: 9,
             delta_show_laps: true,
+            delta_bar: true,
+            delta_range_s: 2.0,
             radio_show_text: true,
+            dash_show_assists: true,
+            inputs_seconds: 8.0,
+            inputs_show_steer: true,
+            laps_rows: 5,
             layout: default_layout(),
         }
     }

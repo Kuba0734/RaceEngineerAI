@@ -177,6 +177,7 @@ pub fn run() {
             commands::delete_session,
             commands::wheel_learn,
             commands::ptt,
+            commands::preview_ptt_sound,
             commands::set_overlay_edit,
             commands::save_overlay_layout,
             commands::get_overlay_edit,

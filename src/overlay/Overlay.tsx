@@ -6,11 +6,14 @@ import i18n from "@/i18n";
 import { api, inTauri, on, type RadioLogEntry, type Settings, type WidgetLayout } from "@/lib/ipc";
 import { useLive } from "@/hooks/useLive";
 import { cx } from "@/components/ui";
-import { lapTime } from "@/lib/format";
 import { TrackMap } from "./widgets/TrackMap";
 import { Radar } from "./widgets/Radar";
 import { Standings } from "./widgets/Standings";
 import { Fuel } from "./widgets/Fuel";
+import { Dash } from "./widgets/Dash";
+import { Delta } from "./widgets/Delta";
+import { Inputs } from "./widgets/Inputs";
+import { RecentLaps } from "./widgets/RecentLaps";
 
 function Widget({ layout, edit, onChange, children, title, hidden = false, panel }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean; panel: number }) {
   const x = useMotionValue(layout.x);
@@ -104,20 +107,14 @@ export default function Overlay() {
         return <div className="w-[360px]">{frame?.standings ? <Standings rows={frame.standings} compact max={o.standings_rows} animate={anim} /> : <span className="text-xs text-dim">{t("session.noStandings")}</span>}</div>;
       case "fuel":
         return <Fuel fuel={frame?.fuel} fuelNow={frame?.fuel_l ?? 0} />;
-      case "delta": {
-        const d = (frame?.delta_ms ?? 0) / 1000;
-        return (
-          <div className="min-w-48 text-center">
-            <div className={cx("num text-3xl font-semibold", d <= 0 ? "text-ok" : "text-danger")}>{d > 0 ? "+" : ""}{d.toFixed(2)}</div>
-            {o.delta_show_laps && (
-              <div className="num mt-1 flex justify-between gap-4 text-xs text-dim">
-                <span>{lapTime(frame?.last_lap_ms)}</span>
-                <span className="text-purple">{lapTime(frame?.best_lap_ms)}</span>
-              </div>
-            )}
-          </div>
-        );
-      }
+      case "delta":
+        return <Delta liveRef={ref} showLaps={o.delta_show_laps} showBar={o.delta_bar} rangeS={o.delta_range_s} />;
+      case "dash":
+        return <Dash liveRef={ref} mph={settings.units.speed === "mph"} showAssists={o.dash_show_assists} />;
+      case "inputs":
+        return <Inputs liveRef={ref} hz={hz} seconds={o.inputs_seconds} showSteer={o.inputs_show_steer} />;
+      case "laps":
+        return <RecentLaps laps={frame?.recent_laps} rows={o.laps_rows} />;
       case "radio":
         return (
           <div className={cx("flex items-center gap-3", o.radio_show_text && "w-[300px]")}>

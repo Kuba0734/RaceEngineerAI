@@ -260,6 +260,7 @@ pub struct SessionInfo {
     pub car_model: String,
     pub car_class: String,
     pub max_fuel_l: f32,
+    pub max_rpm: i32,
     pub sector_count: i32,
     pub pit_window_start_ms: i32,
     pub pit_window_end_ms: i32,
