@@ -551,7 +551,8 @@ fn run(core: Arc<Core>) {
                 let _ = core.app.emit("status", &*core.status.read());
             }
             // Overlay window lives only while a session is live (or in edit mode).
-            let want_overlay = core.settings.read().overlay.enabled && (live || core.overlay_edit.load(Ordering::Relaxed));
+            // Editing works without a game (and with the overlay switched off): sample data then.
+            let want_overlay = (core.settings.read().overlay.enabled && live) || core.overlay_edit.load(Ordering::Relaxed);
             let has_overlay = tauri::Manager::get_webview_window(&core.app, "overlay").is_some();
             if want_overlay && !has_overlay {
                 crate::input::hotkeys::with_overlay(&core.app, |_| {});

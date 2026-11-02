@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import i18n from "@/i18n";
-import { api, inTauri, on, type GamesView, type RadioLogEntry, type RuntimeStatus, type Settings, type WidgetLayout } from "@/lib/ipc";
+import { api, inTauri, on, type GamesView, type LiveFrame, type RadioLogEntry, type RuntimeStatus, type Settings, type WidgetLayout } from "@/lib/ipc";
 import { clock } from "@/lib/format";
 import { useLive } from "@/hooks/useLive";
 import { cx } from "@/components/ui";
@@ -21,6 +21,7 @@ import { ClassStandings } from "./widgets/ClassStandings";
 import { Relative } from "./widgets/Relative";
 import { PitHelper } from "./widgets/PitHelper";
 import { widgetAvailable } from "./available";
+import { previewFrame } from "./preview";
 
 function Widget({ layout, edit, onChange, children, title, hidden = false, panel, globalScale }: { layout: WidgetLayout; edit: boolean; onChange: (l: WidgetLayout) => void; children: ReactNode; title: string; hidden?: boolean; panel: number; globalScale: number }) {
   const x = useMotionValue(layout.x);
@@ -55,7 +56,26 @@ export default function Overlay() {
   const [games, setGames] = useState<GamesView | null>(null);
   const [status, setStatus] = useState<RuntimeStatus | null>(null);
   const hz = settings?.overlay.update_hz ?? 20;
-  const { ref, frame } = useLive(hz, Math.max(2, Math.round(hz / 2)), 4);
+  const { ref: liveRef, frame: liveFrame } = useLive(hz, Math.max(2, Math.round(hz / 2)), 4);
+  // Editing without a running game: sample data, so widgets can be placed and sized.
+  const preview = edit && !liveFrame?.live;
+  const previewRef = useRef<LiveFrame | null>(null);
+  const [previewShown, setPreviewShown] = useState<LiveFrame | null>(null);
+  useEffect(() => {
+    if (!preview) {
+      previewRef.current = null;
+      return;
+    }
+    let n = 0;
+    const id = window.setInterval(() => {
+      const f = previewFrame();
+      previewRef.current = f;
+      if (n++ % 5 === 0) setPreviewShown(f);
+    }, 50);
+    return () => window.clearInterval(id);
+  }, [preview]);
+  const frame = preview ? previewShown : liveFrame;
+  const ref = preview ? previewRef : liveRef;
   const visibleRef = useRef<boolean | null>(null);
 
   useEffect(() => {
@@ -95,7 +115,8 @@ export default function Overlay() {
   }, [edit]);
 
   // Show the window only while a session is live (or while editing).
-  const shouldShow = !!settings?.overlay.enabled && (!!frame?.live || edit);
+  // Live session (overlay switched on) or editing – editing also works without a game.
+  const shouldShow = (!!settings?.overlay.enabled && !!liveFrame?.live) || edit;
   useEffect(() => {
     if (!inTauri || visibleRef.current === shouldShow) return;
     visibleRef.current = shouldShow;
@@ -175,6 +196,7 @@ export default function Overlay() {
     <div className="fixed inset-0 overflow-hidden">
       {edit && (
         <div className="absolute left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-accent/60 bg-bg/95 py-1.5 pl-4 pr-1.5 text-sm text-accent">
+          {preview && <span className="rounded-full bg-data/20 px-2 py-0.5 text-xs font-semibold text-data">{t("ov.previewBadge")}</span>}
           <span>{t("ov.editBanner", { hotkey: settings.overlay.edit_hotkey })}</span>
           <button onClick={() => void api.setOverlayEdit(false)} className="rounded-full bg-accent px-4 py-1 font-semibold text-white hover:brightness-110">{t("ov.done")}</button>
         </div>

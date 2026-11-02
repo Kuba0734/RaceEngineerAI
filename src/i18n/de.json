@@ -328,11 +328,11 @@
  "ov.desc.standings": "Positionen rund um dich",
  "ov.desc.tyres": "Temperatur und Druck, grün im Zielfenster",
  "ov.done": "Fertig",
- "ov.edit": "Bearbeitungsmodus",
+ "ov.edit": "Overlay jetzt einblenden & einstellen",
  "ov.editActive": "aktiv",
  "ov.editBanner": "Bearbeitungsmodus – ziehen zum Verschieben, Mausrad zum Skalieren. {{hotkey}} zum Beenden.",
- "ov.editHint": "Ziehen zum Verschieben, Mausrad zum Skalieren. Beenden mit „Fertig“, Esc oder Hotkey.",
- "ov.editTitle": "Position & Größe im Spiel anpassen",
+ "ov.editHint": "Ohne laufendes Spiel zeigen die Widgets Beispieldaten. Ziehen zum Verschieben, Mausrad zum Skalieren. Beenden mit „Fertig“, Esc oder Hotkey.",
+ "ov.editTitle": "Overlay anzeigen und einstellen – auch ohne Spiel",
  "ov.enabled": "Overlay anzeigen",
  "ov.enabledHint": "Erscheint nur während einer Session. Stell das Spiel auf „Randloses Fenster“.",
  "ov.flagBlue": "Blaue Flagge",
@@ -809,5 +809,6 @@
  "dash.ready.runningHint": "Viel Erfolg! Funke einfach, wenn du etwas wissen willst.",
  "dash.ready.missing": "Noch {{n}} Schritt(e) bis zur ersten Fahrt",
  "dash.ready.next": "Als Nächstes: {{step}}",
- "dash.ready.fix": "Jetzt einrichten"
+ "dash.ready.fix": "Jetzt einrichten",
+ "ov.previewBadge": "Vorschau mit Beispieldaten"
 }

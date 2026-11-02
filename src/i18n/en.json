@@ -328,11 +328,11 @@
  "ov.desc.standings": "Positions around you",
  "ov.desc.tyres": "Temperature and pressure, green in the target window",
  "ov.done": "Done",
- "ov.edit": "Edit mode",
+ "ov.edit": "Show & adjust overlay now",
  "ov.editActive": "active",
  "ov.editBanner": "Edit mode – drag to move, wheel to scale. {{hotkey}} to finish.",
- "ov.editHint": "Drag to move, wheel to scale. Finish with \"Done\", Esc or hotkey.",
- "ov.editTitle": "Adjust position & size in game",
+ "ov.editHint": "Without a running game the widgets show sample data. Drag to move, mouse wheel to resize. Finish with “Done”, Esc or the hotkey.",
+ "ov.editTitle": "Show and adjust the overlay – also without a game",
  "ov.enabled": "Show overlay",
  "ov.enabledHint": "Only shows during a session. Set the game to borderless window.",
  "ov.flagBlue": "Blue flag",
@@ -809,5 +809,6 @@
  "dash.ready.runningHint": "Good luck! Just call on the radio when you need something.",
  "dash.ready.missing": "{{n}} step(s) left before your first drive",
  "dash.ready.next": "Next: {{step}}",
- "dash.ready.fix": "Set it up now"
+ "dash.ready.fix": "Set it up now",
+ "ov.previewBadge": "Preview with sample data"
 }
