@@ -51,6 +51,8 @@ pub struct SessionData {
     pub team_racing: bool,
     /// Tyre compound indices that are wet tyres (`DriverInfo.DriverTires`).
     pub wet_compounds: Vec<i32>,
+    /// `WeekendOptions.FastRepairsLimit: unlimited`.
+    pub fast_repairs_unlimited: bool,
 }
 
 /// `SessionType` strings as written by the sim.
@@ -125,6 +127,7 @@ pub fn parse(src: &str) -> SessionData {
         drivers,
         incident_limit: limit(&y, "WeekendInfo.WeekendOptions.IncidentLimit").map(|v| v as i32).filter(|v| *v > 0),
         team_racing: flag(&y, "WeekendInfo.TeamRacing"),
+        fast_repairs_unlimited: y.str("WeekendInfo.WeekendOptions.FastRepairsLimit").is_some_and(|v| v.eq_ignore_ascii_case("unlimited")),
         wet_compounds: y
             .list("DriverInfo.DriverTires")
             .iter()
@@ -181,6 +184,7 @@ WeekendInfo:
  TeamRacing: 0
  WeekendOptions:
   IncidentLimit: 17
+  FastRepairsLimit: unlimited
 SessionInfo:
  Sessions:
  - SessionNum: 0
@@ -239,6 +243,7 @@ DriverInfo:
         let me = s.driver(2).unwrap();
         assert_eq!(me.car_number, 7);
         assert_eq!(s.incident_limit, Some(17));
+        assert!(s.fast_repairs_unlimited);
         assert!(!s.team_racing);
         assert_eq!(s.wet_compounds, vec![1]);
         assert!(me.races());

@@ -62,6 +62,8 @@ mod pace_bits {
 
 /// `FastRepairAvailable` value for "unlimited".
 const UNLIMITED_FAST_REPAIRS: i32 = 255;
+/// `irsdk_PaceMode::irsdk_PaceModeNotPacing`
+const PACE_MODE_NOT_PACING: i32 = 4;
 const KPA_PER_PSI: f32 = 6.894_757;
 /// Seconds standing in the pit stall before the tyre values are taken (sim updates them on arrival).
 const TYRE_CHECK_DELAY_S: f64 = 1.0;
@@ -519,14 +521,17 @@ impl IRacingProvider {
             oil_temp_c: self.f("OilTemp"),
             water_hot: warn & engine_bits::WATER_TEMP != 0,
             oil_hot: warn & engine_bits::OIL_TEMP != 0,
-            oil_pressure_low: warn & engine_bits::OIL_PRESSURE != 0,
-            fuel_pressure_low: warn & engine_bits::FUEL_PRESSURE != 0,
+            // With the engine off (stalled, in the box) the sim reports oil and fuel pressure
+            // warnings as well (seen live: EngineWarnings=14) – only real while running.
+            oil_pressure_low: warn & engine_bits::OIL_PRESSURE != 0 && warn & engine_bits::STALLED == 0,
+            fuel_pressure_low: warn & engine_bits::FUEL_PRESSURE != 0 && warn & engine_bits::STALLED == 0,
             stalled: warn & engine_bits::STALLED != 0,
         };
         let repair = self.vars.contains_key("PitRepairLeft").then(|| Repair {
             mandatory_s: self.f("PitRepairLeft"),
             optional_s: self.f("PitOptRepairLeft"),
-            fast_repairs_left: self.num("FastRepairAvailable").map(|v| v as i32).filter(|v| *v != UNLIMITED_FAST_REPAIRS),
+            // Offline the sim reports 0 available although `FastRepairsLimit` is unlimited.
+            fast_repairs_left: self.num("FastRepairAvailable").map(|v| v as i32).filter(|v| *v != UNLIMITED_FAST_REPAIRS && !self.data.fast_repairs_unlimited),
         });
         let pit_menu = self.vars.get("PitSvFlags").and_then(|v| self.row.bits(v, 0)).map(|b| PitMenu {
             fuel_l: if b & pit_bits::FUEL != 0 { self.f("PitSvFuel") } else { 0.0 },
@@ -539,8 +544,11 @@ impl IRacingProvider {
             if self.data.team_racing { self.i("PlayerCarTeamIncidentCount") } else { self.i("PlayerCarMyIncidentCount") }
         });
         let pace = if player >= 0 { self.vars.get("CarIdxPaceFlags").and_then(|v| self.row.bits(v, player as usize)).unwrap_or(0) } else { 0 };
+        // The sim also sets "one lap to green" in test sessions without a pace car (seen live);
+        // it only means a restart while the field is paced.
+        let pacing_now = self.vars.contains_key("PaceMode") && self.i("PaceMode") != PACE_MODE_NOT_PACING;
         let pacing = Pacing {
-            green_next_lap: bits & flags::ONE_LAP_TO_GREEN != 0,
+            green_next_lap: bits & flags::ONE_LAP_TO_GREEN != 0 && pacing_now,
             free_pass: pace & pace_bits::FREE_PASS != 0,
             waved_around: pace & pace_bits::WAVED_AROUND != 0,
             end_of_line: pace & pace_bits::END_OF_LINE != 0,
@@ -935,6 +943,7 @@ DriverInfo:
             .i32("PlayerCarMyIncidentCount", 0, 1, 6)
             .bool("WeatherDeclaredWet", 0, 1, true)
             .bits("SessionFlags", 0x0000_0204)
+            .i32("PaceMode", 0, 1, 1)
             .i32("PlayerTrackSurface", 0, 1, 0);
         let (_, out) = run(&b);
         let f = out.iter().find_map(|e| if let ProviderEvent::Frame(f) = e { Some(f) } else { None }).unwrap();
@@ -949,6 +958,17 @@ DriverInfo:
         assert!(f.pacing.green_next_lap);
         // Four wheels off: the lap is no longer valid (track limits).
         assert!(!f.lap_valid);
+    }
+
+    #[test]
+    fn engine_off_and_test_session_flags_stay_quiet() {
+        // Live values from a test session, car parked in the box.
+        let mut b = base();
+        b.bits("EngineWarnings", 14).bits("SessionFlags", 268_698_112).i32("PaceMode", 0, 1, 4);
+        let (_, out) = run(&b);
+        let f = out.iter().find_map(|e| if let ProviderEvent::Frame(f) = e { Some(f) } else { None }).unwrap();
+        assert!(f.engine.stalled && !f.engine.oil_pressure_low && !f.engine.fuel_pressure_low);
+        assert!(!f.pacing.green_next_lap);
     }
 
     #[test]

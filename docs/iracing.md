@@ -93,6 +93,19 @@ iRacing teilt Strecken in viele Zeitsektoren (`SplitTimeInfo`). Die Logik arbeit
 | `LapCompleted` | **-1** bis zur ersten Überfahrt der Linie aus der Box → wird auf 0 begrenzt |
 | `SessionFlags` in der Box | `0x10040000` = startHidden + servicible → keine Flagge |
 
+### Zweiter Live-Test (2026-11-02, gleiche Session, Auto in der Box)
+
+| Punkt | Ergebnis |
+|---|---|
+| `DriverInfo.DriverTires` | vorhanden: `TireIndex 0 = Hard`, `1 = Wet` → Regenreifen-Erkennung bestätigt |
+| `WeekendOptions.IncidentLimit` | `unlimited` → kein Limit |
+| `FastRepairAvailable` | `0`, obwohl `FastRepairsLimit: unlimited` → Limit aus der YAML hat Vorrang |
+| `EngineWarnings` | `14` mit stehendem Motor (Öldruck + Spritdruck + abgewürgt) → Druckwarnungen nur bei laufendem Motor |
+| `SessionFlags` | `0x10040200`: „one lap to green“ auch im Test ohne Pace Car → nur zusammen mit `PaceMode` ≠ 4 (NotPacing) |
+| Reifenwerte in der Box | `tempCL/CM/CR` und `wearL/M/R` plausibel (z. B. LF 86/81/71 °C, 94–97 % Profil) |
+| `IsReplayPlaying` | `1` außerhalb des Autos → Status „Replay“, keine Ansagen |
+| `CarSetup.TiresAero.*.LastHotPressure` | in der YAML vorhanden (z. B. `159 kPa`) – möglicher Weg zu Heißdrücken nach dem Stint, noch nicht genutzt |
+
 ### Noch offen
 
 1. Vorzeichen von `Yaw` (Karte gespiegelt?) – mit `IRACING_LIVE_SECONDS` eine Runde auf einer bekannten Strecke fahren. Nürburgring GP wird im Uhrzeigersinn gefahren.
