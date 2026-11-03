@@ -9,6 +9,7 @@ import type { GamesView } from "./bindings/GamesView";
 import type { KeyStatus } from "./bindings/KeyStatus";
 import type { KeyTest } from "./bindings/KeyTest";
 import type { LapRow } from "./bindings/LapRow";
+import type { ClassTargets } from "./bindings/ClassTargets";
 import type { LiveFrame } from "./bindings/LiveFrame";
 import type { ModelStatus } from "./bindings/ModelStatus";
 import type { PttSoundStyle } from "./bindings/PttSoundStyle";
@@ -54,6 +55,8 @@ export const api = {
   previewVoice: (role: VoiceRole, text?: string) => invoke<void>("preview_voice", { role, text: text ?? null }),
   getGames: () => invoke<GamesView>("get_games"),
   getStatus: () => invoke<RuntimeStatus>("get_status"),
+  remoteUrls: () => invoke<string[]>("remote_urls"),
+  carClassDefaults: () => invoke<Record<string, ClassTargets>>("car_class_defaults"),
   accBroadcastingStatus: () => invoke<BroadcastingStatus>("acc_broadcasting_status"),
   accBroadcastingApply: () => invoke<string | null>("acc_broadcasting_apply"),
   apiKeyStatus: () => invoke<KeyStatus>("api_key_status"),

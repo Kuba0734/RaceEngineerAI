@@ -84,17 +84,30 @@ impl Synth {
                 return None;
             }
             let f = models::voice_files(&v);
-            let config = sherpa_onnx::OfflineTtsConfig {
-                model: sherpa_onnx::OfflineTtsModelConfig {
-                    vits: sherpa_onnx::OfflineTtsVitsModelConfig {
-                        model: Some(f.model.to_string_lossy().into_owned()),
-                        tokens: Some(f.tokens.to_string_lossy().into_owned()),
-                        data_dir: Some(f.data_dir.to_string_lossy().into_owned()),
+            let path = |p: &std::path::Path| Some(p.to_string_lossy().into_owned());
+            let model = if v.is_kokoro() {
+                sherpa_onnx::OfflineTtsModelConfig {
+                    kokoro: sherpa_onnx::OfflineTtsKokoroModelConfig {
+                        model: path(&f.model),
+                        voices: path(&f.voices),
+                        tokens: path(&f.tokens),
+                        data_dir: path(&f.data_dir),
+                        lexicon: Some(f.lexicon.clone()),
+                        length_scale: 1.0,
                         ..Default::default()
                     },
                     num_threads: 2,
                     ..Default::default()
-                },
+                }
+            } else {
+                sherpa_onnx::OfflineTtsModelConfig {
+                    vits: sherpa_onnx::OfflineTtsVitsModelConfig { model: path(&f.model), tokens: path(&f.tokens), data_dir: path(&f.data_dir), ..Default::default() },
+                    num_threads: 2,
+                    ..Default::default()
+                }
+            };
+            let config = sherpa_onnx::OfflineTtsConfig {
+                model,
                 max_num_sentences: 1,
                 ..Default::default()
             };

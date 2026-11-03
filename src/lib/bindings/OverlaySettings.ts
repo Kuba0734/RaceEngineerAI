@@ -29,4 +29,12 @@ class_rows: number, class_rows_other: number, class_show_header: boolean, class_
 /**
  * Relative: cars on each side of the player.
  */
-relative_rows: number, relative_show_header: boolean, relative_show_footer: boolean, relative_show_license: boolean, relative_show_irating: boolean, pit_show_menu: boolean, pit_show_exit: boolean, radar_show_distance: boolean, layout: Array<WidgetLayout>, };
+relative_rows: number, relative_show_header: boolean, relative_show_footer: boolean, relative_show_license: boolean, relative_show_irating: boolean, pit_show_menu: boolean, pit_show_exit: boolean, 
+/**
+ * The pit helper appears only while in the pit lane.
+ */
+pit_only_in_pits: boolean, radar_show_distance: boolean, map_show_numbers: boolean, map_class_colors: boolean, 
+/**
+ * Turns the map (degrees, clockwise).
+ */
+map_rotation_deg: number, map_line_width: number, map_dot_size: number, map_show_pits: boolean, layout: Array<WidgetLayout>, };

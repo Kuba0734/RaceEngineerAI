@@ -7,7 +7,7 @@ import type { GameDef } from "@/lib/bindings/GameDef";
 import type { GameSettings } from "@/lib/bindings/GameSettings";
 import { Badge, Button, Card, Field, NumberInput, Toggle, cx, useAsync } from "@/components/ui";
 
-const DEFAULT_GAME: GameSettings = { enabled: true, broadcasting_port: 0, broadcasting_password: "", mandatory_stops: 0, pit_window_open_min: 0, pit_window_close_min: 0 };
+const DEFAULT_GAME: GameSettings = { enabled: true, broadcasting_port: 0, broadcasting_password: "", auto_pit_fuel: false, record_game_telemetry: false, mandatory_stops: 0, pit_window_open_min: 0, pit_window_close_min: 0 };
 
 function AccSetup() {
   const { t } = useTranslation();
@@ -99,6 +99,16 @@ function GameCard({ g, i }: { g: GameDef; i: number }) {
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-dim">
                 {hints.map((h) => <li key={h}>{h}</li>)}
               </ul>
+            )}
+            {g.capabilities.hasTrackMap && (
+              <div className="mt-3">
+                <Toggle checked={gs.record_game_telemetry} onChange={(v) => set((x) => ({ ...x, record_game_telemetry: v }))} label={t("games.recordTelemetry")} hint={t("games.recordTelemetryHint")} />
+              </div>
+            )}
+            {g.capabilities.hasPitControl && (
+              <div className="mt-3">
+                <Toggle checked={gs.auto_pit_fuel} onChange={(v) => set((x) => ({ ...x, auto_pit_fuel: v }))} label={t("games.autoPitFuel")} hint={t("games.autoPitFuelHint")} />
+              </div>
             )}
             {!g.capabilities.hasPitWindow && (
               <div className="mt-3 grid grid-cols-3 gap-3">

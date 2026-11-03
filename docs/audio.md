@@ -25,3 +25,9 @@ Bewusst **nicht** aufgenommen: `en_US-ryan` (CC BY-NC-SA, nicht kommerziell), `e
 - Englisches Zipformer-KWS-Modell (GigaSpeech). Keywords müssen als BPE-Tokens übergeben werden.
 - Vorschläge („RADIO“, „HEY CREW“, „BOX“, …) sind mit dem SentencePiece-Modell des Pakets vortokenisiert: `resources/wakewords.json`.
 - Eigene Codewörter: Greedy-Longest-Match über `tokens.txt`. Für RADIO / HEY CREW / BOX identisch mit SentencePiece, für manche Wörter abweichend (z. B. ENGINEER) – funktioniert, kann aber schlechter erkannt werden.
+
+## Kokoro (Englisch)
+- Modell `kokoro-multi-lang-v1_0` (Apache-2.0) aus den `tts-models`-Releases, fp32 (die int8-/fp16-Varianten sind mit der eingebauten Laufzeit ungeprüft).
+- Konfiguration wie im offiziellen Beispiel (k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/kokoro.html): `model.onnx`, `voices.bin`, `tokens.txt`, `espeak-ng-data`, Lexikon `lexicon-us-en.txt,lexicon-zh.txt` – auch für die britischen Stimmen.
+- Sprecher-IDs aus derselben Seite (0–19 US, 20–27 UK, z. B. 26 = bm_george). In der App sind nur die englischen auswählbar.
+- **Live prüfen:** Laden und Klang in der App.

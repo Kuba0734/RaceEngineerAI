@@ -4,4 +4,12 @@ export type Capabilities = { hasNativeSpotter: boolean, hasWeatherForecast: bool
 /**
  * Estimated times per car, ratings and classes: relative and class standings.
  */
-hasRelative: boolean, };
+hasRelative: boolean, hasStartLights: boolean, hasRainTrend: boolean, 
+/**
+ * The app can set the game's pit menu.
+ */
+hasPitControl: boolean, 
+/**
+ * A track map from lap positions (no live world coordinates needed).
+ */
+hasTrackMap: boolean, };

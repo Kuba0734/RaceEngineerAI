@@ -7,6 +7,7 @@ pub mod error;
 pub mod games;
 pub mod input;
 pub mod race;
+pub mod remote;
 pub mod replay;
 pub mod runtime;
 pub mod storage;
@@ -64,6 +65,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let settings = settings::load(&paths::settings_path());
+            crate::games::cars::set_overrides(&settings.car_classes);
             let shared_settings = Arc::new(RwLock::new(settings.clone()));
             // Audio out + TTS.
             let audio = match audio::mixer::AudioOut::start(settings.voices.output_device.clone()) {
@@ -140,12 +142,15 @@ pub fn run() {
                     ai::router::ensure_models(&c, &key).await;
                 });
             }
+            remote::start(core.clone());
             runtime::start(core);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_settings,
             commands::save_settings,
+            commands::car_class_defaults,
+            commands::remote_urls,
             commands::reset_settings,
             commands::get_catalog,
             commands::preview_call,

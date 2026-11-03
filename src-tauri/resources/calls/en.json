@@ -471,13 +471,13 @@
  ],
  "race.summary": {
   "default": [
-   "P{position}{gained_part}. Best lap {best}.{loss_part}"
+   "P{position}{gained_part}. Best lap {best}.{loss_part}{irating_part}{incidents_part}"
   ],
   "motivating": [
-   "P{position}{gained_part}! Best lap {best}.{loss_part} Great race!"
+   "P{position}{gained_part}! Best lap {best}.{loss_part}{irating_part}{incidents_part} Great race!"
   ],
   "british": [
-   "P{position}{gained_part}. Best lap {best}.{loss_part} Decent work."
+   "P{position}{gained_part}. Best lap {best}.{loss_part}{irating_part}{incidents_part} Decent work."
   ]
  },
  "race.gained_part:gained": [
@@ -650,5 +650,49 @@
  "weather.wet_declared": [
   "Race control has declared the track wet, wet tyres allowed.",
   "Track's officially wet, wets are allowed."
+ ],
+ "race.start_lights:ready": [
+  "Lights are coming, focus.",
+  "Here we go, stay focused."
+ ],
+ "race.start_lights:go": [
+  "Green, green, green!",
+  "Go, go, go!"
+ ],
+ "traffic.faster_class": [
+  "{class} coming from behind, {gap} seconds.",
+  "Faster class behind you, {class}, {gap} seconds."
+ ],
+ "traffic.slower_ahead": [
+  "Slower car ahead, {class}, {gap} seconds.",
+  "{class} ahead, {gap} seconds, plan the pass."
+ ],
+ "weather.trend:rain_heavier": [
+  "Rain is getting heavier.",
+  "More rain, the track is getting wetter."
+ ],
+ "weather.trend:rain_lighter": [
+  "Rain is easing off.",
+  "Rain getting lighter."
+ ],
+ "weather.trend:track_wetter": [
+  "Track is getting wetter.",
+  "More water on track."
+ ],
+ "weather.trend:track_drying": [
+  "Track is drying.",
+  "It's drying out, the line is coming."
+ ],
+ "race.irating_part:up": [
+  " iRating forecast: plus {n}."
+ ],
+ "race.irating_part:down": [
+  " iRating forecast: minus {n}."
+ ],
+ "race.incidents_part:clean": [
+  " Zero incidents, clean race."
+ ],
+ "race.incidents_part:some": [
+  " {n} incidents."
  ]
 }

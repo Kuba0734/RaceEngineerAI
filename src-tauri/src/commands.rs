@@ -36,6 +36,7 @@ pub fn save_settings(core: CoreState, settings: Settings) -> AppResult<()> {
     let old = core.settings.read().clone();
     *core.settings.write() = settings.clone();
     core.engine.lock().refresh(&settings);
+    crate::games::cars::set_overrides(&settings.car_classes);
     core.save_settings();
     // Voice changes → reload voices and re-render spotter clips.
     let voice_changed = serde_json::to_string(&old.voices).ok() != serde_json::to_string(&settings.voices).ok()
@@ -149,6 +150,18 @@ pub struct GamesView {
 #[tauri::command]
 pub fn get_games(core: CoreState) -> GamesView {
     GamesView { games: core.games.clone(), status: core.status.read().clone() }
+}
+
+/// Addresses of the LAN dashboard to open on a phone or second screen.
+#[tauri::command]
+pub fn remote_urls(core: CoreState) -> Vec<String> {
+    crate::remote::urls(core.settings.read().remote.port)
+}
+
+/// Default target windows of the known car classes.
+#[tauri::command]
+pub fn car_class_defaults() -> std::collections::BTreeMap<String, crate::storage::settings::ClassTargets> {
+    crate::games::cars::class_defaults()
 }
 
 #[tauri::command]

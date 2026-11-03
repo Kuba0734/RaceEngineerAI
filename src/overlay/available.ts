@@ -4,9 +4,9 @@ import type { Capabilities } from "@/lib/bindings/Capabilities";
 export function widgetAvailable(id: string, caps: Capabilities | undefined): boolean {
   if (!caps) return true;
   switch (id) {
-    // Needs real car positions; iRacing has none live.
+    // Real car positions, or positions on a map built from lap distance (iRacing).
     case "map":
-      return caps.hasCarCoordinates;
+      return caps.hasCarCoordinates || caps.hasTrackMap;
     // Games with estimated times and ratings get the class standings and relative instead.
     case "standings":
       return !caps.hasRelative;

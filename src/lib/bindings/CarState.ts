@@ -24,4 +24,12 @@ number_text: string, irating?: number, license?: string, license_color?: string,
 /**
  * Time the car needs from the line to its current spot (s): basis of relative gaps.
  */
-est_time_s?: number, };
+est_time_s?: number, 
+/**
+ * Incident points of the driver in this session.
+ */
+incidents?: number, 
+/**
+ * Lap time estimate of the car's class (s): tells faster and slower classes apart.
+ */
+class_est_lap_s?: number, };

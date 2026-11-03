@@ -167,6 +167,7 @@ export default function OverlayPage() {
           </WidgetCard>
         )}
         <WidgetCard id="pit" w={widget("pit")} onW={(p) => setW("pit", p)}>
+          <Toggle checked={o.pit_only_in_pits} onChange={(v) => set({ pit_only_in_pits: v })} label={t("ov.pitOnlyInPits")} />
           <Toggle checked={o.pit_show_menu} onChange={(v) => set({ pit_show_menu: v })} label={t("ov.pitMenu")} />
           <Toggle checked={o.pit_show_exit} onChange={(v) => set({ pit_show_exit: v })} label={t("ov.pitExit")} />
         </WidgetCard>
@@ -174,6 +175,18 @@ export default function OverlayPage() {
           <Field label={t("ov.size")}>
             <Slider value={o.map_size} min={160} max={480} step={10} onChange={(v) => set({ map_size: v })} format={(v) => `${v} px`} />
           </Field>
+          <Field label={t("ov.mapRotation")}>
+            <Slider value={o.map_rotation_deg} min={0} max={345} step={15} onChange={(v) => set({ map_rotation_deg: v })} format={(v) => `${v}°`} />
+          </Field>
+          <Field label={t("ov.mapLine")}>
+            <Slider value={o.map_line_width} min={2} max={16} step={1} onChange={(v) => set({ map_line_width: v })} format={(v) => `${v} px`} />
+          </Field>
+          <Field label={t("ov.mapDot")}>
+            <Slider value={o.map_dot_size} min={2} max={10} step={0.5} onChange={(v) => set({ map_dot_size: v })} format={(v) => `${v} px`} />
+          </Field>
+          <Toggle checked={o.map_show_numbers} onChange={(v) => set({ map_show_numbers: v })} label={t("ov.mapNumbers")} />
+          <Toggle checked={o.map_class_colors} onChange={(v) => set({ map_class_colors: v })} label={t("ov.mapClassColors")} />
+          <Toggle checked={o.map_show_pits} onChange={(v) => set({ map_show_pits: v })} label={t("ov.mapPits")} />
         </WidgetCard>}
         {avail("standings") && (
           <WidgetCard id="standings" w={widget("standings")} onW={(p) => setW("standings", p)}>

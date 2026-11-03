@@ -35,6 +35,10 @@ pub struct Driver {
     pub license_color: Option<String>,
     pub class_id: i32,
     pub class_color: Option<String>,
+    /// `CurDriverIncidentCount`
+    pub incidents: Option<i32>,
+    /// `CarClassEstLapTime` (s)
+    pub class_est_lap_s: Option<f32>,
 }
 
 impl Driver {
@@ -61,6 +65,8 @@ pub struct SessionData {
     pub est_lap_s: f32,
     /// `DriverPitTrkPct`: where the player's pit box is along the lap.
     pub pit_box_pct: Option<f32>,
+    /// `WeekendInfo.TrackNumTurns`
+    pub track_turns: Option<i32>,
     /// `WeekendInfo.TrackPitSpeedLimit` ("80.00 kph").
     pub pit_speed_limit_kmh: Option<f32>,
     pub team_racing: bool,
@@ -165,6 +171,8 @@ pub fn parse(src: &str) -> SessionData {
             license_color: d.str("LicColor").and_then(hex_color),
             class_id: d.num("CarClassID").unwrap_or(0.0) as i32,
             class_color: d.str("CarClassColor").and_then(hex_color),
+            incidents: d.num("CurDriverIncidentCount").map(|v| v as i32),
+            class_est_lap_s: d.num("CarClassEstLapTime").map(|v| v as f32).filter(|v| *v > 0.0),
         })
         .collect();
     let max_l = y.num("DriverInfo.DriverCarFuelMaxLtr").unwrap_or(0.0);
@@ -183,6 +191,7 @@ pub fn parse(src: &str) -> SessionData {
         incident_limit: limit(&y, "WeekendInfo.WeekendOptions.IncidentLimit").map(|v| v as i32).filter(|v| *v > 0),
         team_racing: flag(&y, "WeekendInfo.TeamRacing"),
         est_lap_s: y.num("DriverInfo.DriverCarEstLapTime").unwrap_or(0.0) as f32,
+        track_turns: y.num("WeekendInfo.TrackNumTurns").map(|v| v as i32).filter(|v| *v > 0),
         pit_box_pct: y.num("DriverInfo.DriverPitTrkPct").map(|v| v as f32).filter(|v| (0.0..=1.0).contains(v)),
         pit_speed_limit_kmh: y.str("WeekendInfo.TrackPitSpeedLimit").and_then(|v| {
             let n = yaml::leading_number(v)? as f32;

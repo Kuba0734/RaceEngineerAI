@@ -57,6 +57,39 @@ pub struct Settings {
     pub selected_game: String,
     /// Stored profiles of the other games.
     pub profiles: BTreeMap<String, GameProfile>,
+    /// Own target windows per car class (replace the defaults of `cars.json`).
+    #[serde(default)]
+    pub car_classes: BTreeMap<String, ClassTargets>,
+    #[serde(default)]
+    pub remote: RemoteSettings,
+}
+
+/// Dashboard for a phone or second screen in the local network (no cloud).
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(default)]
+#[ts(export)]
+pub struct RemoteSettings {
+    pub enabled: bool,
+    pub port: u16,
+    /// Empty = no PIN.
+    pub pin: String,
+}
+
+impl Default for RemoteSettings {
+    fn default() -> Self {
+        Self { enabled: false, port: 8765, pin: String::new() }
+    }
+}
+
+/// Tyre and brake targets of a car class (hot pressures in psi, temperatures in °C).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ClassTargets {
+    pub dry: [f32; 2],
+    pub wet: [f32; 2],
+    pub core_temp_cold: f32,
+    pub core_temp_hot: f32,
+    pub brake_temp_hot: f32,
 }
 
 /// Everything that can differ per game. The selected game's values live directly in
@@ -143,6 +176,8 @@ impl Default for Settings {
             games: BTreeMap::new(),
             selected_game: "acc".into(),
             profiles: BTreeMap::new(),
+            car_classes: BTreeMap::new(),
+            remote: RemoteSettings::default(),
         }
     }
 }
@@ -802,7 +837,16 @@ pub struct OverlaySettings {
     pub relative_show_irating: bool,
     pub pit_show_menu: bool,
     pub pit_show_exit: bool,
+    /// The pit helper appears only while in the pit lane.
+    pub pit_only_in_pits: bool,
     pub radar_show_distance: bool,
+    pub map_show_numbers: bool,
+    pub map_class_colors: bool,
+    /// Turns the map (degrees, clockwise).
+    pub map_rotation_deg: f32,
+    pub map_line_width: f32,
+    pub map_dot_size: f32,
+    pub map_show_pits: bool,
     pub layout: Vec<WidgetLayout>,
 }
 
@@ -871,7 +915,14 @@ impl Default for OverlaySettings {
             relative_show_irating: true,
             pit_show_menu: true,
             pit_show_exit: true,
+            pit_only_in_pits: true,
             radar_show_distance: true,
+            map_show_numbers: false,
+            map_class_colors: true,
+            map_rotation_deg: 0.0,
+            map_line_width: 6.0,
+            map_dot_size: 4.0,
+            map_show_pits: true,
             layout: default_layout(),
         }
     }
@@ -945,6 +996,10 @@ pub struct GameSettings {
     pub enabled: bool,
     pub broadcasting_port: u16,
     pub broadcasting_password: String,
+    /// Enter the fuel needed into the game's pit menu on the way into the pits (games that allow it).
+    pub auto_pit_fuel: bool,
+    /// Let the game record its own telemetry files while driving (iRacing: exact track maps).
+    pub record_game_telemetry: bool,
     /// Rules the game does not report itself (e.g. iRacing series rules): 0 = none.
     pub mandatory_stops: u32,
     /// Pit window in minutes from the race start (open < close; 0/0 = none).
@@ -954,7 +1009,7 @@ pub struct GameSettings {
 
 impl Default for GameSettings {
     fn default() -> Self {
-        Self { enabled: true, broadcasting_port: 0, broadcasting_password: String::new(), mandatory_stops: 0, pit_window_open_min: 0.0, pit_window_close_min: 0.0 }
+        Self { enabled: true, broadcasting_port: 0, broadcasting_password: String::new(), auto_pit_fuel: false, record_game_telemetry: false, mandatory_stops: 0, pit_window_open_min: 0.0, pit_window_close_min: 0.0 }
     }
 }
 

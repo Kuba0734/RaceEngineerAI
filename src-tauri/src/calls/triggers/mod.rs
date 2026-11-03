@@ -104,6 +104,8 @@ pub struct Memory {
     pub last_incidents: Option<i32>,
     pub last_pacing: crate::games::provider::Pacing,
     pub wet_declared: Option<bool>,
+    /// Weather samples for the rain trend: (time s, precipitation, wetness level).
+    pub weather_samples: std::collections::VecDeque<(f64, f32, i32)>,
     // weather
     pub last_rain: Option<(RainIntensity, RainIntensity, RainIntensity)>,
     pub last_grip: Option<TrackGrip>,
@@ -152,6 +154,7 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
     session::tick(ctx, mem);
     flags::tick(ctx, mem);
     race::tick(ctx, mem);
+    race::traffic(ctx);
     fuel::tick(ctx, mem);
     car::tick(ctx, mem);
     weather::tick(ctx, mem);
@@ -168,7 +171,7 @@ pub fn on_frame(state: &RaceState, mem: &mut Memory) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::games::provider::{SessionPhase, SessionType, SimStatus};
+    use crate::games::provider::{CarState, SessionPhase, SessionType, SimStatus};
 
     fn run(state: &mut RaceState, settings: &Settings, engine: &CallEngine, mem: &mut Memory, from_s: u64, to_s: u64) -> Vec<String> {
         let mut ids = Vec::new();
@@ -299,6 +302,43 @@ mod tests {
         s.frame.tyre_check = Some(check);
         assert!(calls(&s, &mut mem, car::tick).iter().any(|c| c == "tyre.pressure_next_stint"));
         assert!(!calls(&s, &mut mem, car::tick).iter().any(|c| c == "tyre.pressure_next_stint"), "once per stop");
+    }
+
+    #[test]
+    fn start_lights_and_rain_trend() {
+        let s = loaded_race();
+        let mut mem = Memory::new();
+        let ready = RaceEvent::StartLight(crate::games::provider::StartLight::Ready);
+        let set = RaceEvent::StartLight(crate::games::provider::StartLight::Set);
+        let go = RaceEvent::StartLight(crate::games::provider::StartLight::Go);
+        assert_eq!(calls(&s, &mut mem, |c, m| race::on_event(c, m, &ready)), vec!["race.start_lights:ready"]);
+        assert!(calls(&s, &mut mem, |c, m| race::on_event(c, m, &set)).is_empty());
+        assert_eq!(calls(&s, &mut mem, |c, m| race::on_event(c, m, &go)), vec!["race.start_lights:go"]);
+
+        // Rain from 0.1 to 0.4 over six minutes: "heavier", once.
+        let mut s = loaded_race();
+        s.frame.weather.wetness_level = Some(2);
+        let mut said = Vec::new();
+        for k in 0..20u64 {
+            s.frame.t_ms = k * 20_000;
+            s.frame.weather.rain_amount = Some(0.1 + 0.3 * (k as f32 / 19.0));
+            said.extend(calls(&s, &mut mem, weather::tick).into_iter().filter(|c| c.starts_with("weather.trend")));
+        }
+        assert_eq!(said, vec!["weather.trend:rain_heavier"]);
+    }
+
+    #[test]
+    fn faster_class_from_behind() {
+        let mut s = loaded_race();
+        s.session.est_lap_s = Some(100.0);
+        let car = |id: i32, spline: f32, est: f32, class_id: i32, lap: f32, me: bool| CarState {
+            id, laps: 3, spline, est_time_s: Some(est), is_player: me, location: crate::games::provider::CarLocation::Track,
+            class_id, class_name: if class_id == 1 { "GT3".into() } else { "LMP2".into() }, class_est_lap_s: Some(lap), ..Default::default()
+        };
+        s.cars = vec![car(0, 0.5, 50.0, 1, 100.0, true), car(1, 0.49, 48.5, 2, 92.0, false), car(2, 0.53, 53.0, 1, 100.5, false)];
+        let mut mem = Memory::new();
+        let out = calls(&s, &mut mem, |c, _| race::traffic(c));
+        assert_eq!(out, vec!["traffic.faster_class"]);
     }
 
     #[test]

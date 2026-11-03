@@ -2,7 +2,7 @@
 
 use super::{Ctx, Memory};
 use crate::calls::engine::CallRequest;
-use crate::games::provider::CarState;
+use crate::games::provider::{CarState, StartLight};
 use crate::race::state::RaceEvent;
 use crate::storage::settings::SessionKind;
 
@@ -23,7 +23,54 @@ fn sector_word(ctx: &Ctx, k: usize) -> String {
     ctx.fmt.ordinal_sector(k)
 }
 
+/// Start lights: "ready" when they come on, the call on green. "Set" stays silent so the
+/// "go" is not delayed by a call that is still playing.
+fn start_lights(ctx: &mut Ctx, light: StartLight) {
+    let sub = match light {
+        StartLight::Ready => "ready",
+        StartLight::Go => "go",
+        StartLight::Set | StartLight::Off => return,
+    };
+    ctx.push(CallRequest::new("race.start_lights").variant(sub));
+}
+
+/// Multi-class traffic around the player, from the relative (time gap on track) and the class
+/// lap time estimates: a faster class closing from behind, a slower class just ahead.
+pub fn traffic(ctx: &mut Ctx) {
+    let s = ctx.state;
+    let Some(me) = s.player_car() else { return };
+    let Some(my_lap) = me.class_est_lap_s else { return };
+    if s.frame.in_pit_lane {
+        return;
+    }
+    let behind_s = ctx.th("traffic.faster_class", "behind_s") as f32;
+    let faster_pct = ctx.th("traffic.faster_class", "speed_diff_pct") as f32 / 100.0;
+    let ahead_s = ctx.th("traffic.slower_ahead", "ahead_s") as f32;
+    let slower_pct = ctx.th("traffic.slower_ahead", "speed_diff_pct") as f32 / 100.0;
+    for r in s.relative(4) {
+        if r.is_player || r.in_pits {
+            continue;
+        }
+        let Some(c) = s.car(r.id) else { continue };
+        let Some(lap) = c.class_est_lap_s else { continue };
+        if c.class_id == me.class_id {
+            continue;
+        }
+        let class = if c.class_name.is_empty() { c.car_brand.clone() } else { c.class_name.clone() };
+        let gap = ctx.fmt.num(r.gap_s.abs(), 1);
+        if r.gap_s < 0.0 && -r.gap_s <= behind_s && lap < my_lap * (1.0 - faster_pct) {
+            ctx.push(CallRequest::new("traffic.faster_class").p("class", class).p("gap", gap).key(r.id.to_string()));
+        } else if r.gap_s > 0.0 && r.gap_s <= ahead_s && lap > my_lap * (1.0 + slower_pct) {
+            ctx.push(CallRequest::new("traffic.slower_ahead").p("class", class).p("gap", gap).key(r.id.to_string()));
+        }
+    }
+}
+
 pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
+    if let RaceEvent::StartLight(l) = ev {
+        start_lights(ctx, *l);
+        return;
+    }
     let RaceEvent::LapCompleted(_) = ev else { return };
     let s = ctx.state;
     let me = s.frame.player_car_id;

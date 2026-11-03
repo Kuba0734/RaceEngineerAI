@@ -25,6 +25,22 @@ mod flags {
     pub const BLACK: u32 = 0x0001_0000;
     pub const DISQUALIFY: u32 = 0x0002_0000;
     pub const REPAIR: u32 = 0x0010_0000;
+    pub const START_READY: u32 = 0x2000_0000;
+    pub const START_SET: u32 = 0x4000_0000;
+    pub const START_GO: u32 = 0x8000_0000;
+}
+
+/// Start lights from `SessionFlags` (startHidden = off).
+pub fn start_light(bits: u32) -> StartLight {
+    if bits & flags::START_GO != 0 {
+        StartLight::Go
+    } else if bits & flags::START_SET != 0 {
+        StartLight::Set
+    } else if bits & flags::START_READY != 0 {
+        StartLight::Ready
+    } else {
+        StartLight::Off
+    }
 }
 
 /// `irsdk_TrkLoc`
@@ -108,6 +124,12 @@ pub struct IRacingProvider {
     /// Saved map being loaded in the background (file IO never runs on this thread).
     map_load: Option<mpsc::Receiver<Vec<u8>>>,
     map_saved: bool,
+    /// Exact map from .ibt telemetry, built in the background.
+    ibt_load: Option<mpsc::Receiver<TrackMap>>,
+    map_version: u32,
+    /// Start iRacing's disk telemetry when driving (needed for exact maps).
+    auto_telemetry: bool,
+    telemetry_started: bool,
     /// Hot pressures last seen in the car setup; the first value is only a baseline.
     last_hot: Option<[f32; 4]>,
     /// A new hot pressure measurement waiting for this stop's tyre check.
@@ -244,6 +266,10 @@ fn lap_delta(from: f32, to: f32) -> f32 {
 
 impl IRacingProvider {
     pub fn new() -> Self {
+        Self::with_options(false)
+    }
+
+    pub fn with_options(auto_telemetry: bool) -> Self {
         Self {
             #[cfg(windows)]
             mem: None,
@@ -269,6 +295,10 @@ impl IRacingProvider {
             stall_captured: false,
             map_load: None,
             map_saved: false,
+            ibt_load: None,
+            map_version: 0,
+            auto_telemetry,
+            telemetry_started: false,
             last_hot: None,
             pending_hot: None,
             reported_laps: -1,
@@ -332,6 +362,7 @@ impl IRacingProvider {
                     self.map.reset();
                     self.map_saved = false;
                     self.map_load = (!data.track_name.is_empty()).then(|| Self::load_map(&data.track_name));
+                    self.ibt_load = (!data.track_name.is_empty()).then(|| Self::load_ibt(&data.track_name));
                 }
                 self.data = data;
                 self.last_session_check = None;
@@ -362,12 +393,44 @@ impl IRacingProvider {
         rx
     }
 
+    fn load_ibt(track: &str) -> mpsc::Receiver<TrackMap> {
+        let (tx, rx) = mpsc::channel();
+        let track = track.to_string();
+        let _ = std::thread::Builder::new().name("iracing-ibt".into()).spawn(move || {
+            if let Some(m) = super::ibt::telemetry_dir().and_then(|d| super::ibt::map_for_track(&d, &track)) {
+                tracing::info!("exact map for {track} from .ibt telemetry");
+                let _ = tx.send(m);
+            }
+        });
+        rx
+    }
+
     /// Takes over a saved map, saves a freshly built one.
     fn sync_map(&mut self) {
+        if let Some(rx) = &self.ibt_load {
+            match rx.try_recv() {
+                Ok(m) => {
+                    self.map.replace(m);
+                    self.map_version += 1;
+                    self.map_saved = false;
+                    self.ibt_load = None;
+                    self.last_session_check = None;
+                }
+                Err(mpsc::TryRecvError::Disconnected) => self.ibt_load = None,
+                Err(mpsc::TryRecvError::Empty) => {}
+            }
+        }
         if let Some(rx) = &self.map_load {
             match rx.try_recv() {
                 Ok(b) => {
-                    self.map_saved = self.map.load_bytes(&b) || self.map_saved;
+                    let had = self.map.is_built();
+                    if self.map.load_bytes(&b) {
+                        self.map_saved = true;
+                        if had {
+                            self.map_version += 1;
+                            self.last_session_check = None;
+                        }
+                    }
                     self.map_load = None;
                 }
                 Err(mpsc::TryRecvError::Disconnected) => self.map_load = None,
@@ -458,6 +521,13 @@ impl IRacingProvider {
         self.sync_map();
         let frame = self.build_frame();
         self.was_live = frame.status == SimStatus::Live;
+        // Disk telemetry on while driving: next time there is an .ibt file for an exact map.
+        if self.auto_telemetry && self.was_live && !self.telemetry_started && !self.b("IsDiskLoggingActive") {
+            self.telemetry_started = true;
+            if let Err(e) = super::broadcast::disk_telemetry(true) {
+                tracing::warn!("iracing telemetry start: {e}");
+            }
+        }
         if self.last_session_check.is_none_or(|t| t.elapsed() > Duration::from_millis(500)) {
             self.last_session_check = Some(Instant::now());
             let info = self.session_info();
@@ -502,6 +572,8 @@ impl IRacingProvider {
             pit_speed_limit_kmh: d.pit_speed_limit_kmh,
             pit_box_pct: d.pit_box_pct,
             est_lap_s: (d.est_lap_s > 0.0).then_some(d.est_lap_s),
+            track_turns: d.track_turns,
+            map_version: self.map_version,
         }
     }
 
@@ -686,6 +758,8 @@ impl IRacingProvider {
                 air_temp_c: self.f("AirTemp"),
                 road_temp_c: self.f("TrackTempCrew"),
                 wind_speed_ms: self.f("WindVel"),
+                rain_amount: self.num("Precipitation").map(|v| v as f32),
+                wetness_level: self.num("TrackWetness").map(|v| v as i32),
             },
             lights_stage: -1,
             wiper_level: -1,
@@ -709,6 +783,7 @@ impl IRacingProvider {
             wet_tyres_allowed: self.vars.contains_key("WeatherDeclaredWet").then(|| self.b("WeatherDeclaredWet")),
             pacing,
             pit_service_active: self.b("PitstopActive"),
+            start_light: start_light(bits),
         }
     }
 
@@ -828,6 +903,8 @@ impl IRacingProvider {
                 license: (!d.license.is_empty()).then(|| d.license.clone()),
                 license_color: d.license_color.clone(),
                 est_time_s: self.at("CarIdxEstTime", idx).filter(|v| *v >= 0.0).map(|v| v as f32),
+                incidents: d.incidents,
+                class_est_lap_s: d.class_est_lap_s,
             });
         }
         // Order on track: furthest round the lap first.
@@ -1099,6 +1176,14 @@ DriverInfo:
         let (_, out) = run(&b);
         let f = out.iter().find_map(|e| if let ProviderEvent::Frame(f) = e { Some(f) } else { None }).unwrap();
         assert_eq!(f.delta_ms, -420);
+    }
+
+    #[test]
+    fn start_lights_from_session_flags() {
+        assert_eq!(start_light(0x1000_0000), StartLight::Off);
+        assert_eq!(start_light(0x2000_0000), StartLight::Ready);
+        assert_eq!(start_light(0x4000_0000), StartLight::Set);
+        assert_eq!(start_light(0x8000_0004), StartLight::Go);
     }
 
     #[test]

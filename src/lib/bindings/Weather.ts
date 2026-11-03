@@ -2,4 +2,12 @@
 import type { RainIntensity } from "./RainIntensity";
 import type { TrackGrip } from "./TrackGrip";
 
-export type Weather = { rain_now: RainIntensity, rain_10min: RainIntensity, rain_30min: RainIntensity, grip: TrackGrip, air_temp_c: number, road_temp_c: number, wind_speed_ms: number, };
+export type Weather = { rain_now: RainIntensity, rain_10min: RainIntensity, rain_30min: RainIntensity, grip: TrackGrip, air_temp_c: number, road_temp_c: number, wind_speed_ms: number, 
+/**
+ * Raw precipitation 0–1 (games that report it), for trends.
+ */
+rain_amount: number | null, 
+/**
+ * Raw track wetness level (game scale), for trends.
+ */
+wetness_level: number | null, };

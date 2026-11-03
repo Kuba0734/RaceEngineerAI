@@ -245,6 +245,8 @@ pub fn build_frame(p: &SPageFilePhysics, g: &SPageFileGraphic, t_ms: u64) -> Tel
             air_temp_c: p.airTemp,
             road_temp_c: p.roadTemp,
             wind_speed_ms: g.windSpeed,
+            rain_amount: None,
+            wetness_level: None,
         },
         lights_stage: g.lightsStage,
         wiper_level: g.wiperLV,

@@ -253,6 +253,8 @@ impl MockProvider {
                 air_temp_c: 21.0,
                 road_temp_c: 29.0 - t * 0.002,
                 wind_speed_ms: 2.0,
+                rain_amount: None,
+                wetness_level: None,
             },
             lights_stage: 0,
             wiper_level: 0,

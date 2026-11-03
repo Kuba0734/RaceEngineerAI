@@ -46,6 +46,12 @@ pub fn definitions() -> Vec<ToolDef> {
         ToolDef { name: "add_reminder", description: "Remind the driver later. Give in_laps OR at_lap OR in_minutes, plus the text.", parameters: obj(json!({ "in_laps": { "type": "integer" }, "at_lap": { "type": "integer" }, "in_minutes": { "type": "number" }, "text": { "type": "string" } }), &["text"]), action: true },
         ToolDef { name: "set_strategy_plan", description: "Set the planned pit lap (all calculations use it); null/0 clears it.", parameters: obj(json!({ "pit_lap": { "type": "integer" } }), &[]), action: true },
         ToolDef { name: "repeat_last", description: "Repeat the last radio message.", parameters: none(), action: true },
+        ToolDef {
+            name: "set_pit_menu",
+            description: "Set the game's pit menu for the next stop (only games that allow it). fuel_l = litres to ADD (0 = no fuel; use get_fuel_strategy 'refuel' for 'as much as needed'). tyres: all, none, front, rear, left, right. Leave out what the driver did not mention.",
+            parameters: obj(json!({ "fuel_l": { "type": "number" }, "tyres": { "type": "string", "enum": ["all", "none", "front", "rear", "left", "right"] }, "fast_repair": { "type": "boolean" }, "windshield": { "type": "boolean" }, "clear_all": { "type": "boolean" } }), &[]),
+            action: true,
+        },
         ToolDef { name: "set_volume", description: "Change crew voice volume: direction 'up' or 'down', or level 0-150 (percent).", parameters: obj(json!({ "direction": { "type": "string" }, "level": { "type": "number" } }), &[]), action: true },
         ToolDef { name: "toggle_call", description: "Enable or disable one radio call permanently, by call_id (e.g. lap.corner_feedback, gap.ahead).", parameters: obj(json!({ "call_id": { "type": "string" }, "enabled": { "type": "boolean" } }), &["call_id", "enabled"]), action: true },
     ]
@@ -142,6 +148,10 @@ fn car_json(state: &RaceState, c: &CarState, f: &Fmt) -> Value {
         "tyre_age_laps": r.and_then(|r| r.last_pit_lap).map(|l| c.laps - l).unwrap_or(c.laps),
         "gap_to_leader_s": c.gap_to_leader_s.map(|g| (g * 10.0).round() / 10.0),
         "on_wet_tyres": c.wet_tyres,
+        "class": (!c.class_name.is_empty()).then(|| c.class_name.clone()),
+        "irating": c.irating,
+        "license": c.license,
+        "incidents": c.incidents,
     })
 }
 
@@ -466,6 +476,31 @@ pub fn action(name: &str, args: &Value, state: &RaceState, engine: &mut CallEngi
             ok(json!({ "ok": true, "pit_lap": l, "current_lap": lap + 1 }))
         }
         "repeat_last" => ActionResult { value: json!({ "ok": true, "last": engine.crew.last_message }), repeat: engine.crew.last_message.clone(), settings_changed: false },
+        "set_pit_menu" => {
+            if !state.has("hasPitControl") {
+                return ok(json!({ "error": "this game does not let the app set the pit menu – tell the driver to set it in the game" }));
+            }
+            let tyres = args.get("tyres").and_then(|v| v.as_str()).and_then(|t| match t {
+                "all" => Some([true; 4]),
+                "none" => Some([false; 4]),
+                "front" => Some([true, true, false, false]),
+                "rear" => Some([false, false, true, true]),
+                "left" => Some([true, false, true, false]),
+                "right" => Some([false, true, false, true]),
+                _ => None,
+            });
+            let req = crate::games::PitRequest {
+                clear: args.get("clear_all").and_then(|v| v.as_bool()).unwrap_or(false),
+                fuel_l: args.get("fuel_l").and_then(|v| v.as_f64()).map(|v| v as f32),
+                tyres,
+                fast_repair: args.get("fast_repair").and_then(|v| v.as_bool()),
+                windshield: args.get("windshield").and_then(|v| v.as_bool()),
+            };
+            match crate::games::set_pit_menu(&state.session.game_id, &req) {
+                Ok(()) => ok(json!({ "ok": true, "fuel_l": req.fuel_l, "tyres": args.get("tyres"), "fast_repair": req.fast_repair })),
+                Err(e) => ok(json!({ "error": e.to_string() })),
+            }
+        }
         "set_volume" => {
             if cmd_off("volume") {
                 return ok(json!({ "error": "this voice command is disabled in the settings" }));

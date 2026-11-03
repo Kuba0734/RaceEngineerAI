@@ -17,4 +17,13 @@ pit_box_pct?: number,
 /**
  * Lap time estimate of the player's car (s), e.g. to wrap relative gaps.
  */
-est_lap_s?: number, };
+est_lap_s?: number, 
+/**
+ * Corners per lap (incidents per corner in the race report).
+ */
+track_turns?: number, 
+/**
+ * Changes when the game's map is replaced (e.g. by an exact one): car positions are then
+ * in a new coordinate frame.
+ */
+map_version: number, };

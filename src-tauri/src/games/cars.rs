@@ -3,6 +3,10 @@
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
+use parking_lot::RwLock;
+
+use crate::storage::settings::ClassTargets;
+
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -64,7 +68,31 @@ pub fn guess_class(key: &str) -> &'static str {
     }
 }
 
+fn overrides() -> &'static RwLock<BTreeMap<String, ClassDef>> {
+    static O: OnceLock<RwLock<BTreeMap<String, ClassDef>>> = OnceLock::new();
+    O.get_or_init(|| RwLock::new(BTreeMap::new()))
+}
+
+/// The user's own target windows (settings), checked before `cars.json`.
+pub fn set_overrides(map: &BTreeMap<String, ClassTargets>) {
+    *overrides().write() = map
+        .iter()
+        .map(|(k, t)| (k.clone(), ClassDef { dry: t.dry, wet: t.wet, core_temp_cold: t.core_temp_cold, core_temp_hot: t.core_temp_hot, brake_temp_hot: t.brake_temp_hot }))
+        .collect();
+}
+
+/// Defaults of every known class (for the settings page).
+pub fn class_defaults() -> BTreeMap<String, ClassTargets> {
+    db().classes
+        .iter()
+        .map(|(k, c)| (k.clone(), ClassTargets { dry: c.dry, wet: c.wet, core_temp_cold: c.core_temp_cold, core_temp_hot: c.core_temp_hot, brake_temp_hot: c.brake_temp_hot }))
+        .collect()
+}
+
 pub fn class_def(class: &str) -> ClassDef {
+    if let Some(c) = overrides().read().get(class) {
+        return c.clone();
+    }
     db().classes.get(class).cloned().unwrap_or(ClassDef {
         dry: [26.0, 27.0],
         wet: [29.5, 31.0],
@@ -95,5 +123,11 @@ mod tests {
         assert_eq!(guess_class("ford_mustang_gt3"), "GT3");
         assert_eq!(brand_from_key("ford_mustang_gt3"), "Ford");
         assert!(class_def("GT3").dry[0] > 20.0);
+        let mut own = BTreeMap::new();
+        own.insert("TEST".to_string(), ClassTargets { dry: [24.0, 25.0], wet: [28.0, 29.0], core_temp_cold: 60.0, core_temp_hot: 95.0, brake_temp_hot: 700.0 });
+        set_overrides(&own);
+        assert_eq!(class_def("TEST").dry, [24.0, 25.0]);
+        set_overrides(&BTreeMap::new());
+        assert!(class_defaults().contains_key("GT3"));
     }
 }

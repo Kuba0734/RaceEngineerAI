@@ -34,7 +34,7 @@ export function PosChange({ start, now }: { start: number | undefined; now: numb
 
 /** Car number on the class colour. */
 export function CarNumber({ text, color }: { text: string; color: string | undefined }) {
-  return <span className="num font-semibold" style={{ color: color ?? "var(--fg)" }}>#{text}</span>;
+  return <span className="num font-semibold" style={{ color: color ?? "var(--text)" }}>#{text}</span>;
 }
 
 /** Signed seconds: "+1.4" / "−0.3". */

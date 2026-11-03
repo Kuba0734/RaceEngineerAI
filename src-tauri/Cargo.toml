@@ -1,6 +1,6 @@
 [package]
 name = "race-engineer-ai"
-version = "0.5.0"
+version = "0.6.0"
 description = "RaceEngineerAI – sim racing pit crew over radio"
 authors = ["Kuba0734"]
 edition = "2021"
@@ -27,7 +27,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 ts-rs = "12.0.1"
 # Async, net
-tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "time", "sync", "net"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "time", "sync", "net", "io-util"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "multipart", "stream", "http2", "charset"] }
 futures-util = "0.3.34"
 # Errors, logging
@@ -62,6 +62,7 @@ tar = "0.4"
 windows = { version = "0.62.2", features = [
   "Win32_Foundation",
   "Win32_System_Memory",
+  "Win32_UI_WindowsAndMessaging",
   "Gaming_Input",
   "Foundation",
   "Foundation_Collections",

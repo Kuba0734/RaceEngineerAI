@@ -83,6 +83,19 @@ Wagenabhängig, nur wenn vorhanden: `dcTractionControl`, `dcABS`, `[LF|RF|LR|RR]
 | Abstand/Intervall in der Klasse | `CarIdxF2Time` (Rennen), sonst Bestzeiten | |
 | Box-Entfernung, Tempolimit | YAML `DriverPitTrkPct`, `TrackPitSpeedLimit`; `EngineWarnings` (pitSpeedLimiter), `PitstopActive` | |
 
+## Fernsteuerung, exakte Karte, Rennbericht
+
+| Was | Quelle | Hinweis |
+|---|---|---|
+| Boxenmenü setzen | SDK-Broadcast `irsdk_BroadcastPitCommand` (9) mit `irsdk_PitCommandMode`; Nachricht `IRSDK_BROADCASTMSG`, `wParam = Typ \| Befehl << 16`, `lParam = Wert` (Referenz: pyirsdk `_broadcast_msg`) | Sprit in Litern (hinzufügen), Reifen mit Wert 0 = Druck aus der Garage. Funktioniert nur, wenn der Fahrer im Auto sitzt. **Live prüfen.** |
+| Telemetrie-Aufzeichnung | `irsdk_BroadcastTelemCommand` (10), Start = 1 | Optional automatisch beim Fahren (Spiele-Seite). |
+| Exakte Karte | .ibt-Datei (`Dokumente\iRacing	elemetry`): gleiches Layout wie der Live-Speicher plus `irsdk_diskSubHeader` (32 Byte) und `Lat`/`Lon` | Neueste Dateien derselben Strecke, Punkte pro Rundenanteil gemittelt, in Meter umgerechnet (x = Ost, z = Nord). Ohne GPS-Daten bleibt die gekoppelte Karte. **Live prüfen**, ob `Lat`/`Lon` auf allen Strecken befüllt sind. |
+| Startampel | `SessionFlags` startReady/startSet/startGo | „Set“ bleibt still, damit „Go“ nicht hinter einer laufenden Ansage wartet. |
+| Schnellere/langsamere Klasse | YAML `CarClassEstLapTime` + Relative (`CarIdxEstTime`) | Schwellen einstellbar. |
+| Regen-Trend | `Precipitation`, `TrackWetness` über die Zeit | Keine Prognose, nur was schon passiert. |
+| Gegner-Infos | YAML `CurDriverIncidentCount`, `IRating`, `LicString` | Für die KI (`get_car`). |
+| Rennbericht | iRating-Prognose (Community-Formel), Incidents, Kurven pro Incident (`TrackNumTurns`) | Die SR-Änderung selbst veröffentlicht iRacing nicht. |
+
 ## Rundenzeit und Delta
 
 - `LapCompleted` steigt an der Linie, `LapLastLapTime` kommt einen Moment später (live gesehen: die App übernahm die vorherige Runde). Eine neue Runde wird erst gemeldet, wenn sich `LapLastLapTime` geändert hat, spätestens nach 3 s.

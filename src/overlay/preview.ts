@@ -50,7 +50,7 @@ export function previewFrame(now = performance.now()): LiveFrame {
     ],
     map: Array.from({ length: 10 }, (_, i) => {
       const a = ((i / 10 + t / 100) % 1) * Math.PI * 2;
-      return { id: i, x: Math.cos(a) * 500, z: Math.sin(a) * 300, position: i + 1, me: i === ME, pit: false };
+      return { id: i, number: String(10 + i * 7), color: i < 6 ? "#ffda59" : "#33ceff", x: Math.cos(a) * 500, z: Math.sin(a) * 300, position: i + 1, me: i === ME, pit: false };
     }),
     outline_version: 0,
     standings: Array.from({ length: 10 }, (_, i) => standing(i)),

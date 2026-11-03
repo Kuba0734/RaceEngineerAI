@@ -147,7 +147,7 @@ export default function Overlay() {
   const content = (id: string): ReactNode => {
     switch (id) {
       case "map":
-        return <TrackMap liveRef={ref} size={o.map_size} />;
+        return <TrackMap liveRef={ref} opts={{ size: o.map_size, rotationDeg: o.map_rotation_deg, lineWidth: o.map_line_width, dotSize: o.map_dot_size, showNumbers: o.map_show_numbers, classColors: o.map_class_colors, showPits: o.map_show_pits }} />;
       case "radar":
         return <Radar liveRef={ref} size={o.radar_size} onActive={setRadarActive} showDistance={o.radar_show_distance} />;
       case "class_standings":
@@ -202,7 +202,7 @@ export default function Overlay() {
         </div>
       )}
       {layout.filter((l) => l.visible && widgetAvailable(l.id, caps)).map((l) => (
-        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} globalScale={o.global_scale} hidden={(l.id === "radar" && o.radar_auto_hide && !radarActive) || (l.id === "flag" && !flag)}>
+        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} globalScale={o.global_scale} hidden={(l.id === "radar" && o.radar_auto_hide && !radarActive) || (l.id === "flag" && !flag) || (l.id === "pit" && o.pit_only_in_pits && !frame?.in_pits)}>
           {content(l.id)}
         </Widget>
       ))}

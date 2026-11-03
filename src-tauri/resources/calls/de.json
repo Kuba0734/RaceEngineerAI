@@ -475,13 +475,13 @@
  ],
  "race.summary": {
   "default": [
-   "P{position}{gained_part}. Beste Runde {best}.{loss_part}"
+   "P{position}{gained_part}. Beste Runde {best}.{loss_part}{irating_part}{incidents_part}"
   ],
   "motivating": [
-   "P{position}{gained_part}! Beste Runde {best}.{loss_part} Starkes Rennen!"
+   "P{position}{gained_part}! Beste Runde {best}.{loss_part}{irating_part}{incidents_part} Starkes Rennen!"
   ],
   "british": [
-   "P{position}{gained_part}. Beste Runde {best}.{loss_part} Ordentliche Arbeit."
+   "P{position}{gained_part}. Beste Runde {best}.{loss_part}{irating_part}{incidents_part} Ordentliche Arbeit."
   ]
  },
  "race.gained_part:gained": [
@@ -654,5 +654,49 @@
  "weather.wet_declared": [
   "Rennleitung hat nass freigegeben, Regenreifen sind erlaubt.",
   "Strecke ist offiziell nass, Regenreifen frei."
+ ],
+ "race.start_lights:ready": [
+  "Lichter kommen, konzentrier dich.",
+  "Gleich geht's los, Fokus."
+ ],
+ "race.start_lights:go": [
+  "Grün, grün, grün!",
+  "Go, go, go!"
+ ],
+ "traffic.faster_class": [
+  "{class} kommt von hinten, {gap} Sekunden.",
+  "Schnellere Klasse hinter dir, {class}, {gap} Sekunden."
+ ],
+ "traffic.slower_ahead": [
+  "Langsameres Auto voraus, {class}, {gap} Sekunden.",
+  "{class} voraus, {gap} Sekunden, plan das Überholen."
+ ],
+ "weather.trend:rain_heavier": [
+  "Der Regen wird stärker.",
+  "Es regnet mehr, Strecke wird nasser."
+ ],
+ "weather.trend:rain_lighter": [
+  "Der Regen lässt nach.",
+  "Regen wird schwächer."
+ ],
+ "weather.trend:track_wetter": [
+  "Die Strecke wird nasser.",
+  "Mehr Wasser auf der Strecke."
+ ],
+ "weather.trend:track_drying": [
+  "Die Strecke trocknet ab.",
+  "Es wird trockener, die Linie kommt."
+ ],
+ "race.irating_part:up": [
+  " iRating-Prognose: plus {n}."
+ ],
+ "race.irating_part:down": [
+  " iRating-Prognose: minus {n}."
+ ],
+ "race.incidents_part:clean": [
+  " Null Incidents, sauber gefahren."
+ ],
+ "race.incidents_part:some": [
+  " {n} Incidents."
  ]
 }

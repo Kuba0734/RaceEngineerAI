@@ -30,7 +30,11 @@
       "hasEngineWarnings": false,
       "hasSafetyCarPacing": false,
       "hasWetDeclared": false,
-      "hasRelative": false
+      "hasRelative": false,
+      "hasStartLights": false,
+      "hasRainTrend": false,
+      "hasPitControl": false,
+      "hasTrackMap": false
     },
     "setupHintsDe": [
       "Broadcasting-API aktivieren: RaceEngineerAI kann broadcasting.json automatisch einrichten (Backup wird angelegt). Danach ACC neu starten.",
@@ -67,7 +71,11 @@
       "hasEngineWarnings": false,
       "hasSafetyCarPacing": false,
       "hasWetDeclared": false,
-      "hasRelative": false
+      "hasRelative": false,
+      "hasStartLights": false,
+      "hasRainTrend": false,
+      "hasPitControl": false,
+      "hasTrackMap": false
     },
     "setupHintsDe": [
       "Unterstützung folgt. Schnittstelle (eingebautes Shared Memory) wird vor der Umsetzung recherchiert."
@@ -107,17 +115,21 @@
       "hasEngineWarnings": true,
       "hasSafetyCarPacing": true,
       "hasWetDeclared": true,
-      "hasRelative": true
+      "hasRelative": true,
+      "hasStartLights": true,
+      "hasRainTrend": true,
+      "hasPitControl": true,
+      "hasTrackMap": true
     },
     "setupHintsDe": [
       "Keine Einrichtung nötig: iRacing stellt seine Telemetrie (SDK) automatisch bereit, sobald du im Auto sitzt.",
-      "Die Streckenkarte entsteht während deiner ersten sauberen Runde (iRacing liefert live keine Koordinaten).",
-      "Für das Overlay iRacing im Modus „Randloses Fenster“ oder „Fenster“ betreiben – im exklusiven Vollbild ist kein Overlay möglich."
+      "Für das Overlay iRacing im Modus „Randloses Fenster“ oder „Fenster“ betreiben – im exklusiven Vollbild ist kein Overlay möglich.",
+      "Exakte Streckenkarte: In iRacing einmal mit Alt+L die Telemetrie-Aufzeichnung einschalten (oder unten automatisch starten lassen). Ohne Aufzeichnung entsteht die Karte aus deiner ersten sauberen Runde."
     ],
     "setupHintsEn": [
       "No setup needed: iRacing provides its telemetry (SDK) automatically as soon as you are in the car.",
-      "The track map is built during your first clean lap (iRacing does not provide live coordinates).",
-      "Run iRacing in borderless or windowed mode for the overlay – exclusive fullscreen cannot show overlays."
+      "Run iRacing in borderless or windowed mode for the overlay – exclusive fullscreen cannot show overlays.",
+      "Exact track map: switch on telemetry recording in iRacing once with Alt+L (or let the app start it below). Without it the map is built from your first clean lap."
     ]
   },
   {
@@ -146,7 +158,11 @@
       "hasEngineWarnings": false,
       "hasSafetyCarPacing": false,
       "hasWetDeclared": false,
-      "hasRelative": false
+      "hasRelative": false,
+      "hasStartLights": false,
+      "hasRainTrend": false,
+      "hasPitControl": false,
+      "hasTrackMap": false
     },
     "setupHintsDe": [
       "Unterstützung folgt. Schnittstelle wird vor der Umsetzung recherchiert."

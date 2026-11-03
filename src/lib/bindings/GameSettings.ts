@@ -2,6 +2,14 @@
 
 export type GameSettings = { enabled: boolean, broadcasting_port: number, broadcasting_password: string, 
 /**
+ * Enter the fuel needed into the game's pit menu on the way into the pits (games that allow it).
+ */
+auto_pit_fuel: boolean, 
+/**
+ * Let the game record its own telemetry files while driving (iRacing: exact track maps).
+ */
+record_game_telemetry: boolean, 
+/**
  * Rules the game does not report itself (e.g. iRacing series rules): 0 = none.
  */
 mandatory_stops: number, 

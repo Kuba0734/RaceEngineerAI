@@ -95,7 +95,22 @@ pub fn race_summary(ctx: &mut Ctx) {
         .filter(|d| d.time_loss_s > 0.05)
         .map(|d| ctx.frag("race.loss_part", &[("corner", d.corner.to_string())]))
         .unwrap_or_default();
-    ctx.push(CallRequest::new("race.summary").p("position", pos.to_string()).p("gained_part", gained_part).p("best", best).p("loss_part", loss_part));
+    let rep = s.report();
+    let irating_part = rep
+        .irating_change
+        .filter(|d| d.abs() >= 1.0)
+        .map(|d| ctx.frag(if d > 0.0 { "race.irating_part:up" } else { "race.irating_part:down" }, &[("n", format!("{}", d.abs().round() as i32))]))
+        .unwrap_or_default();
+    let incidents_part = rep.incidents.map(|n| ctx.frag(if n == 0 { "race.incidents_part:clean" } else { "race.incidents_part:some" }, &[("n", n.to_string())])).unwrap_or_default();
+    ctx.push(
+        CallRequest::new("race.summary")
+            .p("position", pos.to_string())
+            .p("gained_part", gained_part)
+            .p("best", best)
+            .p("loss_part", loss_part)
+            .p("irating_part", irating_part)
+            .p("incidents_part", incidents_part),
+    );
 }
 
 pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {

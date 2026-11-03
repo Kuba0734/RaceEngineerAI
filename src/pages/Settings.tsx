@@ -8,16 +8,17 @@ import { VoicesSection, SpotterSection } from "./settings/voices";
 import { CallsSection } from "./settings/calls";
 import { ConversationSection, CommandsSection, PersonalitySection, SessionStartSection, StrategySection } from "./settings/crew";
 import { InputSection, AboutSection } from "./settings/system";
+import { CarClassesSection } from "./settings/cars";
 import { ExpertContext } from "./settings/expert";
 
-type Section = "general" | "ai" | "listening" | "input" | "voices" | "spotter" | "calls" | "personality" | "sessionStart" | "strategy" | "conversation" | "commands" | "about";
+type Section = "general" | "ai" | "listening" | "input" | "voices" | "spotter" | "calls" | "personality" | "sessionStart" | "strategy" | "cars" | "conversation" | "commands" | "about";
 
 /** Six areas instead of a long tab list; each shows its sections one below the other. */
 const AREAS: { id: string; sections: Section[] }[] = [
   { id: "start", sections: ["general", "ai"] },
   { id: "talk", sections: ["listening", "input", "voices"] },
   { id: "spotter", sections: ["spotter"] },
-  { id: "crew", sections: ["calls", "personality", "sessionStart", "strategy"] },
+  { id: "crew", sections: ["calls", "personality", "sessionStart", "strategy", "cars"] },
   { id: "conversation", sections: ["conversation", "commands"] },
   { id: "about", sections: ["about"] },
 ];
@@ -37,6 +38,7 @@ const KEYS: Record<Section, string[]> = {
   personality: ["pers."],
   sessionStart: ["start."],
   strategy: ["strat."],
+  cars: ["cars."],
   conversation: ["conv."],
   commands: ["cmd."],
   about: ["about."],
@@ -54,6 +56,7 @@ function render(s: Section) {
     case "personality": return <PersonalitySection />;
     case "sessionStart": return <SessionStartSection />;
     case "strategy": return <StrategySection />;
+    case "cars": return <CarClassesSection />;
     case "conversation": return <ConversationSection />;
     case "commands": return <CommandsSection />;
     case "about": return <AboutSection />;

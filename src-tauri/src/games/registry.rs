@@ -42,6 +42,16 @@ pub struct Capabilities {
     /// Estimated times per car, ratings and classes: relative and class standings.
     #[serde(default)]
     pub has_relative: bool,
+    #[serde(default)]
+    pub has_start_lights: bool,
+    #[serde(default)]
+    pub has_rain_trend: bool,
+    /// The app can set the game's pit menu.
+    #[serde(default)]
+    pub has_pit_control: bool,
+    /// A track map from lap positions (no live world coordinates needed).
+    #[serde(default)]
+    pub has_track_map: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -107,6 +117,10 @@ pub fn has_capability(c: &Capabilities, name: &str) -> bool {
         "hasSafetyCarPacing" => c.has_safety_car_pacing,
         "hasWetDeclared" => c.has_wet_declared,
         "hasRelative" => c.has_relative,
+        "hasStartLights" => c.has_start_lights,
+        "hasRainTrend" => c.has_rain_trend,
+        "hasPitControl" => c.has_pit_control,
+        "hasTrackMap" => c.has_track_map,
         _ => false,
     }
 }

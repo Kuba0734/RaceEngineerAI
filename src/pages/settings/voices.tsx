@@ -106,7 +106,16 @@ function VoiceCard({ role }: { role: "engineer" | "spotter" }) {
         <Select value={p.voice_en} onChange={(v) => set({ voice_en: v })} options={voicesFor("en")} />
       </Field>
       <Field label={t("voices.speaker")} hint={t("voices.speakerHint")}>
-        <NumberInput value={p.speaker_id} min={0} max={Math.max(0, (models.find((m) => m.id === (s.language === "de" ? p.voice_de : p.voice_en))?.speakers ?? 1) - 1)} onChange={(v) => set({ speaker_id: v })} />
+        {(() => {
+          const m = models.find((x) => x.id === (s.language === "de" ? p.voice_de : p.voice_en));
+          // Named speakers (Kokoro): English ones only (a = US, b = British; f/m = female/male).
+          const named = (m?.speaker_names ?? []).map((n, i) => ({ n, i })).filter(({ n }) => /^[ab][fm]_/.test(n));
+          return named.length > 0 ? (
+            <Select value={String(p.speaker_id)} onChange={(v) => set({ speaker_id: Number(v) })} options={named.map(({ n, i }) => ({ value: String(i), label: `${n.slice(3).replace(/^./, (c) => c.toUpperCase())} · ${n[0] === "b" ? "UK" : "US"} · ${n[1] === "f" ? "♀" : "♂"}` }))} />
+          ) : (
+            <NumberInput value={p.speaker_id} min={0} max={Math.max(0, (m?.speakers ?? 1) - 1)} onChange={(v) => set({ speaker_id: v })} />
+          );
+        })()}
       </Field>
       <Field label={t("voices.volume")}>
         <Slider value={p.volume} min={0} max={1.5} step={0.05} onChange={(v) => set({ volume: v })} format={(v) => `${Math.round(v * 100)} %`} />

@@ -12,11 +12,20 @@ const MIN_POINTS: usize = 300;
 /// Largest accepted closing error relative to the driven distance.
 const MAX_CLOSURE: f32 = 0.08;
 /// File format version of saved maps; bump when the geometry convention changes.
-const FILE_VERSION: u32 = 1;
+const FILE_VERSION: u32 = 2;
+
+/// Where a map comes from. A telemetry (GPS) map is exact and always wins.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum MapSource {
+    #[default]
+    Driven,
+    Telemetry,
+}
 
 #[derive(Default)]
 pub struct TrackMap {
     bins: Vec<[f32; 2]>,
+    source: MapSource,
     rec: Vec<(f32, [f32; 2])>,
     recording: bool,
     pos: [f32; 2],
@@ -33,6 +42,23 @@ pub fn axes(yaw: f32) -> ([f32; 2], [f32; 2]) {
 }
 
 impl TrackMap {
+    /// Map from (lap fraction, position) points, gaps filled along the lap.
+    pub fn from_points(points: &[(f32, [f32; 2])]) -> Option<TrackMap> {
+        if points.len() < 2 {
+            return None;
+        }
+        Some(TrackMap { bins: bins_from(points), source: MapSource::Telemetry, ..Default::default() })
+    }
+
+    pub fn source(&self) -> MapSource {
+        self.source
+    }
+
+    /// Takes over another map (e.g. an exact one from telemetry).
+    pub fn replace(&mut self, other: TrackMap) {
+        *self = other;
+    }
+
     pub fn is_built(&self) -> bool {
         !self.bins.is_empty()
     }
@@ -56,9 +82,10 @@ impl TrackMap {
         if self.bins.is_empty() {
             return None;
         }
-        let mut b = Vec::with_capacity(8 + self.bins.len() * 8);
+        let mut b = Vec::with_capacity(12 + self.bins.len() * 8);
         b.extend_from_slice(&FILE_VERSION.to_le_bytes());
         b.extend_from_slice(&(self.bins.len() as u32).to_le_bytes());
+        b.extend_from_slice(&u32::from(self.source == MapSource::Telemetry).to_le_bytes());
         for p in &self.bins {
             b.extend_from_slice(&p[0].to_le_bytes());
             b.extend_from_slice(&p[1].to_le_bytes());
@@ -69,14 +96,17 @@ impl TrackMap {
     /// Takes over a saved map (ignored if a map was built meanwhile or the file is invalid).
     pub fn load_bytes(&mut self, b: &[u8]) -> bool {
         let word = |o: usize| b.get(o..o + 4).map(|s| [s[0], s[1], s[2], s[3]]);
-        let (Some(v), Some(n)) = (word(0), word(4)) else { return false };
+        let (Some(v), Some(n), Some(src)) = (word(0), word(4), word(8)) else { return false };
         let n = u32::from_le_bytes(n) as usize;
-        if u32::from_le_bytes(v) != FILE_VERSION || n != BINS || b.len() != 8 + n * 8 || self.is_built() {
+        let source = if u32::from_le_bytes(src) == 1 { MapSource::Telemetry } else { MapSource::Driven };
+        // A driven map never replaces one that exists; a telemetry map does.
+        if u32::from_le_bytes(v) != FILE_VERSION || n != BINS || b.len() != 12 + n * 8 || (self.is_built() && source != MapSource::Telemetry) {
             return false;
         }
+        self.source = source;
         self.bins = (0..n)
             .filter_map(|i| {
-                let o = 8 + i * 8;
+                let o = 12 + i * 8;
                 Some([f32::from_le_bytes(word(o)?), f32::from_le_bytes(word(o + 4)?)])
             })
             .collect();
@@ -169,23 +199,29 @@ impl TrackMap {
                 (*p, [xy[0] - err[0] * k, xy[1] - err[1] * k])
             })
             .collect();
-        let mut bins = Vec::with_capacity(BINS);
-        let mut j = 0;
-        for b in 0..BINS {
-            let target = b as f32 / BINS as f32;
-            while j + 1 < pts.len() && pts[j + 1].0 < target {
-                j += 1;
-            }
-            let (p0, a) = pts[j];
-            let (p1, c) = pts.get(j + 1).copied().unwrap_or((1.0, [0.0, 0.0]));
-            let t = if p1 > p0 { ((target - p0) / (p1 - p0)).clamp(0.0, 1.0) } else { 0.0 };
-            bins.push([a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t]);
-        }
+        let bins = bins_from(&pts);
         self.bins = bins;
         self.recording = false;
         self.rec.clear();
         tracing::info!("iracing map built ({n} samples, {:.0} m, clockwise={:?})", self.dist, self.clockwise());
     }
+}
+
+/// Resamples (lap fraction, position) points to `BINS` evenly spaced points.
+fn bins_from(pts: &[(f32, [f32; 2])]) -> Vec<[f32; 2]> {
+    let mut bins = Vec::with_capacity(BINS);
+    let mut j = 0;
+    for b in 0..BINS {
+        let target = b as f32 / BINS as f32;
+        while j + 1 < pts.len() && pts[j + 1].0 < target {
+            j += 1;
+        }
+        let (p0, a) = pts[j];
+        let (p1, c) = pts.get(j + 1).copied().unwrap_or((1.0 + pts[0].0, pts[0].1));
+        let t = if p1 > p0 { ((target - p0) / (p1 - p0)).clamp(0.0, 1.0) } else { 0.0 };
+        bins.push([a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t]);
+    }
+    bins
 }
 
 #[cfg(test)]

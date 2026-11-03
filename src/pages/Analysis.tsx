@@ -6,6 +6,8 @@ import { useApp } from "@/stores/app";
 import type { CornerDelta } from "@/lib/bindings/CornerDelta";
 import { Badge, Button, Card, Empty, cx, useAsync } from "@/components/ui";
 import { date, lapTime } from "@/lib/format";
+import type { RaceReport } from "@/lib/bindings/RaceReport";
+import { LineChart } from "./analysis/Charts";
 
 interface Summary {
   position?: number;
@@ -15,6 +17,32 @@ interface Summary {
   track_limits?: number;
   corners?: CornerDelta[];
   radio?: RadioLogEntry[];
+  report?: RaceReport;
+}
+
+/** Sector times of each lap compared with the best sector of the session (s, + = slower). */
+function SectorHeat({ laps }: { laps: LapRow[] }) {
+  const { t } = useTranslation();
+  const best = [0, 1, 2].map((k) => Math.min(...laps.map((l) => l.sectors[k] ?? Infinity)));
+  if (!best.every(Number.isFinite)) return null;
+  return (
+    <div>
+      <div className="mb-1 text-xs text-dim">{t("analysis.sectorHeat")}</div>
+      <div className="grid gap-px" style={{ gridTemplateColumns: `3rem repeat(3, 1fr)` }}>
+        {laps.map((l) => (
+          <div key={l.lap} className="contents">
+            <div className="num text-xs text-dim">{l.lap}</div>
+            {[0, 1, 2].map((k) => {
+              const v = l.sectors[k];
+              const d = v != null ? (v - (best[k] ?? 0)) / 1000 : null;
+              const tone = d == null ? "bg-surface-2" : d < 0.05 ? "bg-purple/50" : d < 0.3 ? "bg-ok/40" : d < 0.8 ? "bg-warn/40" : "bg-danger/40";
+              return <div key={k} className={cx("num rounded-sm px-1 text-right text-xs", tone)}>{d == null ? "–" : d < 0.005 ? t("analysis.best") : `+${d.toFixed(2)}`}</div>;
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function parseSummary(json: string | null): Summary {
@@ -86,6 +114,51 @@ function Report({ s }: { s: SessionRow }) {
           </div>
         )}
       </Card>
+      {sum.report && (sum.report.irating_change != null || sum.report.incidents != null) && (
+        <Card title={t("analysis.raceReport")}>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-dim">{t("analysis.irating")}</div>
+              <div className={cx("num text-3xl font-semibold", (sum.report.irating_change ?? 0) >= 0 ? "text-ok" : "text-danger")}>
+                {sum.report.irating_change != null ? `${sum.report.irating_change >= 0 ? "+" : ""}${Math.round(sum.report.irating_change)}` : "–"}
+              </div>
+              <div className="text-xs text-dim">{sum.report.irating != null ? t("analysis.iratingFrom", { n: sum.report.irating }) : ""} {t("analysis.estimate")}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-dim">{t("analysis.incidents")}</div>
+              <div className="num text-3xl font-semibold">{sum.report.incidents ?? "–"}{sum.report.incident_limit != null ? <span className="text-base text-dim">/{sum.report.incident_limit}</span> : null}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-dim">{t("analysis.cpi")}</div>
+              <div className="num text-3xl font-semibold">{sum.report.corners_per_incident != null ? sum.report.corners_per_incident.toFixed(1) : sum.report.incidents === 0 ? "∞" : "–"}</div>
+              <div className="text-xs text-dim">{t("analysis.cpiHint")}</div>
+            </div>
+          </div>
+        </Card>
+      )}
+      {laps && laps.length > 1 && (
+        <Card title={t("analysis.charts")}>
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div>
+              <div className="mb-1 text-xs text-dim">{t("analysis.chartPosition")}</div>
+              <LineChart laps={laps.map((l) => l.lap)} invert format={(v) => `P${Math.round(v)}`} series={[{ label: t("analysis.pos"), color: "var(--accent)", values: laps.map((l) => l.position ?? null) }]} />
+            </div>
+            <div>
+              <div className="mb-1 text-xs text-dim">{t("analysis.chartGaps")}</div>
+              <LineChart laps={laps.map((l) => l.lap)} unit=" s" series={[{ label: t("analysis.gapAhead"), color: "var(--data)", values: laps.map((l) => l.gap_ahead_s ?? null) }, { label: t("analysis.gapBehind"), color: "var(--warn)", values: laps.map((l) => l.gap_behind_s ?? null) }]} />
+            </div>
+            <div>
+              <div className="mb-1 text-xs text-dim">{t("analysis.chartLaps")}</div>
+              <LineChart laps={laps.map((l) => l.lap)} format={(v) => lapTime(v)} series={[{ label: t("analysis.time"), color: "var(--purple)", values: laps.map((l) => (l.valid && l.time_ms > 0 ? l.time_ms : null)) }]} />
+            </div>
+            <div>
+              <div className="mb-1 text-xs text-dim">{t("analysis.chartFuel")}</div>
+              <LineChart laps={laps.map((l) => l.lap)} unit=" L" format={(v) => v.toFixed(2)} series={[{ label: t("analysis.fuel"), color: "var(--ok)", values: laps.map((l) => l.fuel_used ?? null) }]} />
+            </div>
+          </div>
+          <div className="mt-6"><SectorHeat laps={laps} /></div>
+        </Card>
+      )}
       <Card title={t("analysis.lapTimes")}>
         {laps && <LapChart laps={laps} />}
         <table className="mt-3 w-full text-sm">

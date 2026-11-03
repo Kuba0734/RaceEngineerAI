@@ -27,6 +27,12 @@ pub struct VoiceDef {
     #[ts(type = "number")]
     pub size: u64,
     pub speakers: i32,
+    /// "vits" (Piper, default) or "kokoro".
+    #[serde(default)]
+    pub engine: String,
+    /// Names of the speakers by ID (multi-speaker models such as Kokoro).
+    #[serde(default, rename = "speakerNames")]
+    pub speaker_names: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -78,11 +84,23 @@ pub struct VoiceFiles {
     pub model: PathBuf,
     pub tokens: PathBuf,
     pub data_dir: PathBuf,
+    /// Kokoro only: speaker embeddings and lexicons.
+    pub voices: PathBuf,
+    pub lexicon: String,
+}
+
+impl VoiceDef {
+    pub fn is_kokoro(&self) -> bool {
+        self.engine == "kokoro"
+    }
 }
 
 pub fn voice_files(v: &VoiceDef) -> VoiceFiles {
     let dir = paths::models_dir().join(stem(&v.archive));
-    VoiceFiles { model: dir.join(format!("{}.onnx", v.id)), tokens: dir.join("tokens.txt"), data_dir: dir.join("espeak-ng-data") }
+    let model = if v.is_kokoro() { dir.join("model.onnx") } else { dir.join(format!("{}.onnx", v.id)) };
+    // As in the official example for English (US and GB voices).
+    let lexicon = [dir.join("lexicon-us-en.txt"), dir.join("lexicon-zh.txt")].iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>().join(",");
+    VoiceFiles { model, tokens: dir.join("tokens.txt"), data_dir: dir.join("espeak-ng-data"), voices: dir.join("voices.bin"), lexicon }
 }
 
 pub fn voice(id: &str) -> Option<&'static VoiceDef> {
@@ -117,6 +135,8 @@ pub fn custom_voices() -> Vec<VoiceDef> {
                 sha256: String::new(),
                 size: 0,
                 speakers: speaker_count(&e.path().join(format!("{id}.onnx.json"))),
+                engine: String::new(),
+                speaker_names: Vec::new(),
                 id,
             };
             voice_installed(&v).then_some(v)
@@ -151,7 +171,7 @@ pub fn import_archives() -> AppResult<Vec<String>> {
 
 pub fn voice_installed(v: &VoiceDef) -> bool {
     let f = voice_files(v);
-    f.model.is_file() && f.tokens.is_file() && f.data_dir.is_dir()
+    f.model.is_file() && f.tokens.is_file() && f.data_dir.is_dir() && (!v.is_kokoro() || f.voices.is_file())
 }
 
 pub fn vad_path() -> PathBuf {
@@ -193,6 +213,8 @@ pub struct ModelStatus {
     pub size: u64,
     pub installed: bool,
     pub speakers: i32,
+    #[serde(default)]
+    pub speaker_names: Vec<String>,
 }
 
 pub fn status() -> Vec<ModelStatus> {
@@ -200,11 +222,11 @@ pub fn status() -> Vec<ModelStatus> {
     let mut v: Vec<ModelStatus> = c
         .voices
         .iter()
-        .map(|v| ModelStatus { id: v.id.clone(), kind: "voice".into(), name: v.name.clone(), lang: v.lang.clone(), license: v.license.clone(), size: v.size, installed: voice_installed(v), speakers: v.speakers })
+        .map(|v| ModelStatus { id: v.id.clone(), kind: "voice".into(), name: v.name.clone(), lang: v.lang.clone(), license: v.license.clone(), size: v.size, installed: voice_installed(v), speakers: v.speakers, speaker_names: v.speaker_names.clone() })
         .collect();
-    v.extend(custom_voices().into_iter().map(|x| ModelStatus { id: x.id, kind: "voice".into(), name: x.name, lang: x.lang, license: x.license, size: 0, installed: true, speakers: x.speakers }));
-    v.push(ModelStatus { id: c.vad.id.clone(), kind: "vad".into(), name: "Silero VAD".into(), lang: String::new(), license: "MIT".into(), size: c.vad.size, installed: vad_path().is_file(), speakers: 0 });
-    v.push(ModelStatus { id: c.kws.id.clone(), kind: "kws".into(), name: "Keyword spotter (EN)".into(), lang: "en".into(), license: "Apache-2.0".into(), size: c.kws.size, installed: kws_installed(), speakers: 0 });
+    v.extend(custom_voices().into_iter().map(|x| ModelStatus { id: x.id, kind: "voice".into(), name: x.name, lang: x.lang, license: x.license, size: 0, installed: true, speakers: x.speakers, speaker_names: Vec::new() }));
+    v.push(ModelStatus { id: c.vad.id.clone(), kind: "vad".into(), name: "Silero VAD".into(), lang: String::new(), license: "MIT".into(), size: c.vad.size, installed: vad_path().is_file(), speakers: 0, speaker_names: Vec::new() });
+    v.push(ModelStatus { id: c.kws.id.clone(), kind: "kws".into(), name: "Keyword spotter (EN)".into(), lang: "en".into(), license: "Apache-2.0".into(), size: c.kws.size, installed: kws_installed(), speakers: 0, speaker_names: Vec::new() });
     v
 }
 

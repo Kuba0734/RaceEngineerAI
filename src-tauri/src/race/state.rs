@@ -47,6 +47,7 @@ pub enum RaceEvent {
     PersonalBest { time_ms: i32 },
     SessionPhaseChanged(SessionPhase),
     Game(GameEvent),
+    StartLight(StartLight),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -122,6 +123,27 @@ pub struct ClassSummary {
     pub sof: Option<i32>,
 }
 
+/// End-of-race numbers for the report and the summary call.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RaceReport {
+    #[ts(optional)]
+    pub irating: Option<i32>,
+    #[ts(optional)]
+    pub irating_change: Option<f32>,
+    #[ts(optional)]
+    pub license: Option<String>,
+    #[ts(optional)]
+    pub incidents: Option<i32>,
+    #[ts(optional)]
+    pub incident_limit: Option<i32>,
+    #[ts(optional)]
+    pub corners: Option<i32>,
+    /// Corners driven per incident point (higher = cleaner).
+    #[ts(optional)]
+    pub corners_per_incident: Option<f32>,
+}
+
 /// One line of the relative: cars around the player on track.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -192,6 +214,7 @@ pub struct RaceState {
     last_yellow: [bool; 3],
     last_penalty: Option<Penalty>,
     last_phase: SessionPhase,
+    last_start_light: StartLight,
     mistake_cooldown_t: f64,
     off_track_since: Option<f64>,
     pressure_acc: ([f32; 4], [f32; 4], u32),
@@ -254,6 +277,7 @@ impl RaceState {
             last_yellow: [false; 3],
             last_penalty: None,
             last_phase: SessionPhase::Unknown,
+            last_start_light: StartLight::Off,
             mistake_cooldown_t: 0.0,
             off_track_since: None,
             pressure_acc: ([0.0; 4], [0.0; 4], 0),
@@ -312,6 +336,13 @@ impl RaceState {
         if info.phase != self.last_phase {
             self.last_phase = info.phase;
             events.push(RaceEvent::SessionPhaseChanged(info.phase));
+        }
+        // New map coordinates (exact map replaced an estimated one): the outline starts over.
+        if info.map_version != self.session.map_version && !self.session.track.is_empty() {
+            self.outline_bins = vec![None; OUTLINE_BINS];
+            self.outline_filled = 0;
+            self.track_outline.clear();
+            self.outline_version += 1;
         }
         let track_changed = info.track != self.session.track;
         let track_or_car_changed = track_changed || info.car_model != self.session.car_model;
@@ -422,6 +453,11 @@ impl RaceState {
                 SessionKind::Race => sp.in_race,
             };
         self.spotter.update(&f, sp, spotter_active, spotter_out);
+        // Start lights: an event right away (the 5 Hz tick would be too late for "go").
+        if f.start_light != self.last_start_light {
+            self.last_start_light = f.start_light;
+            events.push(RaceEvent::StartLight(f.start_light));
+        }
 
         if f.status != SimStatus::Live {
             self.frame = f;
@@ -886,6 +922,27 @@ impl RaceState {
         let Some(i) = rows.iter().position(|r| r.is_player) else { return rows };
         let from = i.saturating_sub(each_side);
         rows.into_iter().skip(from).take(i - from + 1 + each_side).collect()
+    }
+
+    /// Race report numbers of the player: estimated iRating change, incidents, incidents per
+    /// corner (the basis of iRacing's safety rating; the rating change itself is not published).
+    pub fn report(&self) -> RaceReport {
+        let me = self.standings(5).into_iter().find(|r| r.is_player);
+        let laps = self.laps.len() as i32;
+        let corners = self.session.track_turns.map(|t| t * laps).filter(|c| *c > 0);
+        let incidents = self.frame.incidents;
+        RaceReport {
+            irating: me.as_ref().and_then(|r| r.irating),
+            irating_change: me.as_ref().and_then(|r| r.irating_change),
+            license: me.as_ref().and_then(|r| r.license.clone()),
+            incidents,
+            incident_limit: self.session.incident_limit,
+            corners,
+            corners_per_incident: match (corners, incidents) {
+                (Some(c), Some(i)) if i > 0 => Some(c as f32 / i as f32),
+                _ => None,
+            },
+        }
     }
 
     /// Car directly ahead/behind in the race order.

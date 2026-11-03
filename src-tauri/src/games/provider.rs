@@ -172,6 +172,12 @@ pub struct Weather {
     pub air_temp_c: f32,
     pub road_temp_c: f32,
     pub wind_speed_ms: f32,
+    /// Raw precipitation 0–1 (games that report it), for trends.
+    #[serde(default)]
+    pub rain_amount: Option<f32>,
+    /// Raw track wetness level (game scale), for trends.
+    #[serde(default)]
+    pub wetness_level: Option<i32>,
 }
 
 /// Position of another car from the high-rate source (shared memory), for spotter + map.
@@ -181,6 +187,18 @@ pub struct CarPos {
     pub id: i32,
     pub x: f32,
     pub z: f32,
+}
+
+/// Start lights shown to the player (standing or rolling start).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum StartLight {
+    #[default]
+    Off,
+    Ready,
+    Set,
+    Go,
 }
 
 /// Engine temperatures and warning lights.
@@ -365,6 +383,8 @@ pub struct TelemetryFrame {
     /// The crew is working on the car right now.
     #[serde(default)]
     pub pit_service_active: bool,
+    #[serde(default)]
+    pub start_light: StartLight,
 }
 
 /// Data that changes rarely. Sent when it changes.
@@ -405,6 +425,14 @@ pub struct SessionInfo {
     #[serde(default)]
     #[ts(optional)]
     pub est_lap_s: Option<f32>,
+    /// Corners per lap (incidents per corner in the race report).
+    #[serde(default)]
+    #[ts(optional)]
+    pub track_turns: Option<i32>,
+    /// Changes when the game's map is replaced (e.g. by an exact one): car positions are then
+    /// in a new coordinate frame.
+    #[serde(default)]
+    pub map_version: u32,
 }
 
 /// Lower-rate state of one car (broadcasting API or equivalent).
@@ -468,6 +496,14 @@ pub struct CarState {
     #[serde(default)]
     #[ts(optional)]
     pub est_time_s: Option<f32>,
+    /// Incident points of the driver in this session.
+    #[serde(default)]
+    #[ts(optional)]
+    pub incidents: Option<i32>,
+    /// Lap time estimate of the car's class (s): tells faster and slower classes apart.
+    #[serde(default)]
+    #[ts(optional)]
+    pub class_est_lap_s: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useLive } from "@/hooks/useLive";
+import { useApp } from "@/stores/app";
 import { Card, Empty, Ticker } from "@/components/ui";
 import { TrackMap } from "@/overlay/widgets/TrackMap";
 import { Radar } from "@/overlay/widgets/Radar";
@@ -11,6 +12,7 @@ import { clock, lapTime } from "@/lib/format";
 export default function Session() {
   const { t } = useTranslation();
   const { ref, frame } = useLive(5, 2, 5);
+  const rotation = useApp((s) => s.settings?.overlay.map_rotation_deg ?? 0);
   if (!frame?.live) {
     return (
       <div>
@@ -48,7 +50,7 @@ export default function Session() {
         <div className="col-span-12 space-y-5 xl:col-span-4">
           <Card title={t("session.map")}>
             <div className="flex justify-center">
-              <TrackMap liveRef={ref} size={320} />
+              <TrackMap liveRef={ref} opts={{ size: 320, rotationDeg: rotation, lineWidth: 6, dotSize: 4, showNumbers: false, classColors: true, showPits: true }} />
             </div>
           </Card>
           <div className="grid grid-cols-2 gap-5">

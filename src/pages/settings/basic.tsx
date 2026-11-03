@@ -14,6 +14,34 @@ export function useSettings(): [Settings, (fn: (s: Settings) => Settings) => voi
   return [s, update];
 }
 
+/** Phone / second screen dashboard over the local network. */
+function RemoteCard() {
+  const { t } = useTranslation();
+  const [s, up] = useSettings();
+  const r = s.remote;
+  const set = (patch: Partial<typeof r>) => up((x) => ({ ...x, remote: { ...x.remote, ...patch } }));
+  const [urls] = useAsync<string[]>(() => api.remoteUrls(), [r.port, r.enabled]);
+  return (
+    <Card title={t("remote.title")}>
+      <p className="mb-2 text-sm text-dim">{t("remote.hint")}</p>
+      <Toggle checked={r.enabled} onChange={(v) => set({ enabled: v })} label={t("remote.enabled")} hint={t("remote.firewall")} />
+      {r.enabled && (
+        <>
+          <Field label={t("remote.address")}>
+            <div className="num text-data">{(urls ?? []).join("  ·  ")}</div>
+          </Field>
+          <Field label={t("remote.port")}>
+            <NumberInput value={r.port} min={1024} max={65535} onChange={(v) => set({ port: Math.round(v) })} />
+          </Field>
+          <Field label={t("remote.pin")} hint={t("remote.pinHint")}>
+            <TextInput value={r.pin} onChange={(v) => set({ pin: v.replace(/\D/g, "").slice(0, 8) })} className="w-32" />
+          </Field>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export function GeneralSection() {
   const { t } = useTranslation();
   const [s, up] = useSettings();
@@ -22,6 +50,7 @@ export function GeneralSection() {
       <Card title={t("onb.restartTitle")} actions={<Button small onClick={() => up((x) => ({ ...x, app: { ...x.app, onboarding_done: false } }))}>{t("onb.restart")}</Button>}>
         <p className="text-sm text-dim">{t("onb.restartHint")}</p>
       </Card>
+      <RemoteCard />
       <Card title={t("settings.general.language")}>
         <Field label={t("settings.general.languageLabel")} hint={t("settings.general.languageHint")}>
           <Segmented value={s.language} onChange={(v) => up((x) => ({ ...x, language: v }))} options={[{ value: "de", label: "Deutsch" }, { value: "en", label: "English" }]} />

@@ -48,6 +48,9 @@ const MIGRATIONS: &[&str] = &[
         pit_loss_s REAL,
         PRIMARY KEY (game, track)
     );",
+    // 2: gaps to the cars ahead/behind at the end of each lap (race report)
+    "ALTER TABLE laps ADD COLUMN gap_ahead_s REAL;
+    ALTER TABLE laps ADD COLUMN gap_behind_s REAL;",
 ];
 
 pub fn open(path: &Path) -> AppResult<Connection> {
@@ -101,6 +104,10 @@ pub struct LapRow {
     pub valid: bool,
     pub fuel_used: Option<f32>,
     pub position: Option<u32>,
+    #[serde(default)]
+    pub gap_ahead_s: Option<f32>,
+    #[serde(default)]
+    pub gap_behind_s: Option<f32>,
 }
 
 pub fn now_s() -> i64 {
@@ -122,8 +129,8 @@ pub fn end_session(c: &Connection, id: i64, summary_json: &str) -> AppResult<()>
 
 pub fn insert_lap(c: &Connection, session_id: i64, lap: &LapRow) -> AppResult<()> {
     c.execute(
-        "INSERT INTO laps (session_id, lap, time_ms, s1_ms, s2_ms, s3_ms, valid, fuel_used, position) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
-        params![session_id, lap.lap, lap.time_ms, lap.sectors[0], lap.sectors[1], lap.sectors[2], lap.valid, lap.fuel_used, lap.position],
+        "INSERT INTO laps (session_id, lap, time_ms, s1_ms, s2_ms, s3_ms, valid, fuel_used, position, gap_ahead_s, gap_behind_s) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+        params![session_id, lap.lap, lap.time_ms, lap.sectors[0], lap.sectors[1], lap.sectors[2], lap.valid, lap.fuel_used, lap.position, lap.gap_ahead_s, lap.gap_behind_s],
     )?;
     Ok(())
 }
@@ -156,7 +163,7 @@ pub fn list_sessions(c: &Connection, game: &str, limit: u32) -> AppResult<Vec<Se
 }
 
 pub fn session_laps(c: &Connection, session_id: i64) -> AppResult<Vec<LapRow>> {
-    let mut st = c.prepare("SELECT lap, time_ms, s1_ms, s2_ms, s3_ms, valid, fuel_used, position FROM laps WHERE session_id = ?1 ORDER BY lap")?;
+    let mut st = c.prepare("SELECT lap, time_ms, s1_ms, s2_ms, s3_ms, valid, fuel_used, position, gap_ahead_s, gap_behind_s FROM laps WHERE session_id = ?1 ORDER BY lap")?;
     let rows = st.query_map([session_id], |r| {
         Ok(LapRow {
             lap: r.get(0)?,
@@ -165,6 +172,8 @@ pub fn session_laps(c: &Connection, session_id: i64) -> AppResult<Vec<LapRow>> {
             valid: r.get(5)?,
             fuel_used: r.get(6)?,
             position: r.get(7)?,
+            gap_ahead_s: r.get(8)?,
+            gap_behind_s: r.get(9)?,
         })
     })?;
     Ok(rows.collect::<Result<_, _>>()?)
@@ -225,13 +234,14 @@ mod tests {
         let c = open_memory().unwrap();
         let id = insert_session(&c, "acc", "spa", "porsche_992_gt3_r", "race").unwrap();
         for (i, t) in [(1, 140_000), (2, 138_500), (3, 139_000)] {
-            insert_lap(&c, id, &LapRow { lap: i, time_ms: t, sectors: [Some(40_000), None, None], valid: i != 3, fuel_used: Some(2.9), position: Some(4) }).unwrap();
+            insert_lap(&c, id, &LapRow { lap: i, time_ms: t, sectors: [Some(40_000), None, None], valid: i != 3, fuel_used: Some(2.9), position: Some(4), gap_ahead_s: Some(1.2), gap_behind_s: None }).unwrap();
         }
         let s = list_sessions(&c, "acc", 10).unwrap();
         assert_eq!(s[0].lap_count, 3);
         assert!(list_sessions(&c, "lmu", 10).unwrap().is_empty(), "sessions are separate per game");
         assert_eq!(s[0].best_lap_ms, Some(138_500));
         assert_eq!(session_laps(&c, id).unwrap().len(), 3);
+        assert_eq!(session_laps(&c, id).unwrap()[0].gap_ahead_s, Some(1.2));
     }
 
     #[test]

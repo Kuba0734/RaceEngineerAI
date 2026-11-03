@@ -5,7 +5,39 @@ use super::{Ctx, Memory};
 use crate::calls::engine::CallRequest;
 use crate::games::provider::{RainIntensity, TrackGrip};
 
+/// Rain trend from the raw precipitation and wetness history (games without a forecast):
+/// compares now with `window_min` ago. Not a forecast – it says what is already happening.
+fn rain_trend(ctx: &mut Ctx, mem: &mut Memory) {
+    let w = ctx.state.frame.weather;
+    let (Some(rain), Some(wet)) = (w.rain_amount, w.wetness_level) else { return };
+    let t = ctx.t;
+    let window = ctx.th("weather.trend", "window_min") * 60.0;
+    let step = ctx.th("weather.trend", "rain_step_pct") as f32 / 100.0;
+    if mem.weather_samples.back().is_none_or(|(ts, _, _)| t - ts >= 20.0) {
+        mem.weather_samples.push_back((t, rain, wet));
+    }
+    while mem.weather_samples.front().is_some_and(|(ts, _, _)| t - ts > window * 2.0) {
+        mem.weather_samples.pop_front();
+    }
+    let Some(&(_, r0, w0)) = mem.weather_samples.iter().rev().find(|(ts, _, _)| t - ts >= window) else { return };
+    let sub = if rain - r0 >= step {
+        "rain_heavier"
+    } else if r0 - rain >= step && r0 > 0.0 {
+        "rain_lighter"
+    } else if wet > w0 {
+        "track_wetter"
+    } else if wet < w0 {
+        "track_drying"
+    } else {
+        return;
+    };
+    // Measured again from here, so one change is said once.
+    mem.weather_samples.clear();
+    ctx.push(CallRequest::new("weather.trend").variant(sub));
+}
+
 pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
+    rain_trend(ctx, mem);
     // Race control declares the track wet (wet tyres become legal).
     if let Some(wet) = ctx.state.frame.wet_tyres_allowed {
         if wet && mem.wet_declared.replace(wet) == Some(false) {

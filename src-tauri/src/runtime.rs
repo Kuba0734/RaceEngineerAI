@@ -26,6 +26,9 @@ use crate::storage::db::{DbJob, LapRow};
 #[ts(export)]
 pub struct MapCar {
     pub id: i32,
+    pub number: String,
+    #[ts(optional)]
+    pub color: Option<String>,
     pub x: f32,
     pub z: f32,
     pub position: i32,
@@ -178,7 +181,7 @@ pub struct LiveSub {
     pub count: u32,
 }
 
-fn build_live(core: &Core, heavy: bool) -> LiveFrame {
+pub(crate) fn build_live(core: &Core, heavy: bool) -> LiveFrame {
     let st = core.state.lock();
     let settings = core.settings.read();
     let f = &st.frame;
@@ -186,11 +189,13 @@ fn build_live(core: &Core, heavy: bool) -> LiveFrame {
     let mut map: Vec<MapCar> = st
         .cars
         .iter()
-        .map(|c| MapCar { id: c.id, x: c.x, z: c.z, position: c.position, me: c.is_player || c.id == me, pit: c.location.in_pits() })
+        // Cars without a position yet (no map built) are left out instead of piling up at 0/0.
+        .filter(|c| c.x != 0.0 || c.z != 0.0)
+        .map(|c| MapCar { id: c.id, number: if c.number_text.is_empty() { c.race_number.to_string() } else { c.number_text.clone() }, color: c.class_color.clone(), x: c.x, z: c.z, position: c.position, me: c.is_player || c.id == me, pit: c.location.in_pits() })
         .collect();
     if map.is_empty() {
         // Without broadcasting: positions from shared memory.
-        map = f.cars.iter().map(|c| MapCar { id: c.id, x: c.x, z: c.z, position: 0, me: c.id == me, pit: false }).collect();
+        map = f.cars.iter().map(|c| MapCar { id: c.id, number: String::new(), color: None, x: c.x, z: c.z, position: 0, me: c.id == me, pit: false }).collect();
     }
     let (quiet, preset) = {
         let e = core.engine.lock();
@@ -367,6 +372,8 @@ fn session_summary_json(core: &Core) -> String {
         "best_lap_ms": st.best_valid_lap().map(|l| l.time_ms),
         "track_limits": st.track_limits,
         "corners": st.last_corner_deltas,
+        "report": st.report(),
+        "class": st.player_car().map(|c| c.class_name.clone()),
         "radio": core.engine.lock().log.iter().rev().take(80).cloned().collect::<Vec<_>>(),
     })
     .to_string()
@@ -677,6 +684,7 @@ fn handle_race_events(core: &Core, mem: &mut Memory, sdb: &mut SessionDb, deferr
                 core.engine.lock().race_finished = true;
                 deferred.clear();
             }
+            RaceEvent::PitEntry => auto_pit_fuel(core),
             RaceEvent::NewSession => {
                 deferred.clear();
                 end_session(core, sdb);
@@ -686,7 +694,13 @@ fn handle_race_events(core: &Core, mem: &mut Memory, sdb: &mut SessionDb, deferr
             }
             RaceEvent::LapCompleted(rec) => {
                 if let Some(id) = sdb.id {
-                    core.db.send(DbJob::Lap { session_id: id, lap: LapRow { lap: rec.lap as u32, time_ms: rec.time_ms.max(0) as u32, sectors: rec.sectors.map(|s| s.map(|x| x.max(0) as u32)), valid: rec.valid, fuel_used: rec.fuel_used_l, position: Some(rec.position.max(0) as u32) } });
+                    let (gap_ahead_s, gap_behind_s) = {
+                        let st = core.state.lock();
+                        let me = st.frame.player_car_id;
+                        let gap = |off: i32| st.neighbour(off).and_then(|c| st.gaps.gap(me, c.id)).map(|g| g.abs() as f32);
+                        (gap(-1), gap(1))
+                    };
+                    core.db.send(DbJob::Lap { session_id: id, lap: LapRow { lap: rec.lap as u32, time_ms: rec.time_ms.max(0) as u32, sectors: rec.sectors.map(|s| s.map(|x| x.max(0) as u32)), valid: rec.valid, fuel_used: rec.fuel_used_l, position: Some(rec.position.max(0) as u32), gap_ahead_s, gap_behind_s } });
                 }
                 // Recurring calls requested by the driver.
                 let due: Vec<String> = {
@@ -727,6 +741,27 @@ fn handle_race_events(core: &Core, mem: &mut Memory, sdb: &mut SessionDb, deferr
     }
     speak_requests(core, reqs);
     let _ = core.app.emit("race-events", events.len());
+}
+
+/// Puts the fuel still needed into the game's pit menu when entering the pits (if enabled).
+fn auto_pit_fuel(core: &Core) {
+    let req = {
+        let settings = core.settings.read();
+        let st = core.state.lock();
+        let on = settings.games.get(&st.session.game_id).is_some_and(|g| g.auto_pit_fuel);
+        if !on || !st.has("hasPitControl") {
+            return;
+        }
+        let fs = st.fuel_strategy(&settings);
+        // Without a fuel average there is nothing sensible to enter.
+        if fs.per_lap_l <= 0.0 {
+            return;
+        }
+        (st.session.game_id.clone(), crate::games::PitRequest { fuel_l: Some(fs.refuel_l.max(0.0)), ..Default::default() })
+    };
+    if let Err(e) = crate::games::set_pit_menu(&req.0, &req.1) {
+        tracing::warn!("auto pit fuel: {e}");
+    }
 }
 
 /// Recurring info requested by voice: re-uses the fast path answers.

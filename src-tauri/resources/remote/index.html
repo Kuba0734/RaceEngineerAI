@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0b0e" />
+<title>RaceEngineerAI Dashboard</title>
+<style>
+  :root { --bg:#0a0b0e; --surface:#12141a; --surface-2:#1a1d25; --border:#262a35; --text:#f2f4f8; --dim:#8a90a0; --accent:#ff5a1f; --data:#22d3ee; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; --purple:#a855f7; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { padding: max(12px, env(safe-area-inset-top)) 12px 16px; }
+  .num { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: var(--dim); font-size: 13px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--dim); margin-right: 6px; }
+  .live .dot { background: var(--ok); }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  @media (min-width: 720px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; }
+  .tile .k { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .tile .v { font-size: 30px; font-weight: 650; margin-top: 2px; }
+  .tile .s { font-size: 12px; color: var(--dim); margin-top: 2px; min-height: 1em; }
+  .flag { margin: 8px 0; padding: 10px; border-radius: 12px; text-align: center; font-weight: 700; letter-spacing: .08em; display: none; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-size: 15px; }
+  td { padding: 6px 6px; background: var(--surface); }
+  td:first-child { border-radius: 8px 0 0 8px; } td:last-child { border-radius: 0 8px 8px 0; text-align: right; }
+  tr.me td { background: rgba(255,90,31,.18); }
+  .up { color: var(--danger); } .down { color: var(--data); }
+  h2 { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); margin: 16px 0 6px; font-weight: 600; }
+  .msg { color: var(--dim); text-align: center; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="top"><span id="state"><span class="dot"></span><span id="stateText">…</span></span><span id="track"></span></div>
+<div id="flag" class="flag"></div>
+<div class="grid">
+  <div class="tile"><div class="k" data-t="pos">Position</div><div class="v num" id="pos">–</div><div class="s num" id="lap"></div></div>
+  <div class="tile"><div class="k" data-t="delta">Delta</div><div class="v num" id="delta">–</div><div class="s num" id="laps"></div></div>
+  <div class="tile"><div class="k" data-t="fuel">Fuel</div><div class="v num" id="fuel">–</div><div class="s num" id="fuelS"></div></div>
+  <div class="tile"><div class="k" data-t="time">Time left</div><div class="v num" id="time">–</div><div class="s num" id="inc"></div></div>
+</div>
+<h2 data-t="rel">Around you</h2>
+<table><tbody id="rel"></tbody></table>
+<div id="msg" class="msg"></div>
+<script>
+  const de = (navigator.language || "").startsWith("de");
+  const T = de ? { pos: "Position", delta: "Delta", fuel: "Sprit", time: "Restzeit", rel: "Um dich herum", live: "Live", waiting: "Warte auf Session …", off: "Verbindung getrennt – neuer Versuch …", pin: "PIN eingeben", lap: "Runde", last: "Letzte", best: "Beste", laps: "Rd.", need: "nachtanken", inc: "Incidents" }
+               : { pos: "Position", delta: "Delta", fuel: "Fuel", time: "Time left", rel: "Around you", live: "Live", waiting: "Waiting for a session …", off: "Disconnected – retrying …", pin: "Enter PIN", lap: "Lap", last: "Last", best: "Best", laps: "laps", need: "to add", inc: "Incidents" };
+  document.querySelectorAll("[data-t]").forEach((e) => (e.textContent = T[e.dataset.t]));
+  const $ = (id) => document.getElementById(id);
+  const lap = (ms) => (!ms || ms <= 0 ? "–:––.–––" : `${Math.floor(ms / 60000)}:${((ms % 60000) / 1000).toFixed(3).padStart(6, "0")}`);
+  const clock = (ms) => { if (!ms || ms <= 0) return "–"; const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`; };
+  const FLAGS = { yellow: ["#f59e0b", "#000"], blue: ["#2563eb", "#fff"], black: ["#000", "#fff"], white: ["#f2f4f8", "#000"], checkered: ["#f2f4f8", "#000"], orange: ["#ff5a1f", "#000"], green: ["#22c55e", "#000"] };
+  let pin = new URLSearchParams(location.search).get("pin") || localStorage.getItem("pin") || "";
+  let heavy = {};
+  function render(f) {
+    for (const k of ["standings", "fuel", "relative", "pit", "laps_total_est"]) { if (f[k] != null) heavy[k] = f[k]; else f[k] = heavy[k]; }
+    $("state").className = f.live ? "live" : "";
+    $("stateText").textContent = f.live ? T.live : T.waiting;
+    $("track").textContent = f.track || "";
+    $("pos").textContent = f.position > 0 ? `P${f.position}` : "–";
+    $("lap").textContent = `${T.lap} ${f.lap}${f.laps_total_est ? "/≈" + f.laps_total_est.toFixed(0) : ""} · ${T.last} ${lap(f.last_lap_ms)}`;
+    const d = f.delta_ms / 1000;
+    $("delta").textContent = `${d > 0 ? "+" : ""}${d.toFixed(2)}`;
+    $("delta").style.color = d <= 0 ? "var(--ok)" : "var(--danger)";
+    $("laps").textContent = `${T.best} ${lap(f.best_lap_ms)}`;
+    $("fuel").textContent = `${f.fuel_l.toFixed(1)} L`;
+    $("fuelS").textContent = f.fuel ? `${f.fuel.laps_possible.toFixed(1)} ${T.laps} · ${f.fuel.refuel_l > 0.5 ? f.fuel.refuel_l.toFixed(1) + " L " + T.need : "✓"}` : "";
+    $("time").textContent = clock(f.time_left_ms);
+    $("inc").textContent = f.incidents != null ? `${T.inc} ${f.incidents}${f.incident_limit ? "/" + f.incident_limit : ""}` : "";
+    const fl = FLAGS[f.flag];
+    $("flag").style.display = fl && f.flag !== "green" ? "block" : "none";
+    if (fl) { $("flag").style.background = fl[0]; $("flag").style.color = fl[1]; $("flag").textContent = f.flag.toUpperCase(); }
+    const rel = f.relative && f.relative.length ? f.relative : nearFromStandings(f.standings);
+    $("rel").innerHTML = rel.map((r) => `<tr class="${r.is_player ? "me" : ""}"><td class="num">${r.position || "–"}</td><td class="num" style="color:${r.class_color || "var(--dim)"}">#${esc(r.number_text || String(r.race_number || ""))}</td><td class="${r.laps_ahead > 0 ? "up" : r.laps_ahead < 0 ? "down" : ""}">${esc(r.driver || "")}</td><td class="num">${r.is_player ? "" : r.gap_s != null ? Math.abs(r.gap_s).toFixed(1) : r.gap_to_player_s != null ? Math.abs(r.gap_to_player_s).toFixed(1) : ""}</td></tr>`).join("");
+  }
+  function nearFromStandings(rows) {
+    if (!rows) return [];
+    const i = rows.findIndex((r) => r.is_player);
+    return i < 0 ? rows.slice(0, 7) : rows.slice(Math.max(0, i - 3), i + 4);
+  }
+  function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+  function connect() {
+    const es = new EventSource(`/live?pin=${encodeURIComponent(pin)}`);
+    es.onmessage = (e) => { $("msg").textContent = ""; render(JSON.parse(e.data)); };
+    es.onerror = () => {
+      es.close();
+      fetch(`/live?pin=${encodeURIComponent(pin)}`, { method: "GET" }).then((r) => {
+        if (r.status === 401) { pin = prompt(T.pin) || ""; localStorage.setItem("pin", pin); }
+        r.body && r.body.cancel();
+      }).catch(() => {});
+      $("msg").textContent = T.off;
+      setTimeout(connect, 2000);
+    };
+  }
+  connect();
+</script>
+</body>
+</html>
