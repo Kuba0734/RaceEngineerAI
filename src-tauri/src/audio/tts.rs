@@ -55,6 +55,7 @@ impl TtsHandle {
 struct Synth {
     engines: HashMap<String, sherpa_onnx::OfflineTts>,
     pause_ms: u32,
+    comma_ms: u32,
 }
 
 /// Splits after . ! ? (not inside numbers like 1.5).
@@ -127,19 +128,25 @@ impl Synth {
         let text = speakable(text, lang);
         let text = text.as_str();
         let pause_ms = self.pause_ms;
+        let comma_ms = self.comma_ms;
         let tts = self.engine(voice)?;
         // Slightly longer pauses at commas, plus a short varied gap between sentences.
         let cfg = sherpa_onnx::GenerationConfig { speed: p.speed.clamp(0.5, 2.0), sid: p.speaker_id, silence_scale: 0.35, ..Default::default() };
         let mut samples: Vec<f32> = Vec::new();
         let mut sr = 22_050u32;
         for (i, s) in sentences(text).iter().enumerate() {
-            let audio = tts.generate_with_config(s, &cfg, None::<fn(&[f32], f32) -> bool>)?;
-            sr = audio.sample_rate() as u32;
-            if i > 0 && pause_ms > 0 {
-                let jitter = rand::random_range(0.8..1.25);
-                samples.extend(std::iter::repeat_n(0.0, (sr as f32 * pause_ms as f32 / 1000.0 * jitter) as usize));
+            // Clauses separated by ", " get their own pause (decimals like "1,4" have no space).
+            let clauses: Vec<&str> = if comma_ms > 0 { s.split_inclusive(", ").map(str::trim).filter(|c| !c.is_empty()).collect() } else { vec![s.as_str()] };
+            for (k, clause) in clauses.iter().enumerate() {
+                let audio = tts.generate_with_config(clause, &cfg, None::<fn(&[f32], f32) -> bool>)?;
+                sr = audio.sample_rate() as u32;
+                let gap_ms = if k > 0 { comma_ms } else if i > 0 { pause_ms } else { 0 };
+                if gap_ms > 0 {
+                    let jitter = rand::random_range(0.8..1.25);
+                    samples.extend(std::iter::repeat_n(0.0, (sr as f32 * gap_ms as f32 / 1000.0 * jitter) as usize));
+                }
+                samples.extend_from_slice(audio.samples());
             }
-            samples.extend_from_slice(audio.samples());
         }
         if samples.is_empty() {
             return None;
@@ -258,64 +265,114 @@ pub fn tone_clip(call_id: &str, sr: u32) -> Pcm {
     v.into()
 }
 
+/// The TTS thread's state.
+struct Worker {
+    synth: Synth,
+    settings: Arc<RwLock<Settings>>,
+    mixer: Sender<MixerCmd>,
+    out_sr: u32,
+    next_id: Arc<AtomicU64>,
+    clips: SpotterClips,
+}
+
+impl Worker {
+    fn profile(&self, role: VoiceRole) -> (VoiceProfile, Language) {
+        let s = self.settings.read();
+        (match role {
+            VoiceRole::Engineer => s.voices.engineer.clone(),
+            VoiceRole::Spotter => s.voices.spotter.clone(),
+        }, s.language)
+    }
+
+    /// Calls and previews: rendered and handed to the mixer at once.
+    fn speak(&mut self, job: TtsJob) {
+        (self.synth.pause_ms, self.synth.comma_ms) = { let v = &self.settings.read().voices; (v.sentence_pause_ms, v.comma_pause_ms) };
+        match job {
+            TtsJob::Speak(req) => {
+                if req.expires_at <= Instant::now() {
+                    return;
+                }
+                let (profile, lang) = self.profile(req.role);
+                let Some(pcm) = self.synth.render(&req.text, &profile, lang, self.out_sr) else {
+                    tracing::debug!("no voice for {} – skipped: {}", req.call_id, req.text);
+                    return;
+                };
+                if req.expires_at <= Instant::now() {
+                    return;
+                }
+                let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+                let _ = self.mixer.try_send(MixerCmd::Speech(SpeechItem { id, pcm, priority: req.priority, expires_at: req.expires_at }));
+            }
+            TtsJob::Preview { text, role } => {
+                let (profile, lang) = self.profile(role);
+                let pcm = self.synth.render(&text, &profile, lang, self.out_sr).unwrap_or_else(|| tone_clip("preview", self.out_sr));
+                let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+                let _ = self.mixer.try_send(MixerCmd::Speech(SpeechItem { id, pcm, priority: Priority::Answer, expires_at: Instant::now() + std::time::Duration::from_secs(30) }));
+            }
+            TtsJob::RenderSpotter(_) | TtsJob::Reload => {}
+        }
+    }
+
+    /// Pre-renders the spotter clips. Between clips, new calls and previews are served first;
+    /// a newer list or a voice reload starts the rendering over.
+    fn render_spotter(&mut self, mut list: Vec<(String, Vec<String>)>, rx: &Receiver<TtsJob>) {
+        'again: loop {
+            (self.synth.pause_ms, self.synth.comma_ms) = { let v = &self.settings.read().voices; (v.sentence_pause_ms, v.comma_pause_ms) };
+            let (profile, lang) = self.profile(VoiceRole::Spotter);
+            let mut map = HashMap::new();
+            for i in 0..list.len() {
+                let mut restart = false;
+                for job in rx.try_iter() {
+                    match job {
+                        TtsJob::RenderSpotter(newer) => {
+                            list = newer;
+                            restart = true;
+                        }
+                        TtsJob::Reload => {
+                            self.synth.engines.clear();
+                            restart = true;
+                        }
+                        job => self.speak(job),
+                    }
+                }
+                if restart {
+                    continue 'again;
+                }
+                let (id, texts) = &list[i];
+                let v: Vec<Pcm> = texts.iter().filter_map(|t| self.synth.render(t, &profile, lang, self.out_sr)).collect();
+                map.insert(id.clone(), if v.is_empty() { vec![tone_clip(id, self.out_sr)] } else { v });
+            }
+            *self.clips.write() = map;
+            tracing::info!("spotter clips rendered");
+            return;
+        }
+    }
+}
+
 pub fn start(settings: Arc<RwLock<Settings>>, mixer: Sender<MixerCmd>, out_sr: u32) -> TtsHandle {
     let (tx, rx): (Sender<TtsJob>, Receiver<TtsJob>) = crossbeam_channel::bounded(64);
     let clips: SpotterClips = Arc::new(RwLock::new(HashMap::new()));
     let handle = TtsHandle { tx, spotter_clips: clips.clone(), next_id: Arc::new(AtomicU64::new(1)) };
     let next_id = handle.next_id.clone();
     let spawned = std::thread::Builder::new().name("tts".into()).spawn(move || {
-        let mut synth = Synth { engines: HashMap::new(), pause_ms: 260 };
-        for job in rx {
-            synth.pause_ms = settings.read().voices.sentence_pause_ms;
-            match job {
-                TtsJob::Speak(req) => {
-                    if req.expires_at <= Instant::now() {
-                        continue;
-                    }
-                    let (profile, lang) = {
-                        let s = settings.read();
-                        (match req.role {
-                            VoiceRole::Engineer => s.voices.engineer.clone(),
-                            VoiceRole::Spotter => s.voices.spotter.clone(),
-                        }, s.language)
-                    };
-                    let Some(pcm) = synth.render(&req.text, &profile, lang, out_sr) else {
-                        tracing::debug!("no voice for {} – skipped: {}", req.call_id, req.text);
-                        continue;
-                    };
-                    if req.expires_at <= Instant::now() {
-                        continue;
-                    }
-                    let id = next_id.fetch_add(1, Ordering::Relaxed);
-                    let _ = mixer.try_send(MixerCmd::Speech(SpeechItem { id, pcm, priority: req.priority, expires_at: req.expires_at }));
+        let mut w = Worker { synth: Synth { engines: HashMap::new(), pause_ms: 260, comma_ms: 140 }, settings, mixer, out_sr, next_id, clips };
+        while let Ok(first) = rx.recv() {
+            // Everything waiting: one reload, speech and previews right away, the spotter clips
+            // last (they take seconds and must not hold up a preview or a call).
+            let jobs: Vec<TtsJob> = std::iter::once(first).chain(rx.try_iter()).collect();
+            if jobs.iter().any(|j| matches!(j, TtsJob::Reload)) {
+                w.synth.engines.clear();
+            }
+            let mut spotter = None;
+            for job in jobs {
+                match job {
+                    TtsJob::RenderSpotter(list) => spotter = Some(list),
+                    TtsJob::Reload => {}
+                    job => w.speak(job),
                 }
-                TtsJob::RenderSpotter(list) => {
-                    let (profile, lang) = {
-                        let s = settings.read();
-                        (s.voices.spotter.clone(), s.language)
-                    };
-                    let mut map = HashMap::new();
-                    for (id, texts) in list {
-                        let v: Vec<Pcm> = texts.iter().filter_map(|t| synth.render(t, &profile, lang, out_sr)).collect();
-                        let v = if v.is_empty() { vec![tone_clip(&id, out_sr)] } else { v };
-                        map.insert(id, v);
-                    }
-                    *clips.write() = map;
-                    tracing::info!("spotter clips rendered");
-                }
-                TtsJob::Preview { text, role } => {
-                    let (profile, lang) = {
-                        let s = settings.read();
-                        (match role {
-                            VoiceRole::Engineer => s.voices.engineer.clone(),
-                            VoiceRole::Spotter => s.voices.spotter.clone(),
-                        }, s.language)
-                    };
-                    let pcm = synth.render(&text, &profile, lang, out_sr).unwrap_or_else(|| tone_clip("preview", out_sr));
-                    let id = next_id.fetch_add(1, Ordering::Relaxed);
-                    let _ = mixer.try_send(MixerCmd::Speech(SpeechItem { id, pcm, priority: Priority::Answer, expires_at: Instant::now() + std::time::Duration::from_secs(30) }));
-                }
-                TtsJob::Reload => synth.engines.clear(),
+            }
+            if let Some(list) = spotter {
+                w.render_spotter(list, &rx);
             }
         }
     });

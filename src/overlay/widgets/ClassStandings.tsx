@@ -58,7 +58,7 @@ export function ClassStandings({ rows, classes, playerClass, o, lapText, timeTex
                   return (
                     <tr key={r.id} className={cx(r.is_player ? "bg-accent/20" : "bg-surface/60")}>
                       <td className="num w-6 rounded-l border-l-4 pl-1 font-semibold" style={{ borderColor: color }}>{r.class_position || "–"}</td>
-                      {o.class_show_pos_change && <td className="w-8"><PosChange start={r.start_position} now={r.position} /></td>}
+                      {o.class_show_pos_change && <td className="w-8"><PosChange start={r.start_position} now={r.class_position || r.position} /></td>}
                       <td className="w-10"><CarNumber text={r.number_text} color={r.class_color} /></td>
                       <td className={cx("max-w-40 truncate pr-2", r.is_player && "text-accent")}>{r.driver}</td>
                       {o.class_show_brand && <td className="max-w-20 truncate pr-2 text-[11px] text-dim">{r.brand}</td>}

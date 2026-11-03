@@ -117,6 +117,20 @@ async fn serve(mut stream: TcpStream, core: Arc<Core>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// QR code of a text as a square matrix of dark modules (row by row).
+#[derive(Debug, Clone, serde::Serialize, ts_rs::TS)]
+#[ts(export)]
+pub struct QrMatrix {
+    pub width: u32,
+    pub dark: Vec<bool>,
+}
+
+pub fn qr(text: &str) -> Option<QrMatrix> {
+    let code = qrcode::QrCode::new(text.as_bytes()).ok()?;
+    let dark = code.to_colors().into_iter().map(|c| c == qrcode::Color::Dark).collect();
+    Some(QrMatrix { width: code.width() as u32, dark })
+}
+
 /// Addresses to type on the phone: this PC's network address(es) with the port.
 pub fn urls(port: u16) -> Vec<String> {
     // Connecting a UDP socket only picks the outgoing interface; nothing is sent.
@@ -133,6 +147,13 @@ pub fn urls(port: u16) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::parse_request;
+
+    #[test]
+    fn qr_for_an_address() {
+        let q = super::qr("http://192.168.1.20:8765").unwrap();
+        assert_eq!(q.dark.len(), (q.width * q.width) as usize);
+        assert!(q.width >= 21 && q.dark.iter().any(|d| *d));
+    }
 
     #[test]
     fn request_line() {

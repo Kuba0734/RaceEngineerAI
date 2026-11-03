@@ -96,6 +96,12 @@ Wagenabhängig, nur wenn vorhanden: `dcTractionControl`, `dcABS`, `[LF|RF|LR|RR]
 | Gegner-Infos | YAML `CurDriverIncidentCount`, `IRating`, `LicString` | Für die KI (`get_car`). |
 | Rennbericht | iRating-Prognose (Community-Formel), Incidents, Kurven pro Incident (`TrackNumTurns`) | Die SR-Änderung selbst veröffentlicht iRacing nicht. |
 
+## Zielflagge und Positionen (aus dem ersten Rennen)
+
+- `SessionFlags` checkered und `SessionState = Checkered` kommen, sobald der **Führende** (bzw. in der Quali die Uhr) fertig ist – der Fahrer fährt seine letzte Runde noch. Als „im Ziel“ zählt daher erst die nächste Überfahrt der Linie nach der Flagge (oder die Boxeneinfahrt). Kommt die Flagge direkt an der Linie (ACC), gilt sie sofort.
+- Mehrklassen-Rennen: Position, Abstände nach vorn/hinten, Rivalen, Rauskomm-Position und Relative zählen in der **eigenen Klasse**. Die Live-Reihenfolge (aus der gefahrenen Distanz) wird pro Klasse berechnet.
+- Startposition = Reihenfolge beim grünen Licht.
+
 ## Rundenzeit und Delta
 
 - `LapCompleted` steigt an der Linie, `LapLastLapTime` kommt einen Moment später (live gesehen: die App übernahm die vorherige Runde). Eine neue Runde wird erst gemeldet, wenn sich `LapLastLapTime` geändert hat, spätestens nach 3 s.

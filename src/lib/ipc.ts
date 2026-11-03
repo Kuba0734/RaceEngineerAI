@@ -10,6 +10,7 @@ import type { KeyStatus } from "./bindings/KeyStatus";
 import type { KeyTest } from "./bindings/KeyTest";
 import type { LapRow } from "./bindings/LapRow";
 import type { ClassTargets } from "./bindings/ClassTargets";
+import type { QrMatrix } from "./bindings/QrMatrix";
 import type { LiveFrame } from "./bindings/LiveFrame";
 import type { ModelStatus } from "./bindings/ModelStatus";
 import type { PttSoundStyle } from "./bindings/PttSoundStyle";
@@ -56,6 +57,7 @@ export const api = {
   getGames: () => invoke<GamesView>("get_games"),
   getStatus: () => invoke<RuntimeStatus>("get_status"),
   remoteUrls: () => invoke<string[]>("remote_urls"),
+  remoteQr: (url: string) => invoke<QrMatrix | null>("remote_qr", { url }),
   carClassDefaults: () => invoke<Record<string, ClassTargets>>("car_class_defaults"),
   accBroadcastingStatus: () => invoke<BroadcastingStatus>("acc_broadcasting_status"),
   accBroadcastingApply: () => invoke<string | null>("acc_broadcasting_apply"),

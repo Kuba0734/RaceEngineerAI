@@ -1,6 +1,6 @@
 [package]
 name = "race-engineer-ai"
-version = "0.6.0"
+version = "0.6.1"
 description = "RaceEngineerAI – sim racing pit crew over radio"
 authors = ["Kuba0734"]
 edition = "2021"
@@ -41,6 +41,8 @@ rusqlite = { version = "0.41.1", features = ["bundled"] }
 keyring-core = "1.0.1"
 windows-native-keyring-store = "1.1.0"
 dirs = "7.0.0"
+# QR code of the LAN dashboard address (MIT/Apache-2.0, no extra deps without features)
+qrcode = { version = "0.14.1", default-features = false }
 # Concurrency
 parking_lot = "0.13.0"
 crossbeam-channel = "0.5.17"

@@ -6,6 +6,7 @@ import type { VoiceProfile } from "@/lib/bindings/VoiceProfile";
 import { Badge, Button, Card, Field, NumberInput, Segmented, Select, Slider, TextInput, Toggle, useAsync } from "@/components/ui";
 import { bytes } from "@/lib/format";
 import { useSettings } from "./basic";
+import { useApp } from "@/stores/app";
 import { useGameCaps } from "@/hooks/useGameCaps";
 import { useExpert } from "./expert";
 
@@ -90,6 +91,7 @@ export function ModelsCard() {
 }
 
 function VoiceCard({ role }: { role: "engineer" | "spotter" }) {
+  const flush = useApp((x) => x.flush);
   const { t } = useTranslation();
   const [s, up] = useSettings();
   const [models] = useModels();
@@ -98,7 +100,7 @@ function VoiceCard({ role }: { role: "engineer" | "spotter" }) {
   const fx = p.radio_fx;
   const voicesFor = (lang: string) => models.filter((m) => m.kind === "voice" && m.lang === lang).map((m) => ({ value: m.id, label: `${m.name}${m.installed ? "" : ` (${t("models.notInstalled")})`}` }));
   return (
-    <Card title={t(`voices.${role}`)} actions={<Button small onClick={() => void api.previewVoice(role)}>{t("common.preview")}</Button>}>
+    <Card title={t(`voices.${role}`)} actions={<Button small onClick={() => void flush().then(() => api.previewVoice(role))}>{t("common.preview")}</Button>}>
       <Field label={t("voices.voiceDe")}>
         <Select value={p.voice_de} onChange={(v) => set({ voice_de: v })} options={voicesFor("de")} />
       </Field>
@@ -152,6 +154,9 @@ export function VoicesSection() {
         </Field>
         <Field label={t("voices.pause")} hint={t("voices.pauseHint")}>
           <Slider value={s.voices.sentence_pause_ms} min={0} max={800} step={20} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, sentence_pause_ms: v } }))} format={(v) => `${v} ms`} />
+        </Field>
+        <Field label={t("voices.commaPause")} hint={t("voices.commaPauseHint")}>
+          <Slider value={s.voices.comma_pause_ms} min={0} max={500} step={20} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, comma_pause_ms: v } }))} format={(v) => (v === 0 ? t("common.off") : `${v} ms`)} />
         </Field>
         <p className="text-xs text-dim">{t("voices.deviceRestart")}</p>
       </Card>

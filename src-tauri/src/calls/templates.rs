@@ -64,7 +64,11 @@ pub fn fill(template: &str, params: &[(&str, String)]) -> String {
         }
         out.replace_range(a..=b, "");
     }
-    sentences(&out.split_whitespace().collect::<Vec<_>>().join(" ").replace(" .", ".").replace(" ,", ","))
+    // Parts that are joined into another sentence start with a space in their template: keep
+    // it, otherwise "turn 5." + "5 incidents." becomes "turn 5.5 incidents".
+    let lead = if template.starts_with(char::is_whitespace) { " " } else { "" };
+    let joined = sentences(&out.split_whitespace().collect::<Vec<_>>().join(" ").replace(" .", ".").replace(" ,", ","));
+    format!("{lead}{joined}")
 }
 
 /// Joined parts can lose the space after a full stop ("left.front right …"): every sentence
@@ -127,6 +131,14 @@ mod tests {
         assert_eq!(s, "Links!");
         let s = render(Language::En, "lap.personal_best", &["british"], &[("laptime", "1:47.9".into())]).unwrap();
         assert!(s.contains("Splendid"));
+    }
+
+    #[test]
+    fn parts_keep_their_leading_space() {
+        let part = fill(" {n} incidents.", &[("n", "5".into())]);
+        assert_eq!(part, " 5 incidents.");
+        let s = fill("Most time lost in turn 5.{incidents}", &[("incidents", part)]);
+        assert_eq!(s, "Most time lost in turn 5. 5 incidents.");
     }
 
     #[test]

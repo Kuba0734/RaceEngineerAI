@@ -48,6 +48,8 @@ pub enum RaceEvent {
     SessionPhaseChanged(SessionPhase),
     Game(GameEvent),
     StartLight(StartLight),
+    /// The player took the chequered flag (crossed the line after it, or went into the pits).
+    Finished,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -215,6 +217,10 @@ pub struct RaceState {
     last_penalty: Option<Penalty>,
     last_phase: SessionPhase,
     last_start_light: StartLight,
+    /// Chequered flag shown while the player is still on the last lap (iRacing shows it when the
+    /// leader finishes): the finish counts at the player's next line crossing.
+    finish_pending: bool,
+    finished: bool,
     mistake_cooldown_t: f64,
     off_track_since: Option<f64>,
     pressure_acc: ([f32; 4], [f32; 4], u32),
@@ -223,6 +229,15 @@ pub struct RaceState {
     /// Track outline built from every car: one point per spline bin.
     outline_bins: Vec<Option<[f32; 2]>>,
     outline_filled: usize,
+}
+
+/// Lap fraction around the line within which a chequered flag means "finished now".
+const FINISH_AT_LINE: f32 = 0.03;
+
+fn is_multiclass(cars: &[CarState]) -> bool {
+    let mut ids = cars.iter().map(|c| c.class_id);
+    let first = ids.next();
+    ids.any(|id| Some(id) != first)
 }
 
 /// Resolution of the outline built from all cars (bins along the spline).
@@ -278,6 +293,8 @@ impl RaceState {
             last_penalty: None,
             last_phase: SessionPhase::Unknown,
             last_start_light: StartLight::Off,
+            finish_pending: false,
+            finished: false,
             mistake_cooldown_t: 0.0,
             off_track_since: None,
             pressure_acc: ([0.0; 4], [0.0; 4], 0),
@@ -367,6 +384,8 @@ impl RaceState {
     pub fn on_cars(&mut self, cars: Vec<CarState>, events: &mut Vec<RaceEvent>) {
         let t = self.t_s();
         self.outline_from_cars(&cars);
+        let multiclass = is_multiclass(&cars);
+        let running = self.race_running();
         for c in &cars {
             if !c.is_player {
                 self.gaps.update(c.id, c.laps, c.spline, t);
@@ -382,8 +401,12 @@ impl RaceState {
             }
             r.in_pits = in_pits;
             r.last_location = c.location;
-            if r.start_position.is_none() && c.position > 0 && self.session.session_type == SessionType::Race {
-                r.start_position = Some(c.position);
+            if r.start_position.is_none() && running {
+                // The grid order at the green light, in the same terms as the position shown.
+                let rank = if multiclass { c.class_position } else { c.position };
+                if rank > 0 {
+                    r.start_position = Some(rank);
+                }
             }
         }
         let mut cars = cars;
@@ -397,7 +420,7 @@ impl RaceState {
     /// their spline looks like a nearly finished lap) and not after the flag (the official
     /// classification counts then).
     fn apply_live_order(&self, cars: &mut [CarState]) {
-        if !self.race_running() || self.frame.flag == Flag::Checkered || !cars.iter().any(|c| c.laps >= 1) {
+        if !self.race_running() || self.finished || !cars.iter().any(|c| c.laps >= 1) {
             return;
         }
         let mut order: Vec<(usize, f64, i32)> = cars
@@ -406,9 +429,29 @@ impl RaceState {
             .map(|(i, c)| (i, self.gaps.progress(c.id).unwrap_or(f64::from(c.laps) + f64::from(c.spline)), c.position))
             .collect();
         order.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.2.cmp(&b.2)));
+        let mut per_class: BTreeMap<i32, i32> = BTreeMap::new();
         for (rank, (i, _, _)) in order.into_iter().enumerate() {
             cars[i].position = rank as i32 + 1;
+            // Class position from the same live order (the game's is official, at the line).
+            let n = per_class.entry(cars[i].class_id).or_insert(0);
+            *n += 1;
+            cars[i].class_position = *n;
         }
+    }
+
+    /// More than one car class in the session: positions are meant within the class.
+    pub fn multiclass(&self) -> bool {
+        is_multiclass(&self.cars)
+    }
+
+    /// A car's position as the driver understands it: in its class in multi-class races.
+    pub fn rank(&self, c: &CarState) -> i32 {
+        if self.multiclass() { c.class_position } else { c.position }
+    }
+
+    /// Cars the player races against for position (own class in multi-class races).
+    pub fn is_rival(&self, c: &CarState) -> bool {
+        !c.is_player && (!self.multiclass() || self.player_car().is_none_or(|me| me.class_id == c.class_id))
     }
 
     /// The driver sits in the car and the game delivers real data. In menus the physics
@@ -496,6 +539,10 @@ impl RaceState {
             self.lap_in = true;
             self.pit_entry_t = Some(t);
             events.push(RaceEvent::PitEntry);
+            if std::mem::take(&mut self.finish_pending) && !self.finished {
+                self.finished = true;
+                events.push(RaceEvent::Finished);
+            }
         } else if !in_pit_lane && self.was_in_pit_lane {
             self.lap_out = true;
             let loss = self.pit_entry_t.take().map(|t0| (t - t0) as f32);
@@ -509,6 +556,16 @@ impl RaceState {
         if f.flag != self.last_flag {
             events.push(RaceEvent::FlagChanged { from: self.last_flag, to: f.flag });
             self.last_flag = f.flag;
+            if f.flag == Flag::Checkered && !self.finished {
+                // At the line right now (ACC shows the flag there): finished. Mid-lap (iRacing
+                // shows it when the leader finishes): at the player's next line crossing.
+                if f.spline < FINISH_AT_LINE || f.spline > 1.0 - FINISH_AT_LINE {
+                    self.finished = true;
+                    events.push(RaceEvent::Finished);
+                } else {
+                    self.finish_pending = true;
+                }
+            }
         }
         if f.yellow_sectors != self.last_yellow {
             self.last_yellow = f.yellow_sectors;
@@ -566,8 +623,8 @@ impl RaceState {
             }
         }
 
-        if self.race_start_position.is_none() && f.completed_laps == 0 && f.position > 0 {
-            self.race_start_position = Some(f.position);
+        if self.race_start_position.is_none() && self.race_running() && self.player_position() > 0 {
+            self.race_start_position = Some(self.player_position());
         }
         if self.weather_at_start.is_none() {
             self.weather_at_start = Some(f.weather);
@@ -672,6 +729,10 @@ impl RaceState {
         }
         self.laps.push(rec.clone());
         events.push(RaceEvent::LapCompleted(rec));
+        if std::mem::take(&mut self.finish_pending) && !self.finished {
+            self.finished = true;
+            events.push(RaceEvent::Finished);
+        }
 
         self.sector_times = [None; 3];
         self.lap_out = false;
@@ -765,8 +826,14 @@ impl RaceState {
         fuel::strategy(self.frame.fuel_l, per_lap, clean, avg, laps_to_go, st.fuel_reserve_laps, st.fuel_reserve_liters, st.max_save_fraction)
     }
 
+    /// The player's position as the driver understands it (in the class in multi-class races).
     pub fn player_position(&self) -> i32 {
-        self.player_car().map(|c| c.position).filter(|p| *p > 0).unwrap_or(self.frame.position)
+        match self.player_car() {
+            Some(c) if self.rank(c) > 0 => self.rank(c),
+            // The game's own value is overall; in a multi-class race it would be misleading.
+            _ if self.multiclass() => 0,
+            _ => self.frame.position,
+        }
     }
 
     pub fn standings(&self, trend_window: usize) -> Vec<StandingRow> {
@@ -903,7 +970,7 @@ impl RaceState {
                 let laps_ahead = ((c.laps as f32 + c.spline) - my_dist).round() as i32;
                 Some(RelativeRow {
                     id: c.id,
-                    position: c.position,
+                    position: self.rank(c),
                     class_position: c.class_position,
                     number_text: if c.number_text.is_empty() { c.race_number.to_string() } else { c.number_text.clone() },
                     driver: c.driver.clone(),
@@ -948,7 +1015,7 @@ impl RaceState {
     /// Car directly ahead/behind in the race order.
     pub fn neighbour(&self, offset: i32) -> Option<&CarState> {
         let pos = self.player_position();
-        self.cars.iter().find(|c| c.position == pos + offset && !c.is_player)
+        self.cars.iter().find(|c| self.is_rival(c) && self.rank(c) == pos + offset)
     }
 
     pub fn road_temp_trend_c_per_10min(&self) -> Option<f32> {
@@ -1001,7 +1068,8 @@ mod tests {
         assert_eq!(s.player_position(), 2);
         // After the flag cars stop at different distances, the classification decides.
         let mut s = running_race();
-        s.frame.flag = Flag::Checkered;
+        // After the player's own finish (not merely the flag being out) the classification counts.
+        s.finished = true;
         s.on_cars(vec![car(0, 1, 10, 0.05, false), car(1, 2, 10, 0.50, true)], &mut ev);
         assert_eq!(s.player_position(), 2);
     }
@@ -1067,5 +1135,38 @@ mod tests {
         assert_eq!((r[2].laps_ahead, r[3].laps_ahead), (-1, 1));
         // Only one car each side.
         assert_eq!(s.relative(1).len(), 3);
+    }
+
+    #[test]
+    fn flag_mid_lap_finishes_at_the_next_line() {
+        let mut s = running_race();
+        let settings = Settings::default();
+        let (mut sp, mut ev) = (Vec::new(), Vec::new());
+        let mut f = s.frame.clone();
+        f.status = SimStatus::Live;
+        f.completed_laps = 9;
+        f.spline = 0.5;
+        f.flag = Flag::Checkered;
+        s.on_frame(f.clone(), &settings, &mut sp, &mut ev);
+        assert!(!ev.iter().any(|e| matches!(e, RaceEvent::Finished)), "leader finished, the player still drives");
+        f.completed_laps = 10;
+        f.spline = 0.01;
+        f.last_lap_ms = 100_000;
+        ev.clear();
+        s.on_frame(f, &settings, &mut sp, &mut ev);
+        assert!(ev.iter().any(|e| matches!(e, RaceEvent::Finished)));
+    }
+
+    #[test]
+    fn multiclass_positions_are_class_positions() {
+        let mut s = running_race();
+        let mut ev = Vec::new();
+        let mk = |id: i32, pos: i32, cpos: i32, class_id: i32, me: bool| CarState { id, position: pos, class_position: cpos, class_id, is_player: me, location: CarLocation::Track, ..Default::default() };
+        // Not running yet (grid): the game's positions; the player is P5 overall, P2 in class.
+        s.frame.status = SimStatus::Off;
+        s.on_cars(vec![mk(0, 1, 1, 1, false), mk(1, 5, 2, 2, true), mk(2, 4, 1, 2, false), mk(3, 6, 3, 2, false)], &mut ev);
+        assert_eq!(s.player_position(), 2);
+        assert_eq!(s.neighbour(-1).map(|c| c.id), Some(2));
+        assert_eq!(s.neighbour(1).map(|c| c.id), Some(3));
     }
 }

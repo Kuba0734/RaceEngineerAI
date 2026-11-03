@@ -14,6 +14,20 @@ export function useSettings(): [Settings, (fn: (s: Settings) => Settings) => voi
   return [s, update];
 }
 
+/** QR code as SVG squares (with the quiet zone the scanners need). */
+function QrCode({ text }: { text: string }) {
+  const [qr] = useAsync(() => api.remoteQr(text), [text]);
+  if (!qr) return null;
+  const q = 4;
+  const n = qr.width + q * 2;
+  return (
+    <svg viewBox={`0 0 ${n} ${n}`} className="h-44 w-44 rounded-lg" shapeRendering="crispEdges">
+      <rect width={n} height={n} fill="#ffffff" />
+      {qr.dark.map((d, i) => (d ? <rect key={i} x={(i % qr.width) + q} y={Math.floor(i / qr.width) + q} width={1} height={1} fill="#0a0b0e" /> : null))}
+    </svg>
+  );
+}
+
 /** Phone / second screen dashboard over the local network. */
 function RemoteCard() {
   const { t } = useTranslation();
@@ -30,6 +44,13 @@ function RemoteCard() {
           <Field label={t("remote.address")}>
             <div className="num text-data">{(urls ?? []).join("  ·  ")}</div>
           </Field>
+          {urls?.[0] && (
+            <div className="mt-2 flex items-center gap-4">
+              {/* The PIN goes into the link, so the phone does not ask for it. */}
+              <QrCode text={r.pin ? `${urls[0]}/?pin=${r.pin}` : urls[0]} />
+              <p className="max-w-60 text-sm text-dim">{t("remote.qrHint")}</p>
+            </div>
+          )}
           <Field label={t("remote.port")}>
             <NumberInput value={r.port} min={1024} max={65535} onChange={(v) => set({ port: Math.round(v) })} />
           </Field>

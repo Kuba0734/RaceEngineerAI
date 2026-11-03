@@ -15,6 +15,8 @@ interface AppStore {
   reloadCatalog: () => Promise<void>;
   /** Loads the settings and overlay of another game. */
   selectGame: (id: string) => Promise<void>;
+  /** Saves pending edits now (e.g. before a voice preview, which uses the saved settings). */
+  flush: () => Promise<void>;
 }
 
 let saveTimer: number | undefined;
@@ -60,6 +62,14 @@ export const useApp = create<AppStore>((set, get) => ({
     }, 350);
   },
   reloadCatalog: async () => set({ catalog: await api.getCatalog() }),
+  flush: async () => {
+    const cur = get().settings;
+    if (saveTimer === undefined || !cur) return;
+    window.clearTimeout(saveTimer);
+    saveTimer = undefined;
+    await api.saveSettings(cur);
+    if (get().settings === cur) set({ dirty: false });
+  },
   selectGame: async (id) => {
     // Pending edits belong to the game they were made for.
     const cur = get().settings;

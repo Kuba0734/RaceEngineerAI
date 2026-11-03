@@ -863,5 +863,8 @@
  "remote.address": "Open in the browser",
  "remote.port": "Port",
  "remote.pin": "PIN (optional)",
- "remote.pinHint": "Digits only. Empty = no PIN."
+ "remote.pinHint": "Digits only. Empty = no PIN.",
+ "remote.qrHint": "Scan with the phone camera – the dashboard opens directly. Phone and PC must be on the same Wi-Fi.",
+ "voices.commaPause": "Pause at commas",
+ "voices.commaPauseHint": "A short pause after each comma so long sentences are not rattled off. 0 = only the voice's own pause."
 }

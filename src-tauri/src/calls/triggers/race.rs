@@ -103,12 +103,12 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
     let around = ctx.th("gap.trend_rival", "cars_around") as i32;
     let th = ctx.th("gap.trend_rival", "tenths_per_lap") as f32 / 10.0;
     let pos = s.player_position();
-    for c in s.cars.iter().filter(|c| !c.is_player && (c.position - pos).abs() <= around) {
+    for c in s.cars.iter().filter(|c| s.is_rival(c) && (s.rank(c) - pos).abs() <= around) {
         let Some(tr) = s.gaps.trend(c.id).map(|t| t as f32) else { continue };
         if tr.abs() < th {
             continue;
         }
-        let ahead = c.position < pos;
+        let ahead = s.rank(c) < pos;
         let sub = match (ahead, tr < 0.0) {
             (true, true) => "catching",
             (true, false) => "pulling_away",

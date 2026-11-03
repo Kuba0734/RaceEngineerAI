@@ -680,7 +680,8 @@ fn handle_race_events(core: &Core, mem: &mut Memory, sdb: &mut SessionDb, deferr
     for ev in events {
         let race = core.state.lock().session.session_type.kind() == crate::storage::settings::SessionKind::Race;
         match ev {
-            RaceEvent::FlagChanged { to: crate::games::provider::Flag::Checkered, .. } | RaceEvent::SessionPhaseChanged(crate::games::provider::SessionPhase::SessionOver | crate::games::provider::SessionPhase::PostSession | crate::games::provider::SessionPhase::Results) if race => {
+            // The player's own finish (iRacing shows the flag and "session over" when the leader finishes).
+            RaceEvent::Finished | RaceEvent::SessionPhaseChanged(crate::games::provider::SessionPhase::PostSession | crate::games::provider::SessionPhase::Results) if race => {
                 core.engine.lock().race_finished = true;
                 deferred.clear();
             }

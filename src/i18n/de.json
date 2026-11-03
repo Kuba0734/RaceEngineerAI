@@ -863,5 +863,8 @@
  "remote.address": "Im Browser öffnen",
  "remote.port": "Port",
  "remote.pin": "PIN (optional)",
- "remote.pinHint": "Nur Ziffern. Leer = ohne PIN."
+ "remote.pinHint": "Nur Ziffern. Leer = ohne PIN.",
+ "remote.qrHint": "Mit der Handy-Kamera scannen – das Dashboard öffnet sich direkt. Handy und PC müssen im selben WLAN sein.",
+ "voices.commaPause": "Pause bei Kommas",
+ "voices.commaPauseHint": "Kurze Pause nach jedem Komma, damit lange Sätze nicht durchgerattert werden. 0 = nur die eigene Pause der Stimme."
 }

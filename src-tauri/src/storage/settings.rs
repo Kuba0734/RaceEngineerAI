@@ -322,6 +322,13 @@ pub struct VoiceSettings {
     pub master_volume: f32,
     /// Short pause between sentences so the crew sounds less rushed (ms).
     pub sentence_pause_ms: u32,
+    /// Pause at commas (ms, 0 = only the voice's own).
+    #[serde(default = "default_comma_pause_ms")]
+    pub comma_pause_ms: u32,
+}
+
+fn default_comma_pause_ms() -> u32 {
+    140
 }
 
 impl Default for VoiceSettings {
@@ -346,6 +353,7 @@ impl Default for VoiceSettings {
             output_device: None,
             master_volume: 1.0,
             sentence_pause_ms: 260,
+            comma_pause_ms: default_comma_pause_ms(),
         }
     }
 }

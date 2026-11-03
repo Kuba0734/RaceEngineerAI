@@ -108,7 +108,7 @@ pub fn find_car<'a>(state: &'a RaceState, q: &str) -> Option<&'a CarState> {
     match q.as_str() {
         "ahead" | "vor mir" | "vorne" | "front" => return state.neighbour(-1),
         "behind" | "hinter mir" | "hinten" | "back" => return state.neighbour(1),
-        "leader" | "führender" | "p1" => return state.cars.iter().find(|c| c.position == 1),
+        "leader" | "führender" | "p1" => return state.cars.iter().find(|c| (state.is_rival(c) || c.is_player) && state.rank(c) == 1),
         "me" | "player" | "ich" => return state.player_car(),
         "fastest" | "schnellster" => return state.cars.iter().filter(|c| c.last_lap_ms.is_some()).min_by_key(|c| c.last_lap_ms.unwrap_or(i32::MAX)),
         _ => {}

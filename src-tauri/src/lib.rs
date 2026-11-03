@@ -151,6 +151,7 @@ pub fn run() {
             commands::save_settings,
             commands::car_class_defaults,
             commands::remote_urls,
+            commands::remote_qr,
             commands::reset_settings,
             commands::get_catalog,
             commands::preview_call,

@@ -5,4 +5,8 @@ export type VoiceSettings = { engineer: VoiceProfile, spotter: VoiceProfile, out
 /**
  * Short pause between sentences so the crew sounds less rushed (ms).
  */
-sentence_pause_ms: number, };
+sentence_pause_ms: number, 
+/**
+ * Pause at commas (ms, 0 = only the voice's own).
+ */
+comma_pause_ms: number, };

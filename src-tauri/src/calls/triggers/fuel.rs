@@ -88,9 +88,12 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
             let pos = s.player_position();
             let n = ctx.th("pit.rival_pitting", "positions") as i32;
             let name = ctx.fmt.car(car);
-            if pit::is_undercut_threat(s, ctx.settings, *car_id) && car.position > pos {
+            if !s.is_rival(car) {
+                return;
+            }
+            if pit::is_undercut_threat(s, ctx.settings, *car_id) && s.rank(car) > pos {
                 ctx.push(CallRequest::new("pit.undercut").p("car", name).key(car_id.to_string()));
-            } else if (car.position - pos).abs() <= n {
+            } else if (s.rank(car) - pos).abs() <= n {
                 ctx.push(CallRequest::new("pit.rival_pitting").p("car", name).key(car_id.to_string()));
             }
         }

@@ -42,7 +42,7 @@ pub fn predict(state: &RaceState, settings: &Settings, in_laps: u32, extra_loss_
     let mut rel: Vec<(i32, f32)> = state
         .cars
         .iter()
-        .filter(|c| !c.is_player && !c.location.in_pits())
+        .filter(|c| state.is_rival(c) && !c.location.in_pits())
         .filter_map(|c| {
             let g = state.gaps.gap(me, c.id)? as f32;
             let trend = state.gaps.trend(c.id).unwrap_or(0.0) as f32;

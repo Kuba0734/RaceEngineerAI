@@ -191,6 +191,10 @@ impl CallEngine {
     /// Checks all rules and returns the utterance, if it should be said now.
     pub fn submit(&mut self, req: CallRequest, t: f64, lap: i32, spline: f32, kind: SessionKind) -> Option<Utterance> {
         let e = self.effective.get(req.call_id)?.clone();
+        // A position of 0 means "not known yet": better nothing than "P0".
+        if req.params.iter().any(|(k, v)| *k == "position" && (v.trim() == "0" || v.trim().is_empty())) {
+            return None;
+        }
         const AFTER_FINISH: [&str; 3] = ["flag.checkered", "race.summary", "penalty.received"];
         if self.race_finished && !req.on_request && !AFTER_FINISH.contains(&req.call_id) {
             return None;
@@ -313,6 +317,17 @@ mod tests {
         let k = SessionKind::Race;
         assert!(e.submit(CallRequest::new("fuel.critical").p("laps", "1"), 0.0, 1, 0.0, k).is_none());
         assert!(e.submit(CallRequest::new("flag.checkered").p("position", "3"), 0.0, 1, 0.0, k).is_some());
+    }
+
+    #[test]
+    fn never_says_p0() {
+        let s = Settings::default();
+        let mut e = CallEngine::new(&s);
+        let mut asked = CallRequest::new("answer.position").p("position", "0");
+        asked.on_request = true;
+        assert!(e.submit(asked, 0.0, 0, 0.0, SessionKind::Race).is_none());
+        assert!(e.submit(CallRequest::new("flag.checkered").p("position", "0"), 0.0, 0, 0.0, SessionKind::Race).is_none());
+        assert!(e.submit(CallRequest::new("flag.checkered").p("position", "7"), 1.0, 0, 0.0, SessionKind::Race).is_some());
     }
 
     #[test]

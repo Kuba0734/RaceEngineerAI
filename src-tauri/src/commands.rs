@@ -158,6 +158,12 @@ pub fn remote_urls(core: CoreState) -> Vec<String> {
     crate::remote::urls(core.settings.read().remote.port)
 }
 
+/// QR code of a dashboard address, for the phone camera.
+#[tauri::command]
+pub fn remote_qr(url: String) -> Option<crate::remote::QrMatrix> {
+    crate::remote::qr(&url)
+}
+
 /// Default target windows of the known car classes.
 #[tauri::command]
 pub fn car_class_defaults() -> std::collections::BTreeMap<String, crate::storage::settings::ClassTargets> {
