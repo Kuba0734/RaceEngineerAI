@@ -19,6 +19,8 @@ pub struct SpeakRequest {
     pub priority: Priority,
     pub expires_at: Instant,
     pub call_id: String,
+    /// Fast, higher and louder (start lights, green flag).
+    pub excited: bool,
 }
 
 pub enum TtsJob {
@@ -50,6 +52,14 @@ impl TtsHandle {
     pub fn next_id(&self) -> u64 {
         self.next_id.fetch_add(1, Ordering::Relaxed)
     }
+}
+
+/// Delivery of excited calls: tempo, pitch and volume factors.
+#[derive(Clone, Copy)]
+struct Excited {
+    speed: f32,
+    pitch: f32,
+    gain: f32,
 }
 
 struct Synth {
@@ -120,18 +130,19 @@ impl Synth {
     }
 
     /// Renders text → mono PCM at `out_sr`, with volume and radio effect applied.
-    fn render(&mut self, text: &str, p: &VoiceProfile, lang: Language, out_sr: u32) -> Option<Pcm> {
+    fn render(&mut self, text: &str, p: &VoiceProfile, lang: Language, out_sr: u32, excited: Option<Excited>) -> Option<Pcm> {
         let voice = match lang {
             Language::De => &p.voice_de,
             Language::En => &p.voice_en,
         };
         let text = speakable(text, lang);
         let text = text.as_str();
-        let pause_ms = self.pause_ms;
-        let comma_ms = self.comma_ms;
+        // Excited: no breaks at commas ("Green, green, green!" in one breath), short sentence gaps.
+        let (pause_ms, comma_ms) = if excited.is_some() { (self.pause_ms / 4, 0) } else { (self.pause_ms, self.comma_ms) };
+        let speed = p.speed * excited.map_or(1.0, |e| e.speed.clamp(1.0, 2.0));
         let tts = self.engine(voice)?;
         // Slightly longer pauses at commas, plus a short varied gap between sentences.
-        let cfg = sherpa_onnx::GenerationConfig { speed: p.speed.clamp(0.5, 2.0), sid: p.speaker_id, silence_scale: 0.35, ..Default::default() };
+        let cfg = sherpa_onnx::GenerationConfig { speed: speed.clamp(0.5, 2.5), sid: p.speaker_id, silence_scale: 0.35, ..Default::default() };
         let mut samples: Vec<f32> = Vec::new();
         let mut sr = 22_050u32;
         for (i, s) in sentences(text).iter().enumerate() {
@@ -151,8 +162,13 @@ impl Synth {
         if samples.is_empty() {
             return None;
         }
+        // Higher pitch by playing the voice a little faster (also a touch quicker): urgent, not robotic.
+        let pitch = excited.map_or(1.0, |e| e.pitch.clamp(1.0, 1.3));
+        if pitch > 1.001 {
+            samples = radio_fx::resample(&samples, (sr as f32 * pitch) as u32, sr);
+        }
         let fx = radio_fx::apply(&samples, sr, &p.radio_fx);
-        let vol = p.volume.clamp(0.0, 1.5);
+        let vol = p.volume.clamp(0.0, 1.5) * excited.map_or(1.0, |e| e.gain.clamp(1.0, 1.6));
         let out: Vec<f32> = radio_fx::resample(&fx, sr, out_sr).into_iter().map(|s| (s * vol).clamp(-1.0, 1.0)).collect();
         Some(out.into())
     }
@@ -293,7 +309,11 @@ impl Worker {
                     return;
                 }
                 let (profile, lang) = self.profile(req.role);
-                let Some(pcm) = self.synth.render(&req.text, &profile, lang, self.out_sr) else {
+                let excited = req.excited.then(|| {
+                    let v = &self.settings.read().voices;
+                    Excited { speed: v.excited_speed, pitch: v.excited_pitch, gain: v.excited_gain }
+                });
+                let Some(pcm) = self.synth.render(&req.text, &profile, lang, self.out_sr, excited) else {
                     tracing::debug!("no voice for {} – skipped: {}", req.call_id, req.text);
                     return;
                 };
@@ -305,7 +325,7 @@ impl Worker {
             }
             TtsJob::Preview { text, role } => {
                 let (profile, lang) = self.profile(role);
-                let pcm = self.synth.render(&text, &profile, lang, self.out_sr).unwrap_or_else(|| tone_clip("preview", self.out_sr));
+                let pcm = self.synth.render(&text, &profile, lang, self.out_sr, None).unwrap_or_else(|| tone_clip("preview", self.out_sr));
                 let id = self.next_id.fetch_add(1, Ordering::Relaxed);
                 let _ = self.mixer.try_send(MixerCmd::Speech(SpeechItem { id, pcm, priority: Priority::Answer, expires_at: Instant::now() + std::time::Duration::from_secs(30) }));
             }
@@ -339,7 +359,7 @@ impl Worker {
                     continue 'again;
                 }
                 let (id, texts) = &list[i];
-                let v: Vec<Pcm> = texts.iter().filter_map(|t| self.synth.render(t, &profile, lang, self.out_sr)).collect();
+                let v: Vec<Pcm> = texts.iter().filter_map(|t| self.synth.render(t, &profile, lang, self.out_sr, None)).collect();
                 map.insert(id.clone(), if v.is_empty() { vec![tone_clip(id, self.out_sr)] } else { v });
             }
             *self.clips.write() = map;

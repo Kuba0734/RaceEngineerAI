@@ -158,6 +158,15 @@ export function VoicesSection() {
         <Field label={t("voices.commaPause")} hint={t("voices.commaPauseHint")}>
           <Slider value={s.voices.comma_pause_ms} min={0} max={500} step={20} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, comma_pause_ms: v } }))} format={(v) => (v === 0 ? t("common.off") : `${v} ms`)} />
         </Field>
+        <Field label={t("voices.excitedSpeed")} hint={t("voices.excitedHint")}>
+          <Slider value={s.voices.excited_speed} min={1} max={1.8} step={0.05} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, excited_speed: v } }))} format={(v) => `${v.toFixed(2)}×`} />
+        </Field>
+        <Field label={t("voices.excitedPitch")}>
+          <Slider value={s.voices.excited_pitch} min={1} max={1.25} step={0.01} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, excited_pitch: v } }))} format={(v) => (v <= 1 ? t("common.off") : `+${Math.round((v - 1) * 100)} %`)} />
+        </Field>
+        <Field label={t("voices.excitedGain")}>
+          <Slider value={s.voices.excited_gain} min={1} max={1.6} step={0.05} onChange={(v) => up((x) => ({ ...x, voices: { ...x.voices, excited_gain: v } }))} format={(v) => `${v.toFixed(2)}×`} />
+        </Field>
         <p className="text-xs text-dim">{t("voices.deviceRestart")}</p>
       </Card>
       <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">

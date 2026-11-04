@@ -65,6 +65,9 @@ pub struct TyreView {
     /// The game reports live tyre values / brake temperatures at all.
     pub live: bool,
     pub has_brakes: bool,
+    /// Temperatures across the tread (outer, middle, inner) per wheel; middle only when the
+    /// game reports one value.
+    pub zones_c: [[f32; 3]; 4],
 }
 
 /// Everything the pit helper widget shows.
@@ -90,6 +93,67 @@ pub struct PitView {
     pub mandatory_stops_left: i32,
     #[ts(optional)]
     pub window_open: Option<bool>,
+}
+
+/// A car the driver should know about (off track ahead, faster class behind).
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct CarAlert {
+    pub id: i32,
+    pub position: i32,
+    pub number: String,
+    pub driver: String,
+    pub class_name: String,
+    #[ts(optional)]
+    pub class_color: Option<String>,
+    /// Along the track (m).
+    pub distance_m: f32,
+    /// Time gap (s), when it can be told.
+    #[ts(optional)]
+    pub gap_s: Option<f32>,
+    /// Off track (else stopped / very slow on track).
+    pub off_track: bool,
+    /// For how long (s).
+    pub seconds: f32,
+}
+
+/// Coming back onto the track: the next car from behind.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RejoinView {
+    #[ts(optional)]
+    pub car: Option<CarAlert>,
+    pub clear: bool,
+}
+
+/// Approaching the pit lane: distance to the speed limit line.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct PitEntryView {
+    pub distance_m: f32,
+    pub speed_kmh: f32,
+    #[ts(optional)]
+    pub limit_kmh: Option<f32>,
+    pub limiter_on: bool,
+}
+
+/// Weather as far as the game reports it.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct WeatherView {
+    pub air_temp_c: f32,
+    pub track_temp_c: f32,
+    #[ts(optional)]
+    pub humidity_pct: Option<f32>,
+    #[ts(optional)]
+    pub wind_dir_deg: Option<f32>,
+    pub wind_kmh: f32,
+    pub grip: crate::games::provider::TrackGrip,
+    pub rain_now: crate::games::provider::RainIntensity,
+    pub rain_10min: crate::games::provider::RainIntensity,
+    pub rain_30min: crate::games::provider::RainIntensity,
+    /// The game gives a forecast (else 10/30 min are just "as now").
+    pub has_forecast: bool,
 }
 
 /// Each side of the player in the relative list (the widget shows fewer if set).
@@ -160,6 +224,20 @@ pub struct LiveFrame {
     pub laps_total_est: Option<f32>,
     pub session_total_ms: f64,
     pub track_temp_c: f32,
+    pub clutch: f32,
+    pub start_light: crate::games::provider::StartLight,
+    pub weather: WeatherView,
+    #[ts(optional)]
+    pub fuel_last_lap_l: Option<f32>,
+    pub fuel_max_l: f32,
+    #[ts(optional)]
+    pub offtrack: Option<CarAlert>,
+    #[ts(optional)]
+    pub faster_class: Option<CarAlert>,
+    #[ts(optional)]
+    pub rejoin: Option<RejoinView>,
+    #[ts(optional)]
+    pub pit_entry: Option<PitEntryView>,
     /// The game decides the spotter sides itself (radar shows sides, not exact positions).
     pub native_spotter: bool,
     pub speaking: bool,
@@ -249,6 +327,10 @@ pub(crate) fn build_live(core: &Core, heavy: bool) -> LiveFrame {
                     Some(c) => c.hot_pressure_psi.unwrap_or([0.0; 4]),
                     None => f.wheels.map(|w| w.pressure_psi),
                 },
+                zones_c: match pit {
+                    Some(c) => c.temp_c,
+                    None => f.wheels.map(|w| [w.core_temp_c; 3]),
+                },
                 from_pit: pit.is_some(),
                 live: st.has("hasTyreCoreTemps"),
                 has_brakes: st.has("hasBrakeWear"),
@@ -271,6 +353,26 @@ pub(crate) fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         laps_total_est: heavy.then(|| f.completed_laps as f32 + st.fuel_strategy(&settings).laps_to_go).filter(|l| *l > 0.0),
         session_total_ms: st.session.session_end_ms,
         track_temp_c: f.weather.road_temp_c,
+        clutch: f.clutch,
+        start_light: f.start_light,
+        weather: WeatherView {
+            air_temp_c: f.weather.air_temp_c,
+            track_temp_c: f.weather.road_temp_c,
+            humidity_pct: f.weather.humidity_pct,
+            wind_dir_deg: f.weather.wind_dir_deg,
+            wind_kmh: f.weather.wind_speed_ms * 3.6,
+            grip: f.weather.grip,
+            rain_now: f.weather.rain_now,
+            rain_10min: f.weather.rain_10min,
+            rain_30min: f.weather.rain_30min,
+            has_forecast: st.has("hasWeatherForecast"),
+        },
+        fuel_last_lap_l: st.laps.last().and_then(|l| l.fuel_used_l).filter(|v| *v > 0.0),
+        fuel_max_l: st.session.max_fuel_l,
+        offtrack: offtrack_ahead(&st, settings.overlay.alert_offtrack_m),
+        faster_class: faster_behind(&st, settings.overlay.alert_faster_m),
+        rejoin: rejoin(&st, settings.overlay.rejoin_clear_s),
+        pit_entry: pit_entry(&st, settings.overlay.pit_entry_show_m),
         native_spotter: f.native_side.is_some(),
         recent_laps: heavy.then(|| st.laps.iter().rev().take(RECENT_LAPS).map(|l| RecentLap { lap: l.lap, time_ms: l.time_ms, valid: l.valid, in_lap: l.in_lap, out_lap: l.out_lap }).collect()),
         speaking: core.mixer_status.any_speaking(),
@@ -282,6 +384,89 @@ pub(crate) fn build_live(core: &Core, heavy: bool) -> LiveFrame {
         quiet,
         preset,
     }
+}
+
+fn alert(st: &crate::race::state::RaceState, c: &crate::games::provider::CarState, distance_m: f32) -> CarAlert {
+    let t = st.t_s();
+    let seconds = st.rivals.get(&c.id).and_then(|r| r.off_since).map_or(0.0, |s| (t - s).max(0.0) as f32);
+    // Time to cover the distance at the car's speed (or own speed when it stands).
+    let v = c.speed_kmh.max(st.frame.speed_kmh) / 3.6;
+    CarAlert {
+        id: c.id,
+        position: st.rank(c),
+        number: if c.number_text.is_empty() { c.race_number.to_string() } else { c.number_text.clone() },
+        driver: c.driver.clone(),
+        class_name: c.class_name.clone(),
+        class_color: c.class_color.clone(),
+        distance_m,
+        gap_s: (v > 5.0).then_some(distance_m / v),
+        off_track: c.off_track,
+        seconds,
+    }
+}
+
+/// Distance along the lap from `from` forward to `to` (m).
+fn ahead_m(st: &crate::race::state::RaceState, from: f32, to: f32) -> f32 {
+    (to - from).rem_euclid(1.0) * st.track_m()
+}
+
+fn on_track(c: &crate::games::provider::CarState) -> bool {
+    !c.is_player && !c.location.in_pits() && c.location != crate::games::provider::CarLocation::Unknown
+}
+
+/// Nearest car ahead that is off track or stopped on it.
+fn offtrack_ahead(st: &crate::race::state::RaceState, max_m: f32) -> Option<CarAlert> {
+    let me = st.frame.spline;
+    st.cars
+        .iter()
+        .filter(|c| on_track(c) && st.rivals.get(&c.id).is_some_and(|r| r.off_since.is_some()))
+        .map(|c| (ahead_m(st, me, c.spline), c))
+        .filter(|(d, _)| *d <= max_m)
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(d, c)| alert(st, c, d))
+}
+
+/// Nearest car of a faster class closing from behind.
+fn faster_behind(st: &crate::race::state::RaceState, max_m: f32) -> Option<CarAlert> {
+    let my_lap = st.player_car().and_then(|c| c.class_est_lap_s)?;
+    let me = st.frame.spline;
+    st.cars
+        .iter()
+        .filter(|c| on_track(c) && c.class_est_lap_s.is_some_and(|l| l < my_lap * 0.99))
+        .map(|c| (ahead_m(st, c.spline, me), c))
+        .filter(|(d, _)| *d <= max_m)
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(d, c)| CarAlert { gap_s: (c.speed_kmh > 20.0).then(|| d / (c.speed_kmh / 3.6)), ..alert(st, c, d) })
+}
+
+/// Off track or crawling: who comes next from behind, and whether it is clear.
+fn rejoin(st: &crate::race::state::RaceState, clear_s: f32) -> Option<RejoinView> {
+    let f = &st.frame;
+    let stuck = f.tyres_out >= 3 || (f.speed_kmh < 60.0 && st.race_running());
+    if f.status != SimStatus::Live || f.in_pit_lane || !stuck {
+        return None;
+    }
+    let car = st
+        .cars
+        .iter()
+        .filter(|c| on_track(c) && c.speed_kmh > 30.0)
+        .map(|c| (ahead_m(st, c.spline, f.spline), c))
+        .filter(|(d, _)| *d < 600.0)
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(d, c)| CarAlert { gap_s: Some(d / (c.speed_kmh / 3.6)), ..alert(st, c, d) });
+    let clear = car.as_ref().and_then(|c| c.gap_s).is_none_or(|g| g > clear_s);
+    Some(RejoinView { car, clear })
+}
+
+/// Approaching the pit entry line (learned from cars driving in).
+fn pit_entry(st: &crate::race::state::RaceState, show_m: f32) -> Option<PitEntryView> {
+    let f = &st.frame;
+    let line = st.pit_entry_pct?;
+    if f.in_pit_lane || f.status != SimStatus::Live {
+        return None;
+    }
+    let d = ahead_m(st, f.spline, line);
+    (d <= show_m).then_some(PitEntryView { distance_m: d, speed_kmh: f.speed_kmh, limit_kmh: st.session.pit_speed_limit_kmh, limiter_on: f.engine.pit_limiter })
 }
 
 fn pit_view(st: &crate::race::state::RaceState, settings: &crate::storage::settings::Settings) -> PitView {

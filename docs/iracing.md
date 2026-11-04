@@ -150,3 +150,15 @@ iRacing teilt Strecken in viele Zeitsektoren (`SplitTimeInfo`). Die Logik arbeit
 3. `SessionLapsRemainEx` in einem Rennen nach Runden: zählt es die laufende Runde mit? (`laps_left = Rest − LapDistPct`)
 4. `online` in einer gehosteten/offiziellen Session.
 5. Spotter, Rangliste und Abstände mit Gegnern (KI-Rennen).
+
+## Overlay-Daten (ab 0.7)
+
+| Variable | Verwendung | Hinweis |
+|---|---|---|
+| `Clutch` | Kupplungsbalken im Pedal-Widget | SDK: 0 = getrennt, 1 = voll eingekuppelt → angezeigt wird `1 − Clutch` (Pedalweg) |
+| `RelativeHumidity` | Luftfeuchte im Relative-Kopf | im SDK als Anteil 0–1; Werte > 1 werden als Prozent behandelt (live prüfen) |
+| `WindDir` | Windrichtung im Relative-Kopf | Radiant, Richtung aus der der Wind kommt (live prüfen) |
+| `CarIdxTrackSurface` = 0 (OffTrack) | Widget „Unfall voraus“ | zusätzlich: Auto auf der Strecke < 40 km/h im Rennen = „steht“ |
+| `CarIdxOnPitRoad` (Übergang Strecke → Boxengasse) | Boxeneinfahrt-Linie | wird aus beliebigen Autos gelernt, die in die Box fahren; bleibt für die Strecke gespeichert, bis die App neu startet |
+
+Box-Regeln (z. B. „Tanken und Reifen gleichzeitig“, Reifenwechselzeit) liefert das SDK nicht – dafür gibt es bewusst kein Widget.

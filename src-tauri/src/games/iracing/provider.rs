@@ -707,6 +707,8 @@ impl IRacingProvider {
             rpm: self.i("RPM"),
             throttle: self.f("Throttle"),
             brake: self.f("Brake"),
+            // The SDK reports engagement (1 = fully engaged = pedal released).
+            clutch: self.num("Clutch").map_or(0.0, |c| (1.0 - c as f32).clamp(0.0, 1.0)),
             // Normalised to -1..1 like the other games (sim reports radians).
             steer: match self.num("SteeringWheelAngleMax").filter(|m| *m > 0.1) {
                 Some(max) => (self.f("SteeringWheelAngle") / max as f32).clamp(-1.0, 1.0),
@@ -760,6 +762,10 @@ impl IRacingProvider {
                 wind_speed_ms: self.f("WindVel"),
                 rain_amount: self.num("Precipitation").map(|v| v as f32),
                 wetness_level: self.num("TrackWetness").map(|v| v as i32),
+                // Reported as a fraction (0–1) in the SDK; tolerate a percentage too.
+                humidity_pct: self.num("RelativeHumidity").map(|h| if h <= 1.0 { h * 100.0 } else { h } as f32),
+                // Radians in the SDK.
+                wind_dir_deg: self.num("WindDir").map(|r| r.to_degrees().rem_euclid(360.0) as f32),
             },
             lights_stage: -1,
             wiper_level: -1,
@@ -784,6 +790,9 @@ impl IRacingProvider {
             pacing,
             pit_service_active: self.b("PitstopActive"),
             start_light: start_light(bits),
+            // Raw lap count (not held back for the lap time) so the live order never sees the
+            // player a lap short at the line.
+            progress: (pct >= 0.0).then(|| f64::from(self.i("LapCompleted")) + f64::from(pct)),
         }
     }
 
@@ -905,6 +914,9 @@ impl IRacingProvider {
                 est_time_s: self.at("CarIdxEstTime", idx).filter(|v| *v >= 0.0).map(|v| v as f32),
                 incidents: d.incidents,
                 class_est_lap_s: d.class_est_lap_s,
+                // -1 before the first line crossing (grid behind the line): keeps the start order.
+                off_track: surface == TRK_OFF_TRACK,
+                progress: Some(self.at("CarIdxLapCompleted", idx).map_or(0.0, f64::from) + f64::from(pct.max(0.0))),
             });
         }
         // Order on track: furthest round the lap first.

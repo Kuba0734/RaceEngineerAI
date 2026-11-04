@@ -20,6 +20,7 @@ import { FlagBanner, activeFlag } from "./widgets/FlagBanner";
 import { ClassStandings } from "./widgets/ClassStandings";
 import { Relative } from "./widgets/Relative";
 import { PitHelper } from "./widgets/PitHelper";
+import { FasterClass, LapTimes, MapSectors, OffTrack, PitEntry, Rejoin, SessionBar, StartLights, Weather } from "./widgets/extras";
 import { widgetAvailable } from "./available";
 import { previewFrame } from "./preview";
 
@@ -140,26 +141,56 @@ export default function Overlay() {
   const tod = frame && frame.clock_s > 0 ? `${String(Math.floor(frame.clock_s / 3600) % 24).padStart(2, "0")}:${String(Math.floor((frame.clock_s % 3600) / 60)).padStart(2, "0")}` : "";
   const lapText = frame ? `${t("wd.lap")} ${frame.lap}${frame.laps_total_est != null ? `/≈${frame.laps_total_est.toFixed(1)}` : ""}` : "";
   const total = frame?.session_total_ms ?? 0;
-  const raceText = frame ? (total > 0 ? `${clock(total - frame.time_left_ms)}/${clock(total)}` : clock(frame.time_left_ms)) : "";
   const playerClass = frame?.player_class_id ?? 0;
-  const sof = frame?.classes?.find((c) => c.id === playerClass)?.sof;
+  const lapsToGo = frame?.laps_total_est != null ? Math.max(0, Math.ceil(frame.laps_total_est - (frame.lap - 1))) : null;
+  const progress = frame ? (total > 0 ? (total - frame.time_left_ms) / total : frame.laps_total_est ? (frame.lap - 1) / frame.laps_total_est : 0) : 0;
+  /** Widgets that only show while there is something to show (always while editing). */
+  const idle = (id: string): boolean => {
+    switch (id) {
+      case "radar":
+        return o.radar_auto_hide && !radarActive;
+      case "flag":
+        return !flag;
+      case "pit":
+        return o.pit_only_in_pits && !frame?.in_pits;
+      case "start_lights":
+        return o.start_lights_auto_hide && (frame?.start_light ?? "off") === "off";
+      case "offtrack":
+        return !frame?.offtrack;
+      case "faster_class":
+        return !frame?.faster_class;
+      case "rejoin":
+        return !frame?.rejoin;
+      case "pit_entry":
+        return !frame?.pit_entry;
+      default:
+        return false;
+    }
+  };
   const irChanges = new Map((frame?.standings ?? []).map((r) => [r.id, r.irating_change] as const));
   const content = (id: string): ReactNode => {
     switch (id) {
       case "map":
-        return <TrackMap liveRef={ref} opts={{ size: o.map_size, rotationDeg: o.map_rotation_deg, lineWidth: o.map_line_width, dotSize: o.map_dot_size, showNumbers: o.map_show_numbers, classColors: o.map_class_colors, showPits: o.map_show_pits }} />;
+        return (
+          <>
+            <TrackMap liveRef={ref} opts={{ size: o.map_size, rotationDeg: o.map_rotation_deg, lineWidth: o.map_line_width, dotSize: o.map_dot_size, showNumbers: o.map_show_numbers, classColors: o.map_class_colors, showPits: o.map_show_pits }} />
+            {o.map_show_sectors && <MapSectors me={frame?.standings?.find((r) => r.is_player)} />}
+          </>
+        );
       case "radar":
         return <Radar liveRef={ref} size={o.radar_size} onActive={setRadarActive} showDistance={o.radar_show_distance} />;
       case "class_standings":
-        return <ClassStandings rows={frame?.standings ?? []} classes={frame?.classes ?? []} playerClass={playerClass} o={o} lapText={lapText} timeText={raceText} trackTemp={frame?.track_temp_c ?? 0} />;
+        return <ClassStandings rows={frame?.standings ?? []} classes={frame?.classes ?? []} playerClass={playerClass} o={o} lapText={lapText} timeText={frame ? clock(frame.time_left_ms) : ""} />;
       case "relative":
         return (
           <Relative
             rows={frame?.relative ?? []}
             o={o}
             changes={irChanges}
-            header={{ trackTemp: frame?.track_temp_c ?? 0, sof: sof ?? undefined, incidents: frame?.incidents ?? undefined, incidentLimit: frame?.incident_limit ?? undefined, clock: tod }}
-            footer={{ lap: lapText, race: `${t("wd.race")} ${raceText}` }}
+            weather={frame?.weather}
+            incidents={frame?.incidents ?? undefined}
+            incidentLimit={frame?.incident_limit ?? undefined}
+            footer={{ lapsToGo, progress, timeLeft: frame ? clock(frame.time_left_ms) : "", simClock: tod }}
           />
         );
       case "pit":
@@ -167,19 +198,35 @@ export default function Overlay() {
       case "standings":
         return <div className="w-[360px]">{frame?.standings ? <Standings rows={frame.standings} compact max={o.standings_rows} animate={anim} /> : <span className="text-xs text-dim">{t("session.noStandings")}</span>}</div>;
       case "fuel":
-        return <Fuel fuel={frame?.fuel} fuelNow={frame?.fuel_l ?? 0} />;
+        return <Fuel fuel={frame?.fuel} fuelNow={frame?.fuel_l ?? 0} lastLapL={frame?.fuel_last_lap_l ?? undefined} maxL={frame?.fuel_max_l ?? 0} pit={frame?.pit} showTarget={o.fuel_show_target} />;
       case "delta":
         return <Delta liveRef={ref} showLaps={o.delta_show_laps} showBar={o.delta_bar} rangeS={o.delta_range_s} />;
       case "dash":
         return <Dash liveRef={ref} mph={settings.units.speed === "mph"} showAssists={o.dash_show_assists} />;
       case "inputs":
-        return <Inputs liveRef={ref} hz={hz} seconds={o.inputs_seconds} showSteer={o.inputs_show_steer} />;
+        return <Inputs liveRef={ref} hz={hz} seconds={o.inputs_seconds} showSteer={o.inputs_show_steer} mph={settings.units.speed === "mph"} />;
       case "laps":
         return <RecentLaps laps={frame?.recent_laps} rows={o.laps_rows} />;
       case "tyres":
-        return <Tyres tyres={frame?.tyres} units={settings.units} showBrakes={o.tyres_show_brakes} />;
+        return <Tyres tyres={frame?.tyres} units={settings.units} showBrakes={o.tyres_show_brakes} showZones={o.tyres_show_zones} />;
       case "flag":
         return <FlagBanner flag={flag} />;
+      case "lap_times":
+        return <LapTimes liveRef={ref} showPredicted={o.lap_times_show_predicted} />;
+      case "session":
+        return <SessionBar frame={frame} />;
+      case "weather":
+        return <Weather w={frame?.weather} />;
+      case "start_lights":
+        return <StartLights light={frame?.start_light ?? "off"} />;
+      case "offtrack":
+        return <OffTrack a={frame?.offtrack ?? undefined} maxM={o.alert_offtrack_m} />;
+      case "faster_class":
+        return <FasterClass a={frame?.faster_class ?? undefined} maxM={o.alert_faster_m} />;
+      case "rejoin":
+        return <Rejoin r={frame?.rejoin ?? undefined} />;
+      case "pit_entry":
+        return <PitEntry p={frame?.pit_entry ?? undefined} showM={o.pit_entry_show_m} />;
       case "radio":
         return (
           <div className={cx("flex items-center gap-3", o.radio_show_text && "w-[300px]")}>
@@ -202,7 +249,7 @@ export default function Overlay() {
         </div>
       )}
       {layout.filter((l) => l.visible && widgetAvailable(l.id, caps)).map((l) => (
-        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} globalScale={o.global_scale} hidden={(l.id === "radar" && o.radar_auto_hide && !radarActive) || (l.id === "flag" && !flag) || (l.id === "pit" && o.pit_only_in_pits && !frame?.in_pits)}>
+        <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} globalScale={o.global_scale} hidden={idle(l.id)}>
           {content(l.id)}
         </Widget>
       ))}

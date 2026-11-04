@@ -62,6 +62,7 @@ pub struct Utterance {
     pub priority: Priority,
     pub expires_at: Instant,
     pub call_id: String,
+    pub excited: bool,
 }
 
 pub struct CallEngine {
@@ -236,7 +237,7 @@ impl CallEngine {
         let mut text = templates::render(self.lang, &key, &keys, &params)?;
         text = self.maybe_add_name(text, e.priority, req.call_id);
         self.record(t, req.call_id, &text, e.voice, e.priority);
-        Some(Utterance { text, role: e.voice, priority: e.priority, expires_at: Instant::now() + Duration::from_secs_f32(e.expiry_s.max(1.0)), call_id: req.call_id.to_string() })
+        Some(Utterance { text, role: e.voice, priority: e.priority, expires_at: Instant::now() + Duration::from_secs_f32(e.expiry_s.max(1.0)), call_id: req.call_id.to_string(), excited: e.excited })
     }
 
     fn maybe_add_name(&mut self, text: String, prio: Priority, call_id: &str) -> String {
@@ -275,7 +276,7 @@ impl CallEngine {
     /// A free-form answer (AI or fast path) as utterance.
     pub fn answer(&mut self, t: f64, text: String) -> Utterance {
         self.record(t, "answer", &text, VoiceRole::Engineer, Priority::Answer);
-        Utterance { text, role: VoiceRole::Engineer, priority: Priority::Answer, expires_at: Instant::now() + Duration::from_secs(20), call_id: "answer".into() }
+        Utterance { text, role: VoiceRole::Engineer, priority: Priority::Answer, expires_at: Instant::now() + Duration::from_secs(20), call_id: "answer".into(), excited: false }
     }
 }
 

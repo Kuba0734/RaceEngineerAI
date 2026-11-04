@@ -15,4 +15,9 @@ wear_pct: [number, number, number, number],
 /**
  * The game reports live tyre values / brake temperatures at all.
  */
-live: boolean, has_brakes: boolean, };
+live: boolean, has_brakes: boolean, 
+/**
+ * Temperatures across the tread (outer, middle, inner) per wheel; middle only when the
+ * game reports one value.
+ */
+zones_c: [[number, number, number], [number, number, number], [number, number, number], [number, number, number]], };

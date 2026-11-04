@@ -7,4 +7,8 @@ import type { VoiceRole } from "./VoiceRole";
 /**
  * User override for one call. `None` = take the catalog/preset default.
  */
-export type CallOverride = { enabled?: boolean, priority?: Priority, frequency?: Frequency, cooldown_s?: number, expiry_s?: number, voice?: VoiceRole, sessions?: Array<SessionKind>, thresholds: { [key in string]: number }, };
+export type CallOverride = { enabled?: boolean, priority?: Priority, frequency?: Frequency, cooldown_s?: number, expiry_s?: number, voice?: VoiceRole, sessions?: Array<SessionKind>, thresholds: { [key in string]: number }, 
+/**
+ * Spoken fast and energetic.
+ */
+excited?: boolean, };

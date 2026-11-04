@@ -660,8 +660,9 @@
   "Gleich geht's los, Fokus."
  ],
  "race.start_lights:go": [
-  "Grün, grün, grün!",
-  "Go, go, go!"
+  "Grün, grün, grün! Los!",
+  "Los, los, los!",
+  "Grün, grün, grün! Gib alles!"
  ],
  "traffic.faster_class": [
   "{class} kommt von hinten, {gap} Sekunden.",

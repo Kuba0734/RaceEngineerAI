@@ -37,4 +37,24 @@ pit_only_in_pits: boolean, radar_show_distance: boolean, map_show_numbers: boole
 /**
  * Turns the map (degrees, clockwise).
  */
-map_rotation_deg: number, map_line_width: number, map_dot_size: number, map_show_pits: boolean, layout: Array<WidgetLayout>, };
+map_rotation_deg: number, map_line_width: number, map_dot_size: number, map_show_pits: boolean, map_show_sectors: boolean, 
+/**
+ * Cars off track / stopped ahead are shown from this distance (m).
+ */
+alert_offtrack_m: number, 
+/**
+ * Faster class cars behind are shown from this distance (m).
+ */
+alert_faster_m: number, 
+/**
+ * Rejoin helper: gap to the next car (s) that counts as "clear".
+ */
+rejoin_clear_s: number, 
+/**
+ * Pit entry helper is shown from this distance to the line (m).
+ */
+pit_entry_show_m: number, 
+/**
+ * Start lights widget only while lights are on.
+ */
+start_lights_auto_hide: boolean, lap_times_show_predicted: boolean, fuel_show_target: boolean, tyres_show_zones: boolean, relative_show_weather: boolean, layout: Array<WidgetLayout>, };

@@ -656,8 +656,9 @@
   "Here we go, stay focused."
  ],
  "race.start_lights:go": [
-  "Green, green, green!",
-  "Go, go, go!"
+  "Green, green, green! Go!",
+  "Go, go, go!",
+  "Green, green, green! Send it!"
  ],
  "traffic.faster_class": [
   "{class} coming from behind, {gap} seconds.",

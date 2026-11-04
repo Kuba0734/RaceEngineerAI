@@ -60,6 +60,8 @@ pub struct RivalInfo {
     pub last_location: CarLocation,
     /// First position seen in the race (grid).
     pub start_position: Option<i32>,
+    /// Session time (s) the car went off track / became slow on track.
+    pub off_since: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -201,6 +203,8 @@ pub struct RaceState {
     pub caps: Option<crate::games::registry::Capabilities>,
     /// Own stops in the pit box this session (for mandatory stops from the settings).
     pub own_stops: u32,
+    /// Lap fraction of the pit lane entry (speed limit line), learned from cars driving in.
+    pub pit_entry_pct: Option<f32>,
     was_in_box: bool,
     // Internal edge detection.
     last_completed_laps: i32,
@@ -230,6 +234,9 @@ pub struct RaceState {
     outline_bins: Vec<Option<[f32; 2]>>,
     outline_filled: usize,
 }
+
+/// Below this speed a car on the racing line counts as slow / stopped (km/h).
+const OFF_SLOW_KMH: f32 = 40.0;
 
 /// Lap fraction around the line within which a chequered flag means "finished now".
 const FINISH_AT_LINE: f32 = 0.03;
@@ -278,6 +285,7 @@ impl RaceState {
             weather_at_start: None,
             caps: None,
             own_stops: 0,
+            pit_entry_pct: None,
             was_in_box: false,
             last_completed_laps: -1,
             last_sector_index: -1,
@@ -329,6 +337,7 @@ impl RaceState {
         let reference = self.reference.take();
         let corners = std::mem::take(&mut self.corners);
         let pit_loss = self.pit_loss_s;
+        let pit_entry = self.pit_entry_pct;
         let caps = self.caps.take();
         let outline = (std::mem::take(&mut self.track_outline), std::mem::take(&mut self.outline_bins), self.outline_filled, self.outline_version);
         *self = Self::new();
@@ -337,6 +346,7 @@ impl RaceState {
         self.reference = reference;
         self.corners = corners;
         self.pit_loss_s = pit_loss;
+        self.pit_entry_pct = pit_entry;
         self.caps = caps;
     }
 
@@ -386,9 +396,13 @@ impl RaceState {
         self.outline_from_cars(&cars);
         let multiclass = is_multiclass(&cars);
         let running = self.race_running();
+        let mut pit_entry = None;
         for c in &cars {
             if !c.is_player {
-                self.gaps.update(c.id, c.laps, c.spline, t);
+                match c.progress {
+                    Some(p) => self.gaps.update_progress(c.id, p, t),
+                    None => self.gaps.update(c.id, c.laps, c.spline, t),
+                }
             }
             let r = self.rivals.entry(c.id).or_default();
             let in_pits = c.location.in_pits();
@@ -400,7 +414,17 @@ impl RaceState {
                 events.push(RaceEvent::RivalPitExit { car_id: c.id });
             }
             r.in_pits = in_pits;
+            // Onto pit road from the track: that spot is the pit entry line.
+            if c.location == CarLocation::PitLane && matches!(r.last_location, CarLocation::Track | CarLocation::PitEntry) && c.spline > 0.0 {
+                pit_entry = Some(c.spline);
+            }
             r.last_location = c.location;
+            let stopped = c.location == CarLocation::Track && c.speed_kmh < OFF_SLOW_KMH && running;
+            if c.off_track || stopped {
+                r.off_since.get_or_insert(t);
+            } else {
+                r.off_since = None;
+            }
             if r.start_position.is_none() && running {
                 // The grid order at the green light, in the same terms as the position shown.
                 let rank = if multiclass { c.class_position } else { c.position };
@@ -408,6 +432,9 @@ impl RaceState {
                     r.start_position = Some(rank);
                 }
             }
+        }
+        if pit_entry.is_some() {
+            self.pit_entry_pct = pit_entry;
         }
         let mut cars = cars;
         self.apply_live_order(&mut cars);
@@ -420,13 +447,18 @@ impl RaceState {
     /// their spline looks like a nearly finished lap) and not after the flag (the official
     /// classification counts then).
     fn apply_live_order(&self, cars: &mut [CarState]) {
-        if !self.race_running() || self.finished || !cars.iter().any(|c| c.laps >= 1) {
+        // With an absolute distance from the game the order is right from the green light on;
+        // otherwise only once the lap counters run.
+        let absolute = cars.iter().all(|c| c.progress.is_some());
+        if !self.race_running() || self.finished || !(absolute || cars.iter().any(|c| c.laps >= 1)) {
             return;
         }
+        // All cars from the same sample (incl. the player): a mix of sources and rates would
+        // put cars a lap apart for a moment at the line.
         let mut order: Vec<(usize, f64, i32)> = cars
             .iter()
             .enumerate()
-            .map(|(i, c)| (i, self.gaps.progress(c.id).unwrap_or(f64::from(c.laps) + f64::from(c.spline)), c.position))
+            .map(|(i, c)| (i, c.progress.or_else(|| self.gaps.progress(c.id)).unwrap_or(f64::from(c.laps) + f64::from(c.spline)), c.position))
             .collect();
         order.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.2.cmp(&b.2)));
         let mut per_class: BTreeMap<i32, i32> = BTreeMap::new();
@@ -509,7 +541,10 @@ impl RaceState {
         }
 
         // Player timing (high rate).
-        self.gaps.update(f.player_car_id, f.completed_laps, f.spline, t);
+        match f.progress {
+            Some(p) => self.gaps.update_progress(f.player_car_id, p, t),
+            None => self.gaps.update(f.player_car_id, f.completed_laps, f.spline, t),
+        }
         self.fuel.on_frame(f.fuel_l);
 
         // Trace for lap comparison.
@@ -1072,6 +1107,22 @@ mod tests {
         s.finished = true;
         s.on_cars(vec![car(0, 1, 10, 0.05, false), car(1, 2, 10, 0.50, true)], &mut ev);
         assert_eq!(s.player_position(), 2);
+    }
+
+    #[test]
+    fn absolute_progress_orders_live_from_the_green_light() {
+        let mut ev = Vec::new();
+        let at = |id: i32, pos: i32, progress: f64, me: bool| CarState { progress: Some(progress), ..car(id, pos, progress.floor().max(0.0) as i32, progress.rem_euclid(1.0) as f32, me) };
+        let mut s = running_race();
+        // First lap: official order stale (player officially P3), player already passed car 2.
+        // Car 0 still behind the line (-1 + 0.99) must not count as a lap ahead.
+        s.on_cars(vec![at(0, 1, 0.30, false), at(2, 2, 0.20, false), at(1, 3, 0.25, true), at(3, 4, -0.01, false)], &mut ev);
+        assert_eq!(s.player_position(), 2);
+        // At the line the player's car is a lap further at once, regardless of the lap time gate.
+        s.on_cars(vec![at(0, 1, 1.02, false), at(1, 2, 1.01, true), at(2, 3, 0.99, false), at(3, 4, 0.5, false)], &mut ev);
+        assert_eq!(s.player_position(), 2);
+        s.on_cars(vec![at(0, 1, 1.02, false), at(1, 2, 1.03, true), at(2, 3, 0.99, false), at(3, 4, 0.5, false)], &mut ev);
+        assert_eq!(s.player_position(), 1);
     }
 
     #[test]

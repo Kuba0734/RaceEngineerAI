@@ -9,19 +9,19 @@ import { useSettings } from "./settings/basic";
 import { useGameCaps } from "@/hooks/useGameCaps";
 import { widgetAvailable } from "@/overlay/available";
 
-type WidgetId = "map" | "standings" | "class_standings" | "relative" | "pit" | "radar" | "fuel" | "delta" | "radio" | "dash" | "inputs" | "laps" | "tyres" | "flag";
+type WidgetId = "map" | "standings" | "class_standings" | "relative" | "pit" | "radar" | "fuel" | "delta" | "radio" | "dash" | "inputs" | "laps" | "tyres" | "flag" | "lap_times" | "session" | "weather" | "start_lights" | "offtrack" | "faster_class" | "rejoin" | "pit_entry";
 
-const ALL_WIDGETS: WidgetId[] = ["relative", "class_standings", "standings", "map", "radar", "delta", "fuel", "pit", "dash", "inputs", "laps", "tyres", "flag", "radio"];
+const ALL_WIDGETS: WidgetId[] = ["relative", "class_standings", "standings", "map", "radar", "delta", "fuel", "pit", "session", "lap_times", "weather", "start_lights", "offtrack", "faster_class", "rejoin", "pit_entry", "dash", "inputs", "laps", "tyres", "flag", "radio"];
 
 /** Ready-made sets: which widgets are on. */
 const PRESETS: Record<"minimal" | "standard" | "all", WidgetId[]> = {
   minimal: ["relative", "standings", "radar", "delta", "flag"],
-  standard: ["relative", "class_standings", "standings", "map", "radar", "delta", "fuel", "pit", "flag", "radio"],
+  standard: ["relative", "class_standings", "standings", "map", "radar", "delta", "fuel", "pit", "session", "start_lights", "offtrack", "faster_class", "rejoin", "pit_entry", "flag", "radio"],
   all: ALL_WIDGETS,
 };
 
 /** Start position of widgets that are not in a saved layout yet. */
-const NEW_WIDGET_Y: Partial<Record<WidgetId, number>> = { dash: 40, inputs: 220, laps: 370, tyres: 560, flag: 780, relative: 300, class_standings: 520, pit: 820 };
+const NEW_WIDGET_Y: Partial<Record<WidgetId, number>> = { dash: 40, inputs: 220, laps: 370, tyres: 560, flag: 780, relative: 300, class_standings: 520, pit: 820, session: 10, lap_times: 640, weather: 60, start_lights: 160, offtrack: 160, faster_class: 420, rejoin: 420, pit_entry: 520 };
 
 const ICONS: Record<WidgetId, string> = {
   map: "M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2zM9 4v14m6-12v14",
@@ -38,6 +38,14 @@ const ICONS: Record<WidgetId, string> = {
   class_standings: "M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h7",
   relative: "M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4",
   pit: "M4 20h16M6 20V9l6-5 6 5v11M10 20v-5h4v5",
+  lap_times: "M12 8v5l3 2M9 2h6M12 21a8 8 0 1 0 0-16a8 8 0 0 0 0 16",
+  session: "M3 7h18v10H3zM7 11h4M15 11h2",
+  weather: "M7 18a4 4 0 0 1 0-8a6 6 0 0 1 11.3 2A3.5 3.5 0 0 1 18 18zM8 21l1-2M12 21l1-2M16 21l1-2",
+  start_lights: "M4 5h16v14H4zM8 9v.01M12 9v.01M16 9v.01M8 15v.01M12 15v.01M16 15v.01",
+  offtrack: "M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0",
+  faster_class: "M5 12h14M13 6l6 6-6 6M5 6l6 6-6 6",
+  rejoin: "M4 12h10M10 6l6 6-6 6M20 4v16",
+  pit_entry: "M3 12h12M11 6l6 6-6 6M21 4v16",
 };
 
 function WidgetCard({ id, w, onW, children }: { id: WidgetId; w: WidgetLayout; onW: (p: Partial<WidgetLayout>) => void; children?: ReactNode }) {
@@ -143,6 +151,7 @@ export default function OverlayPage() {
               <Slider value={o.relative_rows} min={1} max={6} step={1} onChange={(v) => set({ relative_rows: v })} />
             </Field>
             <Toggle checked={o.relative_show_header} onChange={(v) => set({ relative_show_header: v })} label={t("ov.showHeader")} />
+            <Toggle checked={o.relative_show_weather} onChange={(v) => set({ relative_show_weather: v })} label={t("ov.relativeWeather")} />
             <Toggle checked={o.relative_show_footer} onChange={(v) => set({ relative_show_footer: v })} label={t("ov.showFooter")} />
             <Toggle checked={o.relative_show_license} onChange={(v) => set({ relative_show_license: v })} label={t("ov.showLicense")} />
             <Toggle checked={o.relative_show_irating} onChange={(v) => set({ relative_show_irating: v })} label={t("ov.showIrating")} />
@@ -187,6 +196,7 @@ export default function OverlayPage() {
           <Toggle checked={o.map_show_numbers} onChange={(v) => set({ map_show_numbers: v })} label={t("ov.mapNumbers")} />
           <Toggle checked={o.map_class_colors} onChange={(v) => set({ map_class_colors: v })} label={t("ov.mapClassColors")} />
           <Toggle checked={o.map_show_pits} onChange={(v) => set({ map_show_pits: v })} label={t("ov.mapPits")} />
+          <Toggle checked={o.map_show_sectors} onChange={(v) => set({ map_show_sectors: v })} label={t("ov.mapSectors")} />
         </WidgetCard>}
         {avail("standings") && (
           <WidgetCard id="standings" w={widget("standings")} onW={(p) => setW("standings", p)}>
@@ -202,7 +212,41 @@ export default function OverlayPage() {
           <Toggle checked={o.radar_auto_hide} onChange={(v) => set({ radar_auto_hide: v })} label={t("ov.radarAutoHide")} hint={t("ov.radarAutoHideHint")} />
           {caps?.hasNativeSpotter && <Toggle checked={o.radar_show_distance} onChange={(v) => set({ radar_show_distance: v })} label={t("ov.radarDistance")} hint={t("ov.radarNativeHint")} />}
         </WidgetCard>
-        <WidgetCard id="fuel" w={widget("fuel")} onW={(p) => setW("fuel", p)} />
+        <WidgetCard id="fuel" w={widget("fuel")} onW={(p) => setW("fuel", p)}>
+          <Toggle checked={o.fuel_show_target} onChange={(v) => set({ fuel_show_target: v })} label={t("ov.fuelTarget")} hint={t("ov.fuelTargetHint")} />
+        </WidgetCard>
+        <WidgetCard id="session" w={widget("session")} onW={(p) => setW("session", p)} />
+        <WidgetCard id="lap_times" w={widget("lap_times")} onW={(p) => setW("lap_times", p)}>
+          <Toggle checked={o.lap_times_show_predicted} onChange={(v) => set({ lap_times_show_predicted: v })} label={t("ov.lapTimesPredicted")} />
+        </WidgetCard>
+        <WidgetCard id="weather" w={widget("weather")} onW={(p) => setW("weather", p)} />
+        {avail("start_lights") && (
+          <WidgetCard id="start_lights" w={widget("start_lights")} onW={(p) => setW("start_lights", p)}>
+            <Toggle checked={o.start_lights_auto_hide} onChange={(v) => set({ start_lights_auto_hide: v })} label={t("ov.startLightsAutoHide")} />
+          </WidgetCard>
+        )}
+        <WidgetCard id="offtrack" w={widget("offtrack")} onW={(p) => setW("offtrack", p)}>
+          <Field label={t("ov.alertDistance")} hint={t("ov.offtrackHint")}>
+            <Slider value={o.alert_offtrack_m} min={200} max={2000} step={50} onChange={(v) => set({ alert_offtrack_m: v })} format={(v) => `${v} m`} />
+          </Field>
+        </WidgetCard>
+        {avail("faster_class") && (
+          <WidgetCard id="faster_class" w={widget("faster_class")} onW={(p) => setW("faster_class", p)}>
+            <Field label={t("ov.alertDistance")} hint={t("ov.fasterHint")}>
+              <Slider value={o.alert_faster_m} min={50} max={800} step={25} onChange={(v) => set({ alert_faster_m: v })} format={(v) => `${v} m`} />
+            </Field>
+          </WidgetCard>
+        )}
+        <WidgetCard id="rejoin" w={widget("rejoin")} onW={(p) => setW("rejoin", p)}>
+          <Field label={t("ov.rejoinClear")} hint={t("ov.rejoinHint")}>
+            <Slider value={o.rejoin_clear_s} min={1} max={8} step={0.5} onChange={(v) => set({ rejoin_clear_s: v })} format={(v) => `${v.toFixed(1)} s`} />
+          </Field>
+        </WidgetCard>
+        <WidgetCard id="pit_entry" w={widget("pit_entry")} onW={(p) => setW("pit_entry", p)}>
+          <Field label={t("ov.alertDistance")} hint={t("ov.pitEntryHint")}>
+            <Slider value={o.pit_entry_show_m} min={150} max={1500} step={50} onChange={(v) => set({ pit_entry_show_m: v })} format={(v) => `${v} m`} />
+          </Field>
+        </WidgetCard>
         <WidgetCard id="delta" w={widget("delta")} onW={(p) => setW("delta", p)}>
           <Toggle checked={o.delta_bar} onChange={(v) => set({ delta_bar: v })} label={t("ov.deltaBar")} hint={t("ov.deltaBarHint")} />
           <Field label={t("ov.deltaRange")} hint={t("ov.deltaRangeHint")}>
@@ -220,6 +264,7 @@ export default function OverlayPage() {
           <Toggle checked={o.inputs_show_steer} onChange={(v) => set({ inputs_show_steer: v })} label={t("ov.inputsSteer")} />
         </WidgetCard>
         <WidgetCard id="tyres" w={widget("tyres")} onW={(p) => setW("tyres", p)}>
+          <Toggle checked={o.tyres_show_zones} onChange={(v) => set({ tyres_show_zones: v })} label={t("ov.tyresZones")} />
           {(!caps || caps.hasBrakeWear) && <Toggle checked={o.tyres_show_brakes} onChange={(v) => set({ tyres_show_brakes: v })} label={t("ov.tyresBrakes")} />}
         </WidgetCard>
         <WidgetCard id="flag" w={widget("flag")} onW={(p) => setW("flag", p)}>

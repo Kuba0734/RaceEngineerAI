@@ -76,6 +76,11 @@ function CallRow({ def, eff }: { def: CallDef; eff: EffectiveCall }) {
               <NumberInput value={eff.expiryS} min={1} max={600} onChange={(v) => setO({ expiry_s: v })} />
             </Field>
             {!spotter && (
+              <Field label={t("calls.excited")} hint={t("calls.excitedHint")}>
+                <Toggle checked={eff.excited} onChange={(v) => setO({ excited: v })} />
+              </Field>
+            )}
+            {!spotter && (
               <Field label={t("calls.voice")}>
                 <Segmented value={eff.voice} onChange={(v) => setO({ voice: v })} options={[{ value: "engineer", label: t("voices.engineer") }, { value: "spotter", label: t("voices.spotter") }]} />
               </Field>

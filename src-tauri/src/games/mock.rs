@@ -255,6 +255,8 @@ impl MockProvider {
                 wind_speed_ms: 2.0,
                 rain_amount: None,
                 wetness_level: None,
+                humidity_pct: Some(55.0),
+                wind_dir_deg: Some(110.0),
             },
             lights_stage: 0,
             wiper_level: 0,

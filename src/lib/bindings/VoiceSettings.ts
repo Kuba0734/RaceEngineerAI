@@ -9,4 +9,16 @@ sentence_pause_ms: number,
 /**
  * Pause at commas (ms, 0 = only the voice's own).
  */
-comma_pause_ms: number, };
+comma_pause_ms: number, 
+/**
+ * Excited calls (start lights, green flag): tempo factor on top of the voice's own.
+ */
+excited_speed: number, 
+/**
+ * Excited calls: pitch raise (1.0 = none) for a more urgent, emotional sound.
+ */
+excited_pitch: number, 
+/**
+ * Excited calls: volume factor.
+ */
+excited_gain: number, };

@@ -325,10 +325,28 @@ pub struct VoiceSettings {
     /// Pause at commas (ms, 0 = only the voice's own).
     #[serde(default = "default_comma_pause_ms")]
     pub comma_pause_ms: u32,
+    /// Excited calls (start lights, green flag): tempo factor on top of the voice's own.
+    #[serde(default = "default_excited_speed")]
+    pub excited_speed: f32,
+    /// Excited calls: pitch raise (1.0 = none) for a more urgent, emotional sound.
+    #[serde(default = "default_excited_pitch")]
+    pub excited_pitch: f32,
+    /// Excited calls: volume factor.
+    #[serde(default = "default_excited_gain")]
+    pub excited_gain: f32,
 }
 
 fn default_comma_pause_ms() -> u32 {
     140
+}
+fn default_excited_speed() -> f32 {
+    1.25
+}
+fn default_excited_pitch() -> f32 {
+    1.08
+}
+fn default_excited_gain() -> f32 {
+    1.2
 }
 
 impl Default for VoiceSettings {
@@ -354,6 +372,9 @@ impl Default for VoiceSettings {
             master_volume: 1.0,
             sentence_pause_ms: 260,
             comma_pause_ms: default_comma_pause_ms(),
+            excited_speed: default_excited_speed(),
+            excited_pitch: default_excited_pitch(),
+            excited_gain: default_excited_gain(),
         }
     }
 }
@@ -757,6 +778,9 @@ pub struct CallOverride {
     #[ts(optional)]
     pub sessions: Option<Vec<SessionKind>>,
     pub thresholds: BTreeMap<String, f64>,
+    /// Spoken fast and energetic.
+    #[ts(optional)]
+    pub excited: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -855,6 +879,21 @@ pub struct OverlaySettings {
     pub map_line_width: f32,
     pub map_dot_size: f32,
     pub map_show_pits: bool,
+    pub map_show_sectors: bool,
+    /// Cars off track / stopped ahead are shown from this distance (m).
+    pub alert_offtrack_m: f32,
+    /// Faster class cars behind are shown from this distance (m).
+    pub alert_faster_m: f32,
+    /// Rejoin helper: gap to the next car (s) that counts as "clear".
+    pub rejoin_clear_s: f32,
+    /// Pit entry helper is shown from this distance to the line (m).
+    pub pit_entry_show_m: f32,
+    /// Start lights widget only while lights are on.
+    pub start_lights_auto_hide: bool,
+    pub lap_times_show_predicted: bool,
+    pub fuel_show_target: bool,
+    pub tyres_show_zones: bool,
+    pub relative_show_weather: bool,
     pub layout: Vec<WidgetLayout>,
 }
 
@@ -877,6 +916,14 @@ pub fn default_layout() -> Vec<WidgetLayout> {
         w("relative", 1440.0, 640.0),
         w("class_standings", 20.0, 420.0),
         w("pit", 754.0, 600.0),
+        w("session", 760.0, 10.0),
+        w("start_lights", 860.0, 160.0),
+        w("offtrack", 1500.0, 160.0),
+        w("faster_class", 1520.0, 420.0),
+        w("rejoin", 760.0, 420.0),
+        w("pit_entry", 760.0, 520.0),
+        WidgetLayout { visible: false, ..w("weather", 20.0, 20.0) },
+        WidgetLayout { visible: false, ..w("lap_times", 1700.0, 640.0) },
     ]
 }
 
@@ -931,6 +978,16 @@ impl Default for OverlaySettings {
             map_line_width: 6.0,
             map_dot_size: 4.0,
             map_show_pits: true,
+            map_show_sectors: true,
+            alert_offtrack_m: 800.0,
+            alert_faster_m: 300.0,
+            rejoin_clear_s: 3.0,
+            pit_entry_show_m: 600.0,
+            start_lights_auto_hide: true,
+            lap_times_show_predicted: true,
+            fuel_show_target: true,
+            tyres_show_zones: true,
+            relative_show_weather: true,
             layout: default_layout(),
         }
     }

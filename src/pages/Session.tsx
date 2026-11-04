@@ -60,7 +60,7 @@ export default function Session() {
               </div>
             </Card>
             <Card title={t("session.fuel")}>
-              <Fuel fuel={frame.fuel} fuelNow={frame.fuel_l} />
+              <Fuel fuel={frame.fuel} fuelNow={frame.fuel_l} lastLapL={frame.fuel_last_lap_l ?? undefined} maxL={frame.fuel_max_l} pit={frame.pit} showTarget />
             </Card>
           </div>
         </div>

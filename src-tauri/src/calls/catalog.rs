@@ -38,6 +38,9 @@ pub struct CallDef {
     #[serde(default)]
     #[ts(optional)]
     pub requires: Option<String>,
+    /// Spoken fast and energetic (start lights, green flag).
+    #[serde(default)]
+    pub excited: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -110,6 +113,7 @@ pub struct EffectiveCall {
     pub voice: VoiceRole,
     pub sessions: Vec<SessionKind>,
     pub thresholds: BTreeMap<String, f64>,
+    pub excited: bool,
 }
 
 fn apply(e: &mut EffectiveCall, o: &CallOverride, spotter: bool) {
@@ -137,6 +141,9 @@ fn apply(e: &mut EffectiveCall, o: &CallOverride, spotter: bool) {
     if let Some(v) = &o.sessions {
         e.sessions = v.clone();
     }
+    if let Some(v) = o.excited {
+        e.excited = v;
+    }
     for (k, v) in &o.thresholds {
         e.thresholds.insert(k.clone(), *v);
     }
@@ -162,6 +169,7 @@ pub fn resolve_all(s: &Settings, preset_override: Option<&str>) -> BTreeMap<Stri
                 voice: c.voice,
                 sessions: c.sessions.clone(),
                 thresholds: c.thresholds.iter().map(|(k, t)| (k.clone(), t.default)).collect(),
+                excited: c.excited,
             };
             if let Some(p) = builtin {
                 if !p.only_groups.is_empty() && !p.only_groups.contains(&c.group) {

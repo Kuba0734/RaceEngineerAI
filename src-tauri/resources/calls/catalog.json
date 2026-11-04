@@ -262,7 +262,8 @@
     "qualifying",
     "race"
    ],
-   "enabled": true
+   "enabled": true,
+   "excited": true
   },
   {
    "id": "flag.white",
@@ -1833,7 +1834,8 @@
     "race"
    ],
    "enabled": true,
-   "requires": "hasStartLights"
+   "requires": "hasStartLights",
+   "excited": true
   },
   {
    "id": "traffic.faster_class",

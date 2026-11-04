@@ -65,7 +65,7 @@ pub struct Core {
 impl Core {
     pub fn speak(&self, u: Utterance) {
         self.emit_radio_last();
-        self.tts.send(TtsJob::Speak(SpeakRequest { text: u.text, role: u.role, priority: u.priority, expires_at: u.expires_at, call_id: u.call_id }));
+        self.tts.send(TtsJob::Speak(SpeakRequest { text: u.text, role: u.role, priority: u.priority, expires_at: u.expires_at, call_id: u.call_id, excited: u.excited }));
     }
 
     /// Submits a call (on request) through the engine and speaks it.

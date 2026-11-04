@@ -32,4 +32,13 @@ incidents?: number,
 /**
  * Lap time estimate of the car's class (s): tells faster and slower classes apart.
  */
-class_est_lap_s?: number, };
+class_est_lap_s?: number, 
+/**
+ * Absolute race distance in laps (laps + lap fraction from the same sample; -1 before the
+ * first line crossing). Basis of the live order. None = the game has no such value.
+ */
+progress?: number, 
+/**
+ * Off the racing surface right now (games that report it).
+ */
+off_track: boolean, };

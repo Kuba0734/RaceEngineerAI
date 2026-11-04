@@ -69,6 +69,11 @@ impl GapTracker {
 
     pub fn update(&mut self, car_id: i32, laps: i32, spline: f32, t_s: f64) {
         let progress = f64::from(laps) + f64::from(spline.clamp(0.0, 0.99999));
+        self.update_progress(car_id, progress, t_s);
+    }
+
+    /// Same with an absolute progress (laps + lap fraction) from the game.
+    pub fn update_progress(&mut self, car_id: i32, progress: f64, t_s: f64) {
         self.cars.entry(car_id).or_insert_with(CarTiming::new).update(progress, t_s);
     }
 

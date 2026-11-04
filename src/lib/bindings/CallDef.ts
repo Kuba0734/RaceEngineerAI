@@ -5,4 +5,8 @@ import type { SessionKind } from "./SessionKind";
 import type { ThresholdDef } from "./ThresholdDef";
 import type { VoiceRole } from "./VoiceRole";
 
-export type CallDef = { id: string, group: string, priority: Priority, cooldownS: number, expiryS: number, frequency: Frequency, voice: VoiceRole, sessions: Array<SessionKind>, enabled: boolean, thresholds: { [key in string]: ThresholdDef }, requires?: string, };
+export type CallDef = { id: string, group: string, priority: Priority, cooldownS: number, expiryS: number, frequency: Frequency, voice: VoiceRole, sessions: Array<SessionKind>, enabled: boolean, thresholds: { [key in string]: ThresholdDef }, requires?: string, 
+/**
+ * Spoken fast and energetic (start lights, green flag).
+ */
+excited: boolean, };

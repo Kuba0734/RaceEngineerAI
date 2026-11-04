@@ -10,4 +10,12 @@ rain_amount: number | null,
 /**
  * Raw track wetness level (game scale), for trends.
  */
-wetness_level: number | null, };
+wetness_level: number | null, 
+/**
+ * Relative humidity in % (games that report it).
+ */
+humidity_pct: number | null, 
+/**
+ * Direction the wind comes from, degrees (games that report it).
+ */
+wind_dir_deg: number | null, };

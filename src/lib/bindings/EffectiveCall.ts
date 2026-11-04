@@ -7,4 +7,4 @@ import type { VoiceRole } from "./VoiceRole";
 /**
  * Effective configuration of one call after preset + overrides.
  */
-export type EffectiveCall = { id: string, group: string, enabled: boolean, priority: Priority, cooldownS: number, expiryS: number, frequency: Frequency, voice: VoiceRole, sessions: Array<SessionKind>, thresholds: { [key in string]: number }, };
+export type EffectiveCall = { id: string, group: string, enabled: boolean, priority: Priority, cooldownS: number, expiryS: number, frequency: Frequency, voice: VoiceRole, sessions: Array<SessionKind>, thresholds: { [key in string]: number }, excited: boolean, };

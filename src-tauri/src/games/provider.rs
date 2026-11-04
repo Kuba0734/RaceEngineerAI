@@ -178,6 +178,12 @@ pub struct Weather {
     /// Raw track wetness level (game scale), for trends.
     #[serde(default)]
     pub wetness_level: Option<i32>,
+    /// Relative humidity in % (games that report it).
+    #[serde(default)]
+    pub humidity_pct: Option<f32>,
+    /// Direction the wind comes from, degrees (games that report it).
+    #[serde(default)]
+    pub wind_dir_deg: Option<f32>,
 }
 
 /// Position of another car from the high-rate source (shared memory), for spotter + map.
@@ -351,6 +357,13 @@ pub struct TelemetryFrame {
     pub game_gap_behind_ms: Option<i32>,
     pub player_car_id: i32,
     pub cars: Vec<CarPos>,
+    /// Clutch pedal pressed 0..1 (0 = released).
+    #[serde(default)]
+    pub clutch: f32,
+    /// Absolute race distance of the player in laps (laps started before the line count as -1),
+    /// ungated, from the same sample as `spline`. None = the game has no such value.
+    #[serde(default)]
+    pub progress: Option<f64>,
     /// Set by games with their own spotter; the spotter then trusts it instead of `cars`.
     #[serde(default)]
     pub native_side: Option<NativeSide>,
@@ -504,6 +517,14 @@ pub struct CarState {
     #[serde(default)]
     #[ts(optional)]
     pub class_est_lap_s: Option<f32>,
+    /// Absolute race distance in laps (laps + lap fraction from the same sample; -1 before the
+    /// first line crossing). Basis of the live order. None = the game has no such value.
+    #[serde(default)]
+    #[ts(optional)]
+    pub progress: Option<f64>,
+    /// Off the racing surface right now (games that report it).
+    #[serde(default)]
+    pub off_track: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
