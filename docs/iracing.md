@@ -162,3 +162,9 @@ iRacing teilt Strecken in viele Zeitsektoren (`SplitTimeInfo`). Die Logik arbeit
 | `CarIdxOnPitRoad` (Übergang Strecke → Boxengasse) | Boxeneinfahrt-Linie | wird aus beliebigen Autos gelernt, die in die Box fahren; bleibt für die Strecke gespeichert, bis die App neu startet |
 
 Box-Regeln (z. B. „Tanken und Reifen gleichzeitig“, Reifenwechselzeit) liefert das SDK nicht – dafür gibt es bewusst kein Widget.
+
+## Testmodus und echte Aufnahmen
+
+- Einstellungen → Über → **Testmodus** blendet die Seite **Datencheck** ein: alle normalisierten Werte mit Plausibilitätsprüfung plus die Rohwerte des SDK (etwa 1×/s, nur im Testmodus). „—“ bei einem Rohwert = Variable existiert nicht.
+- Dort lässt sich die laufende Session aufnehmen (`%LOCALAPPDATA%\RaceEngineerAI\replays\*.jsonl`) und direkt prüfen (Position 0 im Rennen, Positionssprünge > 3, mehrfache Zielerkennung).
+- Aufnahmen, die nach `src-tauri/tests/replays/` kopiert werden, laufen bei `cargo test` automatisch durch die Rennlogik (`diagnostics::tests::recorded_sessions_play_without_problems`).

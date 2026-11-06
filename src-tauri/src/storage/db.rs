@@ -162,6 +162,43 @@ pub fn list_sessions(c: &Connection, game: &str, limit: u32) -> AppResult<Vec<Se
     Ok(rows.collect::<Result<_, _>>()?)
 }
 
+/// Consumption of earlier sessions with the same car and track: clean laps only (valid, close
+/// to the session's typical lap time, so in/out laps and cautions drop out).
+pub fn fuel_history(c: &Connection, game: &str, track: &str, car: &str) -> AppResult<Option<crate::race::fuel_plan::FuelHistory>> {
+    let mut st = c.prepare(
+        "SELECT l.session_id, l.time_ms, l.fuel_used FROM laps l JOIN sessions s ON s.id = l.session_id
+         WHERE s.game = ?1 AND s.track = ?2 AND s.car = ?3 AND l.valid = 1 AND l.fuel_used > 0.05 AND l.time_ms > 0
+           AND l.session_id IN (SELECT id FROM sessions WHERE game = ?1 AND track = ?2 AND car = ?3 ORDER BY started_at DESC LIMIT 10)",
+    )?;
+    let rows: Vec<(i64, u32, f32)> = st.query_map(params![game, track, car], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?.collect::<Result<_, _>>()?;
+    let mut by_session: std::collections::BTreeMap<i64, Vec<(u32, f32)>> = std::collections::BTreeMap::new();
+    for (id, t, f) in rows {
+        by_session.entry(id).or_default().push((t, f));
+    }
+    let mut kept: Vec<(u32, f32)> = Vec::new();
+    let mut sessions = 0;
+    for laps in by_session.values() {
+        let mut times: Vec<u32> = laps.iter().map(|l| l.0).collect();
+        times.sort_unstable();
+        let median = times[times.len() / 2] as f32;
+        let clean: Vec<(u32, f32)> = laps.iter().copied().filter(|(t, _)| (*t as f32) <= median * 1.07).collect();
+        if !clean.is_empty() {
+            sessions += 1;
+            kept.extend(clean);
+        }
+    }
+    if kept.len() < 2 {
+        return Ok(None);
+    }
+    let n = kept.len() as f32;
+    Ok(Some(crate::race::fuel_plan::FuelHistory {
+        per_lap_l: kept.iter().map(|l| l.1).sum::<f32>() / n,
+        lap_ms: (kept.iter().map(|l| l.0 as f32).sum::<f32>() / n) as u32,
+        laps: kept.len() as u32,
+        sessions,
+    }))
+}
+
 pub fn session_laps(c: &Connection, session_id: i64) -> AppResult<Vec<LapRow>> {
     let mut st = c.prepare("SELECT lap, time_ms, s1_ms, s2_ms, s3_ms, valid, fuel_used, position, gap_ahead_s, gap_behind_s FROM laps WHERE session_id = ?1 ORDER BY lap")?;
     let rows = st.query_map([session_id], |r| {
@@ -230,6 +267,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn fuel_history_uses_clean_laps_of_this_car_and_track() {
+        let c = open_memory().unwrap();
+        let lap = |i, t, f, valid| LapRow { lap: i, time_ms: t, sectors: [None; 3], valid, fuel_used: Some(f), position: None, gap_ahead_s: None, gap_behind_s: None };
+        let id = insert_session(&c, "iracing", "spa", "gt3", "practice").unwrap();
+        for (i, (t, f)) in [(100_000, 3.0), (100_400, 3.2), (130_000, 2.0), (99_800, 3.1)].into_iter().enumerate() {
+            insert_lap(&c, id, &lap(i as u32 + 1, t, f, true)).unwrap();
+        }
+        insert_lap(&c, id, &lap(9, 99_000, 9.0, false)).unwrap();
+        let other = insert_session(&c, "iracing", "spa", "lmp2", "practice").unwrap();
+        insert_lap(&c, other, &lap(1, 90_000, 5.0, true)).unwrap();
+        let h = fuel_history(&c, "iracing", "spa", "gt3").unwrap().unwrap();
+        // The slow lap (in-lap / caution), the invalid lap and the other car are left out.
+        assert_eq!((h.laps, h.sessions), (3, 1));
+        assert!((h.per_lap_l - 3.1).abs() < 0.01);
+        assert!(fuel_history(&c, "iracing", "monza", "gt3").unwrap().is_none());
+    }
+
+    #[test]
     fn session_and_laps() {
         let c = open_memory().unwrap();
         let id = insert_session(&c, "acc", "spa", "porsche_992_gt3_r", "race").unwrap();
@@ -266,6 +321,7 @@ pub enum DbJob {
     LoadPitLoss { game: String, track: String, reply: crossbeam_channel::Sender<Option<f32>> },
     ListSessions { game: String, reply: crossbeam_channel::Sender<Vec<SessionRow>> },
     SessionLaps { session_id: i64, reply: crossbeam_channel::Sender<Vec<LapRow>> },
+    FuelHistory { game: String, track: String, car: String, reply: crossbeam_channel::Sender<Option<crate::race::fuel_plan::FuelHistory>> },
     DeleteSession { session_id: i64 },
     Prune { days: u32 },
 }
@@ -305,6 +361,9 @@ impl DbHandle {
                         let _ = reply.send(r);
                     }),
                     DbJob::ListSessions { game, reply } => list_sessions(&conn, &game, 200).map(|r| {
+                        let _ = reply.send(r);
+                    }),
+                    DbJob::FuelHistory { game, track, car, reply } => fuel_history(&conn, &game, &track, &car).map(|r| {
                         let _ = reply.send(r);
                     }),
                     DbJob::SessionLaps { session_id, reply } => session_laps(&conn, session_id).map(|r| {

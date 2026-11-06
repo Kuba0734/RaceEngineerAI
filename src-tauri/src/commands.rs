@@ -19,7 +19,7 @@ use crate::core::{Core, DemoSource, RuntimeStatus};
 use crate::error::{AppError, AppResult};
 use crate::games::acc::config::{self as acc_config, BroadcastingStatus};
 use crate::games::registry::GameDef;
-use crate::runtime::{LiveFrame, LiveSub};
+use crate::live::{LiveFrame, LiveSub};
 use crate::storage::db::{DbJob, LapRow, SessionRow};
 use crate::storage::settings::{Settings, VoiceRole, WidgetLayout};
 use crate::storage::{paths, secrets};
@@ -313,6 +313,72 @@ pub fn stop_demo(core: CoreState) {
     *core.demo.lock() = None;
 }
 
+/// Test mode: what the game delivers right now.
+#[tauri::command]
+pub fn get_datacheck(core: CoreState) -> crate::diagnostics::DataCheck {
+    let st = core.state.lock();
+    let now = std::time::Instant::now();
+    let (frame_hz, cars_hz) = {
+        let mut prev = core.rate_sample.lock();
+        let rates = prev.map(|(t, f, c)| {
+            let dt = now.duration_since(t).as_secs_f32().max(0.001);
+            ((st.frames_seen - f) as f32 / dt, (st.cars_seen - c) as f32 / dt)
+        });
+        *prev = Some((now, st.frames_seen, st.cars_seen));
+        rates.unwrap_or((0.0, 0.0))
+    };
+    crate::diagnostics::DataCheck {
+        game: core.status.read().active_game.clone().unwrap_or_default(),
+        frame_hz,
+        cars_hz,
+        rows: crate::diagnostics::check(&st),
+        raw: st.raw_values.clone(),
+        recording: core.recording.lock().clone(),
+    }
+}
+
+/// Test mode: start / stop recording the running session.
+#[tauri::command]
+pub fn set_recording(core: CoreState, on: bool) {
+    core.record_request.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Plays a recording through the race logic and lists what looks wrong.
+#[tauri::command]
+pub async fn check_recording(name: String) -> AppResult<Vec<String>> {
+    let path = paths::replays_dir().join(&name);
+    if !path.starts_with(paths::replays_dir()) || !path.is_file() {
+        return Err(AppError::NotFound(name));
+    }
+    tauri::async_runtime::spawn_blocking(move || crate::diagnostics::check_recording(&path))
+        .await
+        .map_err(|e| AppError::Invalid(e.to_string()))?
+        .map_err(|e| AppError::Invalid(e.to_string()))
+}
+
+#[derive(serde::Serialize, ts_rs::TS)]
+#[ts(export)]
+pub struct ReplayFile {
+    pub name: String,
+    pub size_kb: u32,
+}
+
+/// Recordings with their size, newest first, and the folder they are in.
+#[tauri::command]
+pub fn replay_files() -> (String, Vec<ReplayFile>) {
+    let dir = paths::replays_dir();
+    let mut v: Vec<ReplayFile> = std::fs::read_dir(&dir)
+        .map(|d| {
+            d.filter_map(|e| e.ok())
+                .filter(|e| e.file_name().to_string_lossy().ends_with(".jsonl"))
+                .map(|e| ReplayFile { name: e.file_name().to_string_lossy().into_owned(), size_kb: e.metadata().map(|m| (m.len() / 1024) as u32).unwrap_or(0) })
+                .collect()
+        })
+        .unwrap_or_default();
+    v.sort_by(|a, b| b.name.cmp(&a.name));
+    (dir.display().to_string(), v)
+}
+
 #[tauri::command]
 pub fn list_replays() -> Vec<String> {
     let mut v: Vec<String> = std::fs::read_dir(paths::replays_dir()).map(|d| d.filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.ends_with(".jsonl")).collect()).unwrap_or_default();
@@ -412,10 +478,11 @@ pub fn ptt(core: CoreState, pressed: bool) {
 /// Plays the press and release sound one after the other.
 #[tauri::command]
 pub fn preview_ptt_sound(core: CoreState, style: crate::storage::settings::PttSoundStyle) {
-    use crate::audio::radio_fx::ptt_clip;
-    let mut clip = ptt_clip(true, style, core.out_sr);
+    use crate::audio::radio_fx::ptt_clip_vol;
+    let vol = core.settings.read().listening.ptt_sound_volume;
+    let mut clip = ptt_clip_vol(true, style, core.out_sr, vol);
     clip.extend(std::iter::repeat_n(0.0, (core.out_sr / 3) as usize));
-    clip.extend(ptt_clip(false, style, core.out_sr));
+    clip.extend(ptt_clip_vol(false, style, core.out_sr, vol));
     let _ = core.mixer.try_send(crate::audio::mixer::MixerCmd::Spotter(clip.into()));
 }
 
@@ -445,6 +512,18 @@ pub fn reset_overlay_layout(core: CoreState) {
 pub fn save_overlay_layout(core: CoreState, layout: Vec<WidgetLayout>) {
     core.settings.write().overlay.layout = layout;
     core.save_settings();
+}
+
+/// Takes over the overlay layout (positions, sizes, visible widgets) of another game's profile.
+#[tauri::command]
+pub fn copy_overlay_layout(core: CoreState, from: String) -> AppResult<()> {
+    {
+        let mut s = core.settings.write();
+        let layout = s.profiles.get(&from).map(|p| p.overlay.layout.clone()).ok_or_else(|| AppError::NotFound(from.clone()))?;
+        s.overlay.layout = layout;
+    }
+    core.save_settings();
+    Ok(())
 }
 
 /// Selects the game whose settings and overlay are edited. While a game runs, its profile stays.

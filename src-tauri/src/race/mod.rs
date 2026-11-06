@@ -1,7 +1,9 @@
 pub mod fuel;
+pub mod fuel_plan;
 pub mod gaps;
 pub mod irating;
 pub mod lapcompare;
 pub mod pit;
 pub mod spotter;
 pub mod state;
+pub mod views;

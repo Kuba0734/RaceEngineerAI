@@ -1,6 +1,6 @@
 [package]
 name = "race-engineer-ai"
-version = "0.7.0"
+version = "0.8.0"
 description = "RaceEngineerAI – sim racing pit crew over radio"
 authors = ["Kuba0734"]
 edition = "2021"

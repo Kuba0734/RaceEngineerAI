@@ -111,12 +111,82 @@ fn key_thump(out: &mut Vec<f32>, srf: f32, freq: f32, ms: f32, level: f32) {
     }
 }
 
+/// Like a radio speaker: 300–3400 Hz band, a little saturation.
+fn radio_band(input: &mut [f32], srf: f32, drive: f32) {
+    let mut hp1 = Biquad::new('h', 300.0, srf, 0.707);
+    let mut hp2 = Biquad::new('h', 300.0, srf, 0.707);
+    let mut lp1 = Biquad::new('l', 3400.0_f32.min(srf * 0.45), srf, 0.707);
+    let mut lp2 = Biquad::new('l', 3400.0_f32.min(srf * 0.45), srf, 0.707);
+    let norm = drive.tanh();
+    for x in input.iter_mut() {
+        let y = lp2.run(lp1.run(hp2.run(hp1.run(*x))));
+        *x = (y * drive).tanh() / norm;
+    }
+}
+
+/// Digital data burst ("brrt"): noise chopped into short frames, as digital radios send a
+/// header when keying up and a tail when releasing.
+fn data_burst(out: &mut Vec<f32>, srf: f32, ms: f32, frame_ms: f32, level: f32, rng: &mut Lcg) {
+    let n = (srf * ms / 1000.0) as usize;
+    let frame = ((srf * frame_ms / 1000.0) as usize).max(1);
+    for i in 0..n {
+        let k = i as f32 / n as f32;
+        // Frames alternate loud / quiet; a soft attack and release keep it from clicking.
+        let gate = if (i / frame) % 2 == 0 { 1.0 } else { 0.25 };
+        let env = (k * 20.0).min(1.0) * (1.0 - k).powf(0.7);
+        out.push(rng.next() * level * gate * env);
+    }
+}
+
+/// Analog FM squelch tail: full-band hiss that stops abruptly when the squelch closes.
+fn squelch_tail(out: &mut Vec<f32>, srf: f32, ms: f32, level: f32, rng: &mut Lcg) {
+    let n = (srf * ms / 1000.0) as usize;
+    let mut lp = Biquad::new('l', 5000.0_f32.min(srf * 0.45), srf, 0.7);
+    for i in 0..n {
+        let k = i as f32 / n as f32;
+        // Holds, then a quick fall over the last 15 % – the "kssh" of a closing squelch.
+        let env = if k < 0.85 { 1.0 - k * 0.3 } else { (1.0 - k) / 0.15 * 0.75 };
+        out.push(lp.run(rng.next()) * level * env);
+    }
+}
+
+/// Push-to-talk feedback for press and release (volume 0–1.5).
+pub fn ptt_clip_vol(pressed: bool, style: PttSoundStyle, sr: u32, volume: f32) -> Vec<f32> {
+    let v = volume.clamp(0.0, 1.5);
+    ptt_clip(pressed, style, sr).into_iter().map(|x| (x * v).clamp(-1.0, 1.0)).collect()
+}
+
 /// Push-to-talk feedback for press and release.
 pub fn ptt_clip(pressed: bool, style: PttSoundStyle, sr: u32) -> Vec<f32> {
     let srf = sr as f32;
     let mut rng = Lcg(if pressed { 0xBEEF } else { 0xF00D });
     let mut out = Vec::new();
     match (style, pressed) {
+        // Key-up: mechanical click, a short silence, then the digital header burst.
+        (PttSoundStyle::TeamRadio, true) => {
+            key_thump(&mut out, srf, 180.0, 10.0, 0.5);
+            click(&mut out, srf, 0.35, &mut rng);
+            out.extend(std::iter::repeat_n(0.0, (srf * 0.018) as usize));
+            data_burst(&mut out, srf, 70.0, 6.0, 0.45, &mut rng);
+            radio_band(&mut out, srf, 2.5);
+        }
+        // Release: the tail burst, a touch of hiss, then the key letting go.
+        (PttSoundStyle::TeamRadio, false) => {
+            data_burst(&mut out, srf, 55.0, 5.0, 0.4, &mut rng);
+            static_burst(&mut out, srf, 60.0, 600.0, 3200.0, 0.25, &mut rng);
+            radio_band(&mut out, srf, 2.5);
+            click(&mut out, srf, 0.25, &mut rng);
+        }
+        // Carrier opens: a thump and a short rush of hiss.
+        (PttSoundStyle::Squelch, true) => {
+            key_thump(&mut out, srf, 140.0, 14.0, 0.45);
+            static_burst(&mut out, srf, 45.0, 300.0, 4500.0, 0.4, &mut rng);
+        }
+        // Carrier drops: the classic squelch tail.
+        (PttSoundStyle::Squelch, false) => {
+            squelch_tail(&mut out, srf, 220.0, 0.38, &mut rng);
+            radio_band(&mut out, srf, 1.6);
+        }
         // Key-up: click, then a bright, very short "tsch".
         (PttSoundStyle::Static, true) => {
             click(&mut out, srf, 0.45, &mut rng);
@@ -194,7 +264,7 @@ mod tests {
 
     #[test]
     fn ptt_clips_are_short_and_bounded() {
-        for style in [PttSoundStyle::Static, PttSoundStyle::Beep, PttSoundStyle::Click] {
+        for style in [PttSoundStyle::TeamRadio, PttSoundStyle::Squelch, PttSoundStyle::Static, PttSoundStyle::Beep, PttSoundStyle::Click] {
             for p in [true, false] {
                 let c = ptt_clip(p, style, 48_000);
                 assert!(!c.is_empty() && c.len() < 48_000 / 3);

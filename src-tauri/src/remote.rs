@@ -103,7 +103,7 @@ async fn serve(mut stream: TcpStream, core: Arc<Core>) -> anyhow::Result<()> {
                 if !core.settings.read().remote.enabled {
                     break;
                 }
-                let frame = crate::runtime::build_live(&core, k % HEAVY_EVERY == 0);
+                let frame = crate::live::build_live(&core, k % HEAVY_EVERY == 0);
                 let json = serde_json::to_string(&frame)?;
                 stream.write_all(format!("data: {json}\n\n").as_bytes()).await?;
                 k += 1;

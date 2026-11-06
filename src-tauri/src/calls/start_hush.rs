@@ -17,7 +17,7 @@ enum Stage {
     Done,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StartHush {
     stage: Stage,
     last_spline: Option<f32>,

@@ -69,6 +69,8 @@ pub enum Flag {
     Penalty,
     Green,
     Orange,
+    /// Debris / slippery surface (oil) on track.
+    Debris,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS, Default)]
@@ -446,6 +448,12 @@ pub struct SessionInfo {
     /// in a new coordinate frame.
     #[serde(default)]
     pub map_version: u32,
+    /// Length of this event's race (laps), if the game tells; None = unknown / by time.
+    #[serde(default)]
+    pub race_laps: Option<i32>,
+    /// Length of this event's race (s), if the game tells.
+    #[serde(default)]
+    pub race_time_s: Option<f64>,
 }
 
 /// Lower-rate state of one car (broadcasting API or equivalent).
@@ -548,7 +556,12 @@ pub enum ProviderEvent {
     Event(GameEvent),
     /// Connection state of the secondary data source (e.g. ACC broadcasting).
     SecondaryConnected(bool),
+    /// Raw values of the game for the data check (test mode only, about once a second).
+    Diagnostics(Vec<(String, String)>),
 }
+
+/// Test mode is on: providers send `ProviderEvent::Diagnostics`.
+pub static DIAGNOSTICS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 pub trait TelemetryProvider: Send {
     fn game_id(&self) -> &str;

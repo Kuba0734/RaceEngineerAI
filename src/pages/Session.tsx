@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useLive } from "@/hooks/useLive";
 import { useApp } from "@/stores/app";
-import { Card, Empty, Ticker } from "@/components/ui";
+import { Card, Empty, PageHeader, Ticker } from "@/components/ui";
 import { TrackMap } from "@/overlay/widgets/TrackMap";
 import { Radar } from "@/overlay/widgets/Radar";
 import { Standings } from "@/overlay/widgets/Standings";
@@ -16,7 +16,7 @@ export default function Session() {
   if (!frame?.live) {
     return (
       <div>
-        <h1 className="mb-5 text-2xl font-semibold">{t("session.title")}</h1>
+        <PageHeader title={t("session.title")} />
         <Empty>{t("session.empty")}</Empty>
       </div>
     );

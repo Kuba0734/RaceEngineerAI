@@ -5,7 +5,7 @@ import { api, type BroadcastingStatus } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
 import type { GameDef } from "@/lib/bindings/GameDef";
 import type { GameSettings } from "@/lib/bindings/GameSettings";
-import { Badge, Button, Card, Field, NumberInput, Toggle, cx, useAsync } from "@/components/ui";
+import { Badge, Button, Card, Field, NumberInput, PageHeader, Toggle, cx, useAsync } from "@/components/ui";
 
 const DEFAULT_GAME: GameSettings = { enabled: true, broadcasting_port: 0, broadcasting_password: "", auto_pit_fuel: false, record_game_telemetry: false, mandatory_stops: 0, pit_window_open_min: 0, pit_window_close_min: 0 };
 
@@ -135,8 +135,7 @@ export default function Games() {
   const games = useApp((s) => s.games);
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold">{t("games.title")}</h1>
-      <p className="mb-5 text-sm text-dim">{t("games.subtitle")}</p>
+      <PageHeader title={t("games.title")} subtitle={t("games.subtitle")} />
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         {(games?.games ?? []).map((g, i) => <GameCard key={g.id} g={g} i={i} />)}
       </div>

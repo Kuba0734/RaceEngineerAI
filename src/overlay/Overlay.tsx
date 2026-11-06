@@ -20,7 +20,7 @@ import { FlagBanner, activeFlag } from "./widgets/FlagBanner";
 import { ClassStandings } from "./widgets/ClassStandings";
 import { Relative } from "./widgets/Relative";
 import { PitHelper } from "./widgets/PitHelper";
-import { FasterClass, LapTimes, MapSectors, OffTrack, PitEntry, Rejoin, SessionBar, StartLights, Weather } from "./widgets/extras";
+import { FasterClass, FuelCalc, LapTimes, MapSectors, OffTrack, PitEntry, SessionBar, StartLights, Weather } from "./widgets/extras";
 import { widgetAvailable } from "./available";
 import { previewFrame } from "./preview";
 
@@ -45,6 +45,9 @@ function Widget({ layout, edit, onChange, children, title, hidden = false, panel
     </motion.div>
   );
 }
+
+/** Widgets this version can draw (old layouts may still name removed ones). */
+const KNOWN = new Set(["map", "radar", "class_standings", "relative", "pit", "standings", "fuel", "delta", "dash", "inputs", "laps", "tyres", "flag", "radio", "lap_times", "session", "weather", "start_lights", "offtrack", "faster_class", "pit_entry", "fuel_calc"]);
 
 export default function Overlay() {
   const { t } = useTranslation();
@@ -115,9 +118,12 @@ export default function Overlay() {
     return () => window.removeEventListener("keydown", onKey);
   }, [edit]);
 
-  // Show the window only while a session is live (or while editing).
-  // Live session (overlay switched on) or editing – editing also works without a game.
-  const shouldShow = (!!settings?.overlay.enabled && !!liveFrame?.live) || edit;
+  // Live session (overlay switched on) or editing – editing also works without a game. The fuel
+  // planner also shows outside the car (garage / setup screen) while a game is detected.
+  const live = !!liveFrame?.live;
+  const driving = live && !(liveFrame?.in_pits && (liveFrame?.speed ?? 0) < 5);
+  const planner = !!settings?.overlay.layout.some((l) => l.id === "fuel_calc" && l.visible) && !!liveFrame?.game_running && !driving;
+  const shouldShow = (!!settings?.overlay.enabled && (live || planner)) || edit;
   useEffect(() => {
     if (!inTauri || visibleRef.current === shouldShow) return;
     visibleRef.current = shouldShow;
@@ -159,10 +165,10 @@ export default function Overlay() {
         return !frame?.offtrack;
       case "faster_class":
         return !frame?.faster_class;
-      case "rejoin":
-        return !frame?.rejoin;
       case "pit_entry":
         return !frame?.pit_entry;
+      case "fuel_calc":
+        return driving;
       default:
         return false;
     }
@@ -223,8 +229,8 @@ export default function Overlay() {
         return <OffTrack a={frame?.offtrack ?? undefined} maxM={o.alert_offtrack_m} />;
       case "faster_class":
         return <FasterClass a={frame?.faster_class ?? undefined} maxM={o.alert_faster_m} />;
-      case "rejoin":
-        return <Rejoin r={frame?.rejoin ?? undefined} />;
+      case "fuel_calc":
+        return <FuelCalc p={frame?.fuel_plan ?? undefined} track={frame?.track ?? ""} />;
       case "pit_entry":
         return <PitEntry p={frame?.pit_entry ?? undefined} showM={o.pit_entry_show_m} />;
       case "radio":
@@ -248,7 +254,7 @@ export default function Overlay() {
           <button onClick={() => void api.setOverlayEdit(false)} className="rounded-full bg-accent px-4 py-1 font-semibold text-white hover:brightness-110">{t("ov.done")}</button>
         </div>
       )}
-      {layout.filter((l) => l.visible && widgetAvailable(l.id, caps)).map((l) => (
+      {layout.filter((l) => l.visible && KNOWN.has(l.id) && widgetAvailable(l.id, caps) && (live || edit || l.id === "fuel_calc")).map((l) => (
         <Widget key={l.id} layout={l} edit={edit} onChange={change} title={t(`widget.${l.id}`)} panel={o.panel_opacity} globalScale={o.global_scale} hidden={idle(l.id)}>
           {content(l.id)}
         </Widget>

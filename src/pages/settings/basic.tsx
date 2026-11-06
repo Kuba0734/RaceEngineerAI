@@ -216,9 +216,14 @@ export function ListeningSection() {
         {l.ptt_sound && (
           <Field label={t("settings.listening.pttStyle")}>
             <div className="flex items-center gap-2">
-              <Segmented value={l.ptt_sound_style} onChange={(v) => set({ ptt_sound_style: v })} options={[{ value: "static", label: t("settings.listening.pttStatic") }, { value: "beep", label: t("settings.listening.pttBeep") }, { value: "click", label: t("settings.listening.pttClick") }]} />
+              <Select value={l.ptt_sound_style} onChange={(v) => set({ ptt_sound_style: v })} options={(["team_radio", "squelch", "static", "beep", "click"] as const).map((v) => ({ value: v, label: t(`settings.listening.ptt_${v}`) }))} />
               <Button small onClick={() => void api.previewPttSound(l.ptt_sound_style)}>{t("common.preview")}</Button>
             </div>
+          </Field>
+        )}
+        {l.ptt_sound && (
+          <Field label={t("settings.listening.pttVolume")}>
+            <Slider value={l.ptt_sound_volume} min={0.1} max={1.5} step={0.05} onChange={(v) => set({ ptt_sound_volume: v })} format={(v) => `${Math.round(v * 100)} %`} />
           </Field>
         )}
         <Field label={t("settings.listening.sttLanguage")} hint={t("settings.listening.sttLanguageHint")}>

@@ -9,4 +9,8 @@ onboarding_done: boolean,
 /**
  * Settings show every option instead of the essentials.
  */
-expert_mode: boolean, };
+expert_mode: boolean, 
+/**
+ * Test mode: data check page, recordings of real sessions.
+ */
+test_mode: boolean, };

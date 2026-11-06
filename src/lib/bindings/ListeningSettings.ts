@@ -24,6 +24,10 @@ only_when_game_running: boolean,
  */
 ptt_sound: boolean, ptt_sound_style: PttSoundStyle, 
 /**
+ * Volume of the push-to-talk sound (0–1.5).
+ */
+ptt_sound_volume: number, 
+/**
  * Language for speech recognition (may differ from the app language).
  */
 stt_language: SttLanguage, 

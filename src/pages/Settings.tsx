@@ -89,7 +89,7 @@ export default function SettingsPage() {
   return (
     <div className="flex gap-6">
       <aside className="sticky top-0 w-56 shrink-0 self-start">
-        <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
+        <h1 className="text-[26px] font-semibold tracking-tight">{t("settings.title")}</h1>
         <p className="mb-4 mt-1 text-xs text-dim">{t("settings.profileHint")}</p>
         <TextInput value={q} onChange={setQ} placeholder={t("settings.search")} className="mb-3 w-full" />
         <nav className="space-y-1">
@@ -97,7 +97,7 @@ export default function SettingsPage() {
             <button
               key={a.id}
               onClick={() => { setArea(a.id); setQ(""); }}
-              className={cx("w-full rounded-lg px-3 py-2 text-left text-sm transition-colors", !query && area === a.id ? "bg-accent/15 text-accent" : "text-dim hover:bg-surface-2 hover:text-fg")}
+              className={cx("w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-colors", !query && area === a.id ? "border-line bg-surface-2 text-fg shadow-[inset_3px_0_0_var(--accent)]" : "border-transparent text-dim hover:bg-surface/70 hover:text-fg")}
             >
               <div className="font-medium">{t(`settings.area.${a.id}`)}</div>
               <div className="text-[11px] opacity-80">{t(`settings.area.${a.id}Hint`)}</div>

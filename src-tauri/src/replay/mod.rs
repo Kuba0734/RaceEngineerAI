@@ -71,6 +71,11 @@ impl ReplayProvider {
         self.lines.is_empty()
     }
 
+    /// All events played.
+    pub fn done(&self) -> bool {
+        self.idx >= self.lines.len()
+    }
+
     /// Pushes all events up to `t_ms` (for tests: deterministic, no clock).
     pub fn advance_to(&mut self, t_ms: u64, out: &mut Vec<ProviderEvent>) {
         while self.idx < self.lines.len() && self.lines[self.idx].0 <= t_ms {

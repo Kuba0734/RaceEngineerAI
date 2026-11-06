@@ -11,7 +11,7 @@ use ts_rs::TS;
 
 use crate::error::AppResult;
 
-pub const SETTINGS_VERSION: u32 = 4;
+pub const SETTINGS_VERSION: u32 = 5;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "snake_case")]
@@ -226,6 +226,9 @@ pub struct ListeningSettings {
     /// Radio sound when the push-to-talk button is pressed and released.
     pub ptt_sound: bool,
     pub ptt_sound_style: PttSoundStyle,
+    /// Volume of the push-to-talk sound (0–1.5).
+    #[serde(default = "default_ptt_volume")]
+    pub ptt_sound_volume: f32,
     /// Language for speech recognition (may differ from the app language).
     pub stt_language: SttLanguage,
     /// Pause (s) that ends a sentence in always-on / wake word mode.
@@ -238,8 +241,13 @@ pub struct ListeningSettings {
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
 pub enum PttSoundStyle {
+    /// Digital team radio as heard in motorsport: key click, short data burst, band-limited.
+    TeamRadio,
+    /// Analog FM handheld: carrier opens with a hiss, closes with the typical squelch tail.
+    Squelch,
     /// Key click with a short burst of radio static.
     Static,
+    /// Roger beep on release.
     Beep,
     Click,
 }
@@ -271,7 +279,8 @@ impl Default for ListeningSettings {
             allow_interrupt: false,
             only_when_game_running: true,
             ptt_sound: true,
-            ptt_sound_style: PttSoundStyle::Static,
+            ptt_sound_style: PttSoundStyle::TeamRadio,
+            ptt_sound_volume: 0.8,
             // Follows Settings → General → language; Auto/DE/EN only as an exception.
             stt_language: SttLanguage::App,
             end_silence_s: 0.8,
@@ -334,6 +343,10 @@ pub struct VoiceSettings {
     /// Excited calls: volume factor.
     #[serde(default = "default_excited_gain")]
     pub excited_gain: f32,
+}
+
+fn default_ptt_volume() -> f32 {
+    0.8
 }
 
 fn default_comma_pause_ms() -> u32 {
@@ -884,14 +897,22 @@ pub struct OverlaySettings {
     pub alert_offtrack_m: f32,
     /// Faster class cars behind are shown from this distance (m).
     pub alert_faster_m: f32,
-    /// Rejoin helper: gap to the next car (s) that counts as "clear".
-    pub rejoin_clear_s: f32,
+    /// A car counts as stopped below this speed (km/h) …
+    pub alert_stopped_kmh: f32,
+    /// … for at least this long (s).
+    pub alert_stopped_min_s: f32,
+    /// Off track for at least this long (s) before it is shown.
+    pub alert_offtrack_min_s: f32,
     /// Pit entry helper is shown from this distance to the line (m).
     pub pit_entry_show_m: f32,
     /// Start lights widget only while lights are on.
     pub start_lights_auto_hide: bool,
     pub lap_times_show_predicted: bool,
     pub fuel_show_target: bool,
+    /// Fuel planner: consumption per lap set by hand (0 = from sessions / game).
+    pub fuel_calc_per_lap_l: f32,
+    /// Fuel planner: race laps set by hand (0 = from the session / strategy settings).
+    pub fuel_calc_race_laps: u32,
     pub tyres_show_zones: bool,
     pub relative_show_weather: bool,
     pub layout: Vec<WidgetLayout>,
@@ -920,9 +941,9 @@ pub fn default_layout() -> Vec<WidgetLayout> {
         w("start_lights", 860.0, 160.0),
         w("offtrack", 1500.0, 160.0),
         w("faster_class", 1520.0, 420.0),
-        w("rejoin", 760.0, 420.0),
         w("pit_entry", 760.0, 520.0),
         WidgetLayout { visible: false, ..w("weather", 20.0, 20.0) },
+        w("fuel_calc", 760.0, 300.0),
         WidgetLayout { visible: false, ..w("lap_times", 1700.0, 640.0) },
     ]
 }
@@ -981,11 +1002,15 @@ impl Default for OverlaySettings {
             map_show_sectors: true,
             alert_offtrack_m: 800.0,
             alert_faster_m: 300.0,
-            rejoin_clear_s: 3.0,
+            alert_stopped_kmh: 30.0,
+            alert_stopped_min_s: 3.0,
+            alert_offtrack_min_s: 1.0,
             pit_entry_show_m: 600.0,
             start_lights_auto_hide: true,
             lap_times_show_predicted: true,
             fuel_show_target: true,
+            fuel_calc_per_lap_l: 0.0,
+            fuel_calc_race_laps: 0,
             tyres_show_zones: true,
             relative_show_weather: true,
             layout: default_layout(),
@@ -1046,11 +1071,14 @@ pub struct AppSettings {
     pub onboarding_done: bool,
     /// Settings show every option instead of the essentials.
     pub expert_mode: bool,
+    /// Test mode: data check page, recordings of real sessions.
+    #[serde(default)]
+    pub test_mode: bool,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
-        Self { autostart: false, updates: UpdateMode::Automatic, reduce_motion: false, start_minimized: false, onboarding_done: false, expert_mode: false }
+        Self { autostart: false, updates: UpdateMode::Automatic, reduce_motion: false, start_minimized: false, onboarding_done: false, expert_mode: false, test_mode: false }
     }
 }
 
@@ -1108,6 +1136,41 @@ pub fn migrate(mut v: serde_json::Value) -> serde_json::Value {
         if let Some(app) = v.as_object_mut().map(|o| o.entry("app").or_insert_with(|| serde_json::json!({}))).and_then(|a| a.as_object_mut()) {
             app.insert("onboarding_done".into(), true.into());
             app.insert("expert_mode".into(), true.into());
+        }
+    }
+    if version < 5 {
+        // v5: new overlay widgets join existing layouts, the rejoin helper is gone, and the
+        // push-to-talk sound becomes the new team-radio sound.
+        let defaults = serde_json::to_value(default_layout()).unwrap_or_default();
+        let mut layouts: Vec<&mut serde_json::Value> = Vec::new();
+        if let Some(obj) = v.as_object_mut() {
+            for (k, val) in obj.iter_mut() {
+                match k.as_str() {
+                    "overlay" => layouts.extend(val.get_mut("layout")),
+                    "profiles" => {
+                        if let Some(p) = val.as_object_mut() {
+                            for prof in p.values_mut() {
+                                layouts.extend(prof.get_mut("overlay").and_then(|o| o.get_mut("layout")));
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        for l in layouts {
+            if let Some(list) = l.as_array_mut() {
+                list.retain(|w| w.get("id").and_then(|i| i.as_str()) != Some("rejoin"));
+                let have: Vec<String> = list.iter().filter_map(|w| w.get("id").and_then(|i| i.as_str()).map(String::from)).collect();
+                for d in defaults.as_array().into_iter().flatten() {
+                    if d.get("id").and_then(|i| i.as_str()).is_some_and(|id| !have.iter().any(|h| h == id)) {
+                        list.push(d.clone());
+                    }
+                }
+            }
+        }
+        if let Some(l) = v.get_mut("listening").and_then(|l| l.as_object_mut()) {
+            l.insert("ptt_sound_style".into(), "team_radio".into());
         }
     }
     if let Some(obj) = v.as_object_mut() {
@@ -1198,6 +1261,17 @@ mod tests {
         s.switch_profile("lmu");
         assert_eq!(s.spotter.name, "Tom");
         assert_eq!(s.calls.preset, "minimal");
+    }
+
+    #[test]
+    fn migrates_v4_layouts() {
+        let v = serde_json::json!({"version": 4, "overlay": {"layout": [{"id": "map", "x": 5.0}, {"id": "rejoin"}]}, "profiles": {"acc": {"overlay": {"layout": [{"id": "radar"}]}}}, "listening": {"ptt_sound_style": "static"}});
+        let s: Settings = serde_json::from_value(migrate(v)).unwrap();
+        let ids: Vec<&str> = s.overlay.layout.iter().map(|w| w.id.as_str()).collect();
+        assert_eq!(s.overlay.layout[0].x, 5.0);
+        assert!(!ids.contains(&"rejoin") && ids.contains(&"offtrack") && ids.contains(&"fuel_calc"));
+        assert!(s.profiles["acc"].overlay.layout.iter().any(|w| w.id == "session"));
+        assert_eq!(s.listening.ptt_sound_style, PttSoundStyle::TeamRadio);
     }
 
     #[test]

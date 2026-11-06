@@ -26,4 +26,12 @@ track_turns?: number,
  * Changes when the game's map is replaced (e.g. by an exact one): car positions are then
  * in a new coordinate frame.
  */
-map_version: number, };
+map_version: number, 
+/**
+ * Length of this event's race (laps), if the game tells; None = unknown / by time.
+ */
+race_laps: number | null, 
+/**
+ * Length of this event's race (s), if the game tells.
+ */
+race_time_s: number | null, };

@@ -18,6 +18,7 @@ mod flags {
     pub const GREEN: u32 = 0x0000_0004;
     pub const YELLOW: u32 = 0x0000_0008;
     pub const BLUE: u32 = 0x0000_0020;
+    pub const DEBRIS: u32 = 0x0000_0040;
     pub const ONE_LAP_TO_GREEN: u32 = 0x0000_0200;
     pub const YELLOW_WAVING: u32 = 0x0000_0100;
     pub const CAUTION: u32 = 0x0000_4000;
@@ -113,6 +114,7 @@ pub struct IRacingProvider {
     /// Per car: last lap fraction, session time and the smoothed speed (km/h).
     speeds: HashMap<i32, (f32, f64, f32)>,
     last_cars_emit: Option<Instant>,
+    last_diag: Option<Instant>,
     was_live: bool,
     timing: Timing,
     timing_session: i32,
@@ -211,6 +213,8 @@ pub fn map_flags(bits: u32) -> (Flag, bool, bool, Option<Penalty>) {
         Flag::Blue
     } else if local_yellow || fcy {
         Flag::Yellow
+    } else if has(flags::DEBRIS) {
+        Flag::Debris
     } else if has(flags::WHITE) {
         Flag::White
     } else if has(flags::GREEN) {
@@ -286,6 +290,7 @@ impl IRacingProvider {
             sectors: SectorClock::default(),
             speeds: HashMap::new(),
             last_cars_emit: None,
+            last_diag: None,
             was_live: false,
             timing: Timing::default(),
             timing_session: -1,
@@ -541,6 +546,36 @@ impl IRacingProvider {
             out.push(ProviderEvent::Cars(self.build_cars(frame.player_car_id)));
         }
         out.push(ProviderEvent::Frame(Box::new(frame)));
+        if crate::games::provider::DIAGNOSTICS.load(std::sync::atomic::Ordering::Relaxed) && self.last_diag.is_none_or(|t| t.elapsed() > Duration::from_secs(1)) {
+            self.last_diag = Some(Instant::now());
+            out.push(ProviderEvent::Diagnostics(self.raw_values()));
+        }
+    }
+
+    /// Raw SDK values for the data check ("—" = the variable does not exist in this build/car).
+    fn raw_values(&self) -> Vec<(String, String)> {
+        const VARS: [&str; 34] = [
+            "SessionNum", "SessionState", "SessionFlags", "SessionTimeRemain", "PlayerCarIdx", "LapCompleted", "LapDistPct", "PlayerCarPosition", "PlayerCarClassPosition",
+            "PlayerTrackSurface", "OnPitRoad", "PlayerCarInPitStall", "PitstopActive", "PitSvFlags", "PitSvFuel", "dcPitSpeedLimiterToggle", "EngineWarnings", "Clutch", "Throttle",
+            "Brake", "Gear", "Speed", "FuelLevel", "AirTemp", "TrackTempCrew", "RelativeHumidity", "WindDir", "WindVel", "Precipitation", "TrackWetness", "CarLeftRight",
+            "PlayerCarMyIncidentCount", "LapDeltaToBestLap", "IsDiskLoggingActive",
+        ];
+        let me = self.data.player_car_idx.max(0) as usize;
+        let mut v: Vec<(String, String)> = VARS
+            .iter()
+            .map(|n| {
+                let val = match self.num(n) {
+                    Some(x) if *n == "SessionFlags" || *n == "EngineWarnings" || *n == "PitSvFlags" => format!("0x{:08x}", x as u32),
+                    Some(x) => format!("{x:.4}"),
+                    None => "—".into(),
+                };
+                (n.to_string(), val)
+            })
+            .collect();
+        for n in ["CarIdxLapCompleted", "CarIdxLapDistPct", "CarIdxPosition", "CarIdxClassPosition", "CarIdxTrackSurface", "CarIdxOnPitRoad", "CarIdxEstTime"] {
+            v.push((format!("{n}[me]"), self.at(n, me).map_or("—".into(), |x| format!("{x:.4}"))));
+        }
+        v
     }
 
     fn session_info(&self) -> SessionInfo {
@@ -574,6 +609,8 @@ impl IRacingProvider {
             est_lap_s: (d.est_lap_s > 0.0).then_some(d.est_lap_s),
             track_turns: d.track_turns,
             map_version: self.map_version,
+            race_laps: d.sessions.iter().rev().find(|s| s.kind == SessionType::Race).and_then(|s| s.laps),
+            race_time_s: d.sessions.iter().rev().find(|s| s.kind == SessionType::Race).and_then(|s| s.time_s),
         }
     }
 
@@ -1206,6 +1243,9 @@ DriverInfo:
         assert_eq!(map_flags(0x0001_0000).3.unwrap().kind, PenaltyKind::Other);
         assert_eq!(map_flags(0x0010_0020).0, Flag::Orange);
         assert_eq!(map_flags(0x0000_0021).0, Flag::Checkered);
+        assert_eq!(map_flags(0x0000_0044).0, Flag::Debris);
+        // Yellow is the more important one when both are out.
+        assert_eq!(map_flags(0x0000_0048).0, Flag::Yellow);
         assert_eq!(native_side(4), NativeSide::ThreeWide);
         assert_eq!(native_side(6), NativeSide::Right);
         assert_eq!(native_side(0), NativeSide::Off);

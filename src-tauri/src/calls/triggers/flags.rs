@@ -49,6 +49,7 @@ pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
         RaceEvent::FlagChanged { to, .. } => match to {
             Flag::Green => ctx.push(CallRequest::new("flag.green")),
             Flag::White => ctx.push(CallRequest::new("flag.white")),
+            Flag::Debris => ctx.push(CallRequest::new("flag.debris")),
             // Said at the player's own finish (RaceEvent::Finished), not when the flag first shows.
             Flag::Blue => blue(ctx),
             _ => {}

@@ -8,7 +8,7 @@ use crate::race::state::{RaceEvent, RaceState};
 use crate::storage::settings::{AfterMistake, Level3};
 
 /// Understeer/oversteer accumulator: yaw response per steering input, entry vs exit.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Handling {
     entry_sum: f32,
     entry_n: u32,

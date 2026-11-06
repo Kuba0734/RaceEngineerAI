@@ -5,9 +5,14 @@ use crate::calls::engine::CallRequest;
 use crate::race::state::RaceEvent;
 use crate::storage::settings::SessionKind;
 
-pub fn on_event(ctx: &mut Ctx, _mem: &mut Memory, ev: &RaceEvent) {
+pub fn on_event(ctx: &mut Ctx, mem: &mut Memory, ev: &RaceEvent) {
     if ctx.kind != SessionKind::Qualifying {
         return;
+    }
+    match ev {
+        RaceEvent::PitExit { .. } => mem.quali_out_lap = true,
+        RaceEvent::LapCompleted(_) => mem.quali_out_lap = false,
+        _ => {}
     }
     if let RaceEvent::LapCompleted(rec) = ev {
         if !rec.valid {
@@ -32,7 +37,14 @@ pub fn tick(ctx: &mut Ctx, mem: &mut Memory) {
     let s = ctx.state;
     let f = &s.frame;
     let lap = ctx.lap();
-    let out_lap = s.laps.last().is_none_or(|l| l.in_lap) || f.completed_laps == 0;
+    // The out-lap ends at the line. Watched on the lap distance itself: iRacing does not count
+    // the first crossing out of the pits as a lap (-1 → 0), so the flying lap would still look
+    // like an out-lap and get "push now" near its end.
+    if mem.quali_last_spline > 0.9 && f.spline < 0.1 {
+        mem.quali_out_lap = false;
+    }
+    mem.quali_last_spline = f.spline;
+    let out_lap = mem.quali_out_lap;
     let desired = ctx.th("quali.traffic_gap", "desired_gap_s") as f32;
     let me = f.player_car_id;
     // Nearest car ahead on track (by gap, any position).

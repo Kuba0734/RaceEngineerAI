@@ -281,6 +281,23 @@
    "enabled": true
   },
   {
+   "id": "flag.debris",
+   "group": "flags",
+   "priority": "high",
+   "cooldownS": 90,
+   "expiryS": 8,
+   "frequency": {
+    "kind": "always"
+   },
+   "voice": "engineer",
+   "sessions": [
+    "practice",
+    "qualifying",
+    "race"
+   ],
+   "enabled": true
+  },
+  {
    "id": "flag.checkered",
    "group": "flags",
    "priority": "high",

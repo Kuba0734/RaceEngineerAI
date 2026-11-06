@@ -47,9 +47,17 @@ alert_offtrack_m: number,
  */
 alert_faster_m: number, 
 /**
- * Rejoin helper: gap to the next car (s) that counts as "clear".
+ * A car counts as stopped below this speed (km/h) …
  */
-rejoin_clear_s: number, 
+alert_stopped_kmh: number, 
+/**
+ * … for at least this long (s).
+ */
+alert_stopped_min_s: number, 
+/**
+ * Off track for at least this long (s) before it is shown.
+ */
+alert_offtrack_min_s: number, 
 /**
  * Pit entry helper is shown from this distance to the line (m).
  */
@@ -57,4 +65,12 @@ pit_entry_show_m: number,
 /**
  * Start lights widget only while lights are on.
  */
-start_lights_auto_hide: boolean, lap_times_show_predicted: boolean, fuel_show_target: boolean, tyres_show_zones: boolean, relative_show_weather: boolean, layout: Array<WidgetLayout>, };
+start_lights_auto_hide: boolean, lap_times_show_predicted: boolean, fuel_show_target: boolean, 
+/**
+ * Fuel planner: consumption per lap set by hand (0 = from sessions / game).
+ */
+fuel_calc_per_lap_l: number, 
+/**
+ * Fuel planner: race laps set by hand (0 = from the session / strategy settings).
+ */
+fuel_calc_race_laps: number, tyres_show_zones: boolean, relative_show_weather: boolean, layout: Array<WidgetLayout>, };

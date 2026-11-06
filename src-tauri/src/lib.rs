@@ -3,9 +3,11 @@ pub mod audio;
 pub mod calls;
 pub mod commands;
 pub mod core;
+pub mod diagnostics;
 pub mod error;
 pub mod games;
 pub mod input;
+pub mod live;
 pub mod race;
 pub mod remote;
 pub mod replay;
@@ -102,6 +104,9 @@ pub fn run() {
                 live_subs: Mutex::new(Vec::new()),
                 overlay_edit: AtomicBool::new(false),
                 downloads: Mutex::new(BTreeSet::new()),
+                record_request: AtomicBool::new(false),
+                recording: Mutex::new(None),
+                rate_sample: Mutex::new(None),
             });
             let _ = core.mixer.try_send(audio::mixer::MixerCmd::SetMasterVolume(settings.voices.master_volume));
             let _ = core.mixer.try_send(audio::mixer::MixerCmd::SetDucking(settings.spotter.ducking));
@@ -189,6 +194,11 @@ pub fn run() {
             commands::get_overlay_edit,
             commands::list_monitors,
             commands::reset_overlay_layout,
+            commands::copy_overlay_layout,
+            commands::get_datacheck,
+            commands::set_recording,
+            commands::check_recording,
+            commands::replay_files,
             commands::select_game,
             commands::models_rescan,
             commands::open_models_folder,

@@ -5,13 +5,23 @@ export function cx(...c: (string | false | null | undefined)[]): string {
   return c.filter(Boolean).join(" ");
 }
 
-export function Card({ children, className, glow = true, title, actions }: { children: ReactNode; className?: string; glow?: boolean; title?: ReactNode; actions?: ReactNode }) {
+export function Card({ children, className, glow = true, title, actions, icon, subtitle }: { children: ReactNode; className?: string; glow?: boolean; title?: ReactNode; actions?: ReactNode; icon?: string; subtitle?: ReactNode }) {
   return (
-    <div className={cx("rounded-[var(--radius)] border border-line bg-surface/90 p-4", glow && "glow", className)}>
+    <div className={cx("surface rounded-[var(--radius)] border border-line/80 p-5", glow && "glow", className)}>
       {(title || actions) && (
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">{title}</div>
-          {actions}
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {icon && (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <Icon d={icon} size={16} />
+              </span>
+            )}
+            <div className="min-w-0">
+              <div className="text-[15px] font-semibold leading-tight">{title}</div>
+              {subtitle && <div className="mt-0.5 text-xs text-dim">{subtitle}</div>}
+            </div>
+          </div>
+          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </div>
       )}
       {children}
@@ -19,10 +29,58 @@ export function Card({ children, className, glow = true, title, actions }: { chi
   );
 }
 
+/** Line icon from an SVG path. */
+export function Icon({ d, size = 18, className }: { d: string; size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={cx("shrink-0", className)}>
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** Title row of a page: name, one line of explanation, actions on the right. */
+export function PageHeader({ title, subtitle, actions, eyebrow }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; eyebrow?: ReactNode }) {
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        {eyebrow && <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">{eyebrow}</div>}
+        <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
+        {subtitle && <p className="mt-1.5 max-w-2xl text-sm text-dim">{subtitle}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
+  );
+}
+
+/** Small caption above a group of cards. */
+export function SectionTitle({ children, hint }: { children: ReactNode; hint?: ReactNode }) {
+  return (
+    <div className="mb-3 mt-1 flex items-baseline gap-3">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-dim">{children}</h2>
+      {hint && <span className="text-xs text-dim/80">{hint}</span>}
+      <span className="h-px flex-1 bg-line/70" />
+    </div>
+  );
+}
+
+/** Number tile: caption, big value, unit. */
+export function StatTile({ label, value, unit, tone, className }: { label: ReactNode; value: ReactNode; unit?: ReactNode; tone?: "ok" | "warn" | "danger" | "data" | "accent"; className?: string }) {
+  const color = tone ? { ok: "text-ok", warn: "text-warn", danger: "text-danger", data: "text-data", accent: "text-accent" }[tone] : "";
+  return (
+    <div className={cx("rounded-xl border border-line/70 bg-surface-2/50 px-4 py-3", className)}>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dim">{label}</div>
+      <div className={cx("num mt-1 text-[26px] font-semibold leading-none", color)}>
+        {value}
+        {unit && <span className="ml-1 text-sm font-medium text-dim">{unit}</span>}
+      </div>
+    </div>
+  );
+}
+
 type BtnVariant = "primary" | "ghost" | "outline" | "danger";
 export function Button({ children, onClick, variant = "outline", disabled, className, title, small }: { children: ReactNode; onClick?: () => void; variant?: BtnVariant; disabled?: boolean; className?: string; title?: string; small?: boolean }) {
   const v: Record<BtnVariant, string> = {
-    primary: "bg-accent text-white hover:brightness-110",
+    primary: "bg-gradient-to-b from-accent to-[color-mix(in_srgb,var(--accent)_80%,black)] text-white shadow-[0_6px_18px_-8px_var(--accent)] hover:brightness-110",
     ghost: "text-dim hover:text-fg hover:bg-surface-2",
     outline: "border border-line text-fg hover:border-accent/60 hover:bg-surface-2",
     danger: "border border-danger/50 text-danger hover:bg-danger/10",
@@ -33,7 +91,7 @@ export function Button({ children, onClick, variant = "outline", disabled, class
       title={title}
       disabled={disabled}
       onClick={onClick}
-      className={cx("inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)] font-medium transition-colors disabled:pointer-events-none disabled:opacity-40", small ? "px-2.5 py-1 text-xs" : "px-3.5 py-2 text-sm", v[variant], className)}
+      className={cx("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] font-medium transition-colors disabled:pointer-events-none disabled:opacity-40", small ? "px-2.5 py-1 text-xs" : "px-4 py-2 text-sm", v[variant], className)}
     >
       {children}
     </motion.button>
@@ -42,11 +100,11 @@ export function Button({ children, onClick, variant = "outline", disabled, class
 
 export function Toggle({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; hint?: ReactNode; disabled?: boolean }) {
   return (
-    <label className={cx("flex cursor-pointer items-center justify-between gap-4 py-1.5", disabled && "pointer-events-none opacity-40")}>
+    <label className={cx("flex cursor-pointer items-center justify-between gap-4 py-2", disabled && "pointer-events-none opacity-40")}>
       {label && (
-        <span className="min-w-0">
-          <span className="block text-sm">{label}</span>
-          {hint && <span className="block text-xs text-dim">{hint}</span>}
+        <span className="min-w-0 max-w-md">
+          <span className="block text-sm font-medium">{label}</span>
+          {hint && <span className="mt-0.5 block text-xs leading-snug text-dim">{hint}</span>}
         </span>
       )}
       <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className={cx("relative h-6 w-11 shrink-0 rounded-full transition-colors", checked ? "bg-accent" : "bg-surface-2 ring-1 ring-line")}>
@@ -58,10 +116,10 @@ export function Toggle({ checked, onChange, label, hint, disabled }: { checked: 
 
 export function Field({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-6 py-1.5">
-      <div className="min-w-0">
-        <div className="text-sm">{label}</div>
-        {hint && <div className="text-xs text-dim">{hint}</div>}
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line/40 py-2.5 last:border-b-0">
+      <div className="min-w-0 max-w-md">
+        <div className="text-sm font-medium">{label}</div>
+        {hint && <div className="mt-0.5 text-xs leading-snug text-dim">{hint}</div>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -70,9 +128,9 @@ export function Field({ label, hint, children }: { label: ReactNode; hint?: Reac
 
 export function Slider({ value, onChange, min, max, step = 1, format }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number; format?: (v: number) => string }) {
   return (
-    <div className="flex w-64 items-center gap-3">
+    <div className="flex w-60 items-center gap-3">
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="range w-full" style={{ ["--fill" as string]: `${((value - min) / (max - min || 1)) * 100}%` }} />
-      <span className="num w-14 text-right text-xs text-data">{format ? format(value) : value}</span>
+      <span className="num min-w-14 rounded-md bg-surface-2 px-1.5 py-0.5 text-right text-xs text-data">{format ? format(value) : value}</span>
     </div>
   );
 }
@@ -215,7 +273,7 @@ export function RadioOrb({ levelRef, size = 160, active }: { levelRef: React.Mut
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded-[var(--radius)] border border-dashed border-line p-8 text-center text-sm text-dim">{children}</div>;
+  return <div className="rounded-[var(--radius)] border border-dashed border-line bg-surface/40 p-10 text-center text-sm text-dim">{children}</div>;
 }
 
 export function useInterval(cb: () => void, ms: number) {

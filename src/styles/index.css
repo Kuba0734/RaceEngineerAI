@@ -5,6 +5,7 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-line: var(--border);
   --color-fg: var(--text);
   --color-dim: var(--text-dim);
@@ -39,15 +40,20 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Subtle grid backdrop, static (no animation cost). */
+/* Backdrop: a soft glow in the game colour and a faint dot grid, static (no animation cost). */
 .backdrop {
   background-image:
-    radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--game-accent, var(--accent)) 14%, transparent), transparent 45%),
-    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--game-accent, var(--data)) 10%, transparent), transparent 50%),
-    linear-gradient(rgba(38, 42, 53, 0.35) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(38, 42, 53, 0.35) 1px, transparent 1px);
-  background-size: auto, auto, 48px 48px, 48px 48px;
+    radial-gradient(ellipse 60% 40% at 30% -5%, color-mix(in srgb, var(--game-accent, var(--accent)) 13%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 105% 105%, color-mix(in srgb, var(--data) 7%, transparent), transparent 70%),
+    radial-gradient(rgba(138, 144, 160, 0.09) 1px, transparent 1px);
+  background-size: auto, auto, 22px 22px;
   background-color: var(--bg);
+}
+
+/* Card surface: slightly lighter at the top, hairline highlight. */
+.surface {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 70%, var(--surface)) 0%, var(--surface) 140px);
+  box-shadow: var(--shadow-card);
 }
 
 /* Hover glow on cards: opacity of a pseudo element only (cheap). */

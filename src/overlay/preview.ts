@@ -67,8 +67,9 @@ export function previewFrame(now = performance.now()): LiveFrame {
     fuel_last_lap_l: 3.2, fuel_max_l: 120,
     offtrack: { id: 8, position: 9, number: "33", driver: "M. Weber", class_name: "GT4", class_color: "#33ceff", distance_m: 260 + Math.sin(t) * 40, gap_s: 4.8, off_track: true, seconds: t % 10 },
     faster_class: { id: 9, position: 1, number: "7", driver: "A. Lead", class_name: "GTP", class_color: "#a855f7", distance_m: 30 + wave(0.5) * 150, gap_s: 1.2, off_track: false, seconds: 0 },
-    rejoin: { car: { id: 4, position: 5, number: "55", driver: "J. Berg", class_name: "GT3", class_color: "#ffda59", distance_m: 340 - wave(0.3) * 250, gap_s: 4.8 - wave(0.3) * 3.6, off_track: false, seconds: 0 }, clear: wave(0.3) < 0.6 },
     pit_entry: { distance_m: 150 + wave(0.4) * 300, speed_kmh: 70 + wave(0.4) * 60, limit_kmh: 80, limiter_on: wave(0.4) < 0.3 },
+    fuel_plan: { per_lap_l: 3.1, source: "history", history: { per_lap_l: 3.1, lap_ms: 100_300, laps: 42, sessions: 3 }, lap_ms: 100_300, race_laps: 37, race_source: "session_time", race_minutes: 60, formation_lap: true, reserve_l: 3.1, total_l: 120.9, start_l: 120, tank_l: 120, stops: 1, refuel_per_stop_l: 0.9, fuel_now_l: 42.5 },
+    game_running: true,
     native_spotter: false, speaking: false, listening: "off", mic_level: 0, out_level: 0, track: "Preview", session: "race", quiet: false, preset: "standard",
   };
 }

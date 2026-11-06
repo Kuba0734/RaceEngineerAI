@@ -699,5 +699,9 @@
  ],
  "race.incidents_part:some": [
   " {n} Incidents."
+ ],
+ "flag.debris": [
+  "Debris-Flagge, Trümmer oder Öl auf der Strecke, vorsichtig.",
+  "Achtung, Debris-Flagge, rutschige Stelle voraus."
  ]
 }

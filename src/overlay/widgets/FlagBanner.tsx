@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { LiveFrame } from "@/lib/ipc";
 import type { OverlaySettings } from "@/lib/bindings/OverlaySettings";
 
-export type FlagTone = "yellow" | "blue" | "penalty";
+export type FlagTone = "yellow" | "blue" | "penalty" | "debris";
 
 export interface ActiveFlag {
   tone: FlagTone;
@@ -25,6 +25,7 @@ export function activeFlag(f: LiveFrame | null, o: OverlaySettings): ActiveFlag 
     if (sectors.length > 0) return { tone: "yellow", key: "wd.flag.yellowSector", values: { sectors: sectors.join(", ") } };
     return { tone: "yellow", key: "wd.flag.yellow" };
   }
+  if (o.flag_yellow && f.flag === "debris") return { tone: "debris", key: "wd.flag.debris" };
   if (o.flag_blue && f.flag === "blue") return { tone: "blue", key: "wd.flag.blue" };
   return null;
 }
@@ -33,6 +34,8 @@ const TONE: Record<FlagTone, string> = {
   yellow: "bg-warn text-black",
   blue: "bg-[var(--flag-blue)] text-white",
   penalty: "bg-danger text-white",
+  // Yellow with red stripes like the real flag.
+  debris: "bg-[repeating-linear-gradient(90deg,var(--warn)_0_28px,var(--danger)_28px_56px)] text-black",
 };
 
 export function FlagBanner({ flag }: { flag: ActiveFlag | null }) {

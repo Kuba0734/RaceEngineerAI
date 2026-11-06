@@ -2,11 +2,11 @@ import { useTranslation } from "react-i18next";
 import type { LiveFrame } from "@/lib/ipc";
 import type { WeatherView } from "@/lib/bindings/WeatherView";
 import type { CarAlert } from "@/lib/bindings/CarAlert";
-import type { RejoinView } from "@/lib/bindings/RejoinView";
 import type { PitEntryView } from "@/lib/bindings/PitEntryView";
 import type { StartLight } from "@/lib/bindings/StartLight";
 import type { RainIntensity } from "@/lib/bindings/RainIntensity";
 import type { StandingRow } from "@/lib/bindings/StandingRow";
+import type { FuelPlanView } from "@/lib/bindings/FuelPlanView";
 import { clock, lapTime } from "@/lib/format";
 import { cx } from "@/components/ui";
 import { Ico, WidgetHead, mss, useLiveText } from "./racebits";
@@ -211,35 +211,6 @@ export function FasterClass({ a, maxM }: { a: CarAlert | undefined; maxM: number
   );
 }
 
-/** Coming back onto the track: next car from behind and whether it is clear. */
-export function Rejoin({ r }: { r: RejoinView | undefined }) {
-  const { t } = useTranslation();
-  if (!r) return <div className="w-60 text-xs text-dim">{t("wd.rejoinIdle")}</div>;
-  const c = r.car;
-  const color = r.clear ? "var(--ok)" : "var(--danger)";
-  return (
-    <div className="w-60">
-      <WidgetHead label={t("widget.rejoin")} color={color}>
-        <span className="rounded px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-bg" style={{ background: color }}>{r.clear ? t("wd.clear") : t("wd.wait")}</span>
-      </WidgetHead>
-      {c ? (
-        <>
-          <div className="truncate text-[12px] text-dim">{t("wd.nextCar")} · <span className="font-semibold text-fg">#{c.number} {c.driver}</span></div>
-          <div className="flex items-baseline justify-between">
-            <span className="num text-[30px] font-bold leading-tight" style={{ color }}>{Math.round(c.distance_m)}<span className="ml-1 text-[14px] text-dim">m</span></span>
-            {c.gap_s != null && <span className="num text-[15px] font-semibold">{c.gap_s.toFixed(1)} s</span>}
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-            <div className="h-full origin-left rounded-full" style={{ background: color, transform: `scaleX(${Math.min(1, c.distance_m / 600)})` }} />
-          </div>
-        </>
-      ) : (
-        <div className="text-[14px] font-bold text-ok">{t("wd.nobodyBehind")}</div>
-      )}
-    </div>
-  );
-}
-
 /** Approaching the pit lane: distance to the speed limit line, speed and limiter. */
 export function PitEntry({ p, showM }: { p: PitEntryView | undefined; showM: number }) {
   const { t } = useTranslation();
@@ -285,6 +256,61 @@ export function MapSectors({ me }: { me: StandingRow | undefined }) {
           </span>
         );
       })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ fuel planner */
+
+/** Fuel planner for the setup screen: start fuel, stops and refuel amounts for the race,
+ *  from the consumption of earlier sessions with this car and track. */
+export function FuelCalc({ p, track }: { p: FuelPlanView | undefined; track: string }) {
+  const { t } = useTranslation();
+  if (!p) return <div className="w-72 text-xs text-dim">{t("wd.noData")}</div>;
+  const known = p.per_lap_l > 0 && p.race_laps > 0;
+  const source =
+    p.source === "history" && p.history
+      ? t("wd.fc.fromHistory", { sessions: p.history.sessions, laps: p.history.laps })
+      : t(`wd.fc.src_${p.source}`);
+  const race = p.race_minutes != null ? t("wd.fc.raceTimed", { laps: Math.round(p.race_laps), min: Math.round(p.race_minutes) }) : t("wd.fc.raceLaps", { laps: Math.round(p.race_laps) });
+  const add = p.start_l - p.fuel_now_l;
+  return (
+    <div className="w-80 text-[13px]">
+      <WidgetHead label={t("widget.fuel_calc")}>
+        {track && <span className="max-w-36 truncate text-[10px] font-semibold text-dim">{track}</span>}
+      </WidgetHead>
+      {!known ? (
+        <div className="text-[12px] text-dim">{p.per_lap_l > 0 ? t("wd.fc.noLapTime") : t("wd.fc.noFuel")}</div>
+      ) : (
+        <>
+          <div className="flex items-end justify-between rounded-lg bg-surface/80 px-3 py-2">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-dim">{t("wd.fc.start")}</div>
+              <div className="num text-[30px] font-bold leading-none text-ok">{p.start_l.toFixed(1)}<span className="ml-1 text-[14px] text-dim">L</span></div>
+            </div>
+            <div className="num text-right text-[12px] font-semibold">
+              {p.stops > 0 ? <div className="text-warn">{t("wd.fc.stops", { n: p.stops, l: p.refuel_per_stop_l.toFixed(1) })}</div> : <div className="text-ok">{t("wd.fc.noStop")}</div>}
+              {p.tank_l > 0 && <div className="text-dim">{t("wd.fc.tank", { l: Math.round(p.tank_l) })}</div>}
+            </div>
+          </div>
+          <table className="num mt-2 w-full text-[12px]">
+            <tbody>
+              <tr><td className="py-0.5 text-dim">{t("wd.fc.perLap")}</td><td className="text-right font-semibold">{p.per_lap_l.toFixed(2)} L</td></tr>
+              <tr><td colSpan={2} className="pb-1 text-right text-[10px] text-dim">{source}</td></tr>
+              {p.lap_ms > 0 && <tr><td className="py-0.5 text-dim">{t("wd.fc.lapTime")}</td><td className="text-right font-semibold">{lapTime(p.lap_ms)}</td></tr>}
+              <tr><td className="py-0.5 text-dim">{t("wd.fc.race")}</td><td className="text-right font-semibold">{race}</td></tr>
+              <tr><td className="py-0.5 text-dim">{t("wd.fc.total")}</td><td className="text-right font-semibold">{p.total_l.toFixed(1)} L</td></tr>
+              <tr><td colSpan={2} className="pb-1 text-right text-[10px] text-dim">{t(p.formation_lap ? "wd.fc.inclFormation" : "wd.fc.inclReserve", { l: p.reserve_l.toFixed(1) })}</td></tr>
+            </tbody>
+          </table>
+          {p.fuel_now_l > 0 && (
+            <div className={cx("num mt-1 flex justify-between border-t border-line/60 pt-1.5 text-[12px] font-bold", Math.abs(add) < 0.5 ? "text-ok" : add > 0 ? "text-warn" : "text-data")}>
+              <span className="text-dim">{t("wd.fc.inCar", { l: p.fuel_now_l.toFixed(1) })}</span>
+              <span>{Math.abs(add) < 0.5 ? t("wd.fc.ok") : add > 0 ? `+${add.toFixed(1)} L` : `−${Math.abs(add).toFixed(1)} L`}</span>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

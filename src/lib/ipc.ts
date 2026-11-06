@@ -22,6 +22,8 @@ import type { Settings } from "./bindings/Settings";
 import type { TrackOutline } from "./bindings/TrackOutline";
 import type { VoiceRole } from "./bindings/VoiceRole";
 import type { WidgetLayout } from "./bindings/WidgetLayout";
+import type { DataCheck } from "./bindings/DataCheck";
+import type { ReplayFile } from "./bindings/ReplayFile";
 
 export type {
   AudioDevices,
@@ -73,6 +75,10 @@ export const api = {
   stopDemo: () => invoke<void>("stop_demo"),
   listReplays: () => invoke<string[]>("list_replays"),
   startReplay: (name: string) => invoke<void>("start_replay", { name }),
+  getDatacheck: () => invoke<DataCheck>("get_datacheck"),
+  setRecording: (on: boolean) => invoke<void>("set_recording", { on }),
+  checkRecording: (name: string) => invoke<string[]>("check_recording", { name }),
+  replayFiles: () => invoke<[string, ReplayFile[]]>("replay_files"),
   ask: (text: string) => invoke<void>("ask", { text }),
   getTrackOutline: () => invoke<TrackOutline>("get_track_outline"),
   getRadioLog: () => invoke<RadioLogEntry[]>("get_radio_log"),
@@ -88,6 +94,7 @@ export const api = {
   getOverlayEdit: () => invoke<boolean>("get_overlay_edit"),
   listMonitors: () => invoke<string[]>("list_monitors"),
   resetOverlayLayout: () => invoke<void>("reset_overlay_layout"),
+  copyOverlayLayout: (from: string) => invoke<void>("copy_overlay_layout", { from }),
   selectGame: (id: string) => invoke<Settings>("select_game", { id }),
   modelsRescan: () => invoke<ModelStatus[]>("models_rescan"),
   openModelsFolder: () => invoke<void>("open_models_folder"),

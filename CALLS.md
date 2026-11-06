@@ -50,6 +50,7 @@ Die Settings-Seite zeigt den Katalog gruppiert nach den Abschnitten unten, mit S
 | `flag.fcy` | „FCY! Box diese Runde, Stopp ist jetzt billig“ | Flaggen/Rennleitung | Box-Empfehlung an/aus |
 | `flag.green` | „Grün, grün, grün!“ | Flagge/Session-Phase | – |
 | `flag.white` / `flag.checkered` | „Letzte Runde“ / „Zielflagge, P4, gut gemacht“ | Session | – |
+| `flag.debris` | „Debris-Flagge, Trümmer oder Öl auf der Strecke“ | Flagge (iRacing `SessionFlags` debris 0x40) | – |
 | `penalty.track_limits` | „Track Limit Nummer 3, beim nächsten gibt's Strafe“ | abgeleitet aus `isValidLap`/Penalty-Feldern (iRacing: vier Räder neben der Strecke) | Zähler-Warnung ab N |
 | `penalty.incidents` | „Incident, jetzt 12 von 17. Noch 5 bis zur Strafe“ | iRacing `PlayerCarMyIncidentCount` + `IncidentLimit` | ab N Incidents melden, Warnung N vor dem Limit |
 | `flag.pace` | „Safety Car kommt rein, nächste Runde grün“ / Free Pass / Wave Around / ans Ende | iRacing `SessionFlags` (oneLapToGreen), `CarIdxPaceFlags` | an/aus |

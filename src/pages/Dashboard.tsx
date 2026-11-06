@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api, type BroadcastingStatus, type KeyStatus, type ModelStatus } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
 import { useLive } from "@/hooks/useLive";
-import { Badge, Button, Card, RadioOrb, TextInput, Ticker, cx, useAsync } from "@/components/ui";
+import { Badge, Button, Card, RadioOrb, StatTile, TextInput, Ticker, cx, useAsync } from "@/components/ui";
 import { clock, lapTime } from "@/lib/format";
 import type { Page } from "@/app/App";
 
@@ -15,15 +15,17 @@ function ReadyBanner({ checklist, gameName, running, go }: { checklist: { ok: bo
   const ready = missing.length === 0;
   const first = missing[0];
   return (
-    <div className={cx("col-span-12 flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius)] border px-6 py-5", ready ? "border-ok/40 bg-ok/10" : "border-warn/40 bg-warn/10")}>
-      <div className="flex items-center gap-4">
-        <span className={cx("flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold", ready ? "bg-ok/20 text-ok" : "bg-warn/20 text-warn")}>{ready ? "✓" : missing.length}</span>
+    <div className={cx("surface relative col-span-12 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-[var(--radius)] border px-7 py-6", ready ? "border-ok/40" : "border-warn/40")}>
+      <div aria-hidden className={cx("pointer-events-none absolute inset-0 opacity-60", ready ? "bg-[radial-gradient(ellipse_60%_120%_at_0%_50%,color-mix(in_srgb,var(--ok)_18%,transparent),transparent)]" : "bg-[radial-gradient(ellipse_60%_120%_at_0%_50%,color-mix(in_srgb,var(--warn)_18%,transparent),transparent)]")} />
+      <div className="relative flex items-center gap-5">
+        <span className={cx("flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold", ready ? "bg-ok/20 text-ok" : "bg-warn/20 text-warn")}>{ready ? "✓" : missing.length}</span>
         <div>
-          <div className="text-lg font-semibold">{ready ? (running ? t("dash.ready.running", { game: gameName }) : t("dash.ready.title")) : t("dash.ready.missing", { n: missing.length })}</div>
+          {gameName && <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-dim">{gameName}</div>}
+          <div className="text-xl font-semibold">{ready ? (running ? t("dash.ready.running", { game: gameName }) : t("dash.ready.title")) : t("dash.ready.missing", { n: missing.length })}</div>
           <div className="text-sm text-dim">{ready ? (running ? t("dash.ready.runningHint") : t("dash.ready.hint", { game: gameName })) : t("dash.ready.next", { step: first?.label ?? "" })}</div>
         </div>
       </div>
-      {first && <Button variant="primary" onClick={() => go(first.page)}>{t("dash.ready.fix")}</Button>}
+      {first && <Button className="relative" variant="primary" onClick={() => go(first.page)}>{t("dash.ready.fix")}</Button>}
     </div>
   );
 }
@@ -77,7 +79,7 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
   return (
     <div className="grid grid-cols-12 gap-5">
       <ReadyBanner checklist={checklist} gameName={activeGame?.name ?? games?.games.find((g) => g.id === settings?.selected_game)?.name ?? ""} running={!!status?.connected && !status.demo} go={go} />
-      <Card className="col-span-12 lg:col-span-5" title={t("dash.radio")}>
+      <Card className="col-span-12 lg:col-span-5" title={t("dash.radio")} icon="M4 15a8 8 0 0 1 16 0M8 15a4 4 0 0 1 8 0M12 15v.01">
         <div className="flex items-center gap-6">
           <RadioOrb levelRef={levelRef} active={!settings?.app.reduce_motion} size={170} />
           <div className="min-w-0 flex-1 space-y-3">
@@ -111,7 +113,7 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
         </div>
       </Card>
 
-      <Card className="col-span-12 lg:col-span-7" title={t("dash.session")} actions={
+      <Card className="col-span-12 lg:col-span-7" title={t("dash.session")} icon="M4 19h16M6 15l4-6 4 3 4-7" actions={
         status?.demo ? <Button small variant="ghost" onClick={() => void api.stopDemo()}>{t("dash.stopDemo")}</Button> : <Button small variant="ghost" onClick={() => void api.startDemo()}>{t("dash.startDemo")}</Button>
       }>
         {frame?.live ? (
@@ -124,11 +126,8 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
               { k: t("live.best"), v: lapTime(frame.best_lap_ms), s: "" },
               { k: t("live.fuel"), v: frame.fuel_l.toFixed(1), s: "L" },
             ].map((x, i) => (
-              <motion.div key={x.k} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="rounded-xl border border-line bg-surface-2/60 p-3">
-                <div className="text-[11px] uppercase tracking-widest text-dim">{x.k}</div>
-                <div className="mt-1 text-2xl font-semibold">
-                  <Ticker value={x.v} /> <span className="text-sm text-dim">{x.s}</span>
-                </div>
+              <motion.div key={x.k} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                <StatTile label={x.k} value={<Ticker value={x.v} />} unit={x.s} />
               </motion.div>
             ))}
             {frame.fuel && (
@@ -146,7 +145,7 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
         )}
       </Card>
 
-      <Card className="col-span-12 lg:col-span-4" title={t("dash.setup")}>
+      <Card className="col-span-12 lg:col-span-4" title={t("dash.setup")} icon="M9 12l2 2 4-4M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18">
         <ul className="space-y-2">
           {checklist.map((c, i) => (
             <motion.li key={c.label} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex items-center justify-between gap-3">
@@ -160,7 +159,7 @@ export default function Dashboard({ go }: { go: (p: Page) => void }) {
         </ul>
       </Card>
 
-      <Card className="col-span-12 lg:col-span-8" title={t("dash.log")}>
+      <Card className="col-span-12 lg:col-span-8" title={t("dash.log")} icon="M4 6h16M4 12h16M4 18h10">
         <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
           <AnimatePresence initial={false}>
             {[...radio].reverse().slice(0, 40).map((e, i) => (

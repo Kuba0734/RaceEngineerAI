@@ -51,7 +51,7 @@ impl<'a> Ctx<'a> {
 }
 
 /// Internal state of all triggers for the current session.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Memory {
     // session
     pub live_since: Option<f64>,
@@ -114,6 +114,9 @@ pub struct Memory {
     // quali
     pub quali_time_said: bool,
     pub push_said_lap: Option<i32>,
+    /// On the out-lap: from leaving the pits until the next line crossing.
+    pub quali_out_lap: bool,
+    pub quali_last_spline: f32,
     pub traffic_said_lap: Option<i32>,
     // race start silence
     pub start_hush: crate::calls::start_hush::StartHush,
@@ -240,6 +243,33 @@ mod tests {
         let mut ctx = Ctx::new(state, &settings, &engine);
         f(&mut ctx, mem);
         ctx.out.iter().map(|r| match r.sub { Some(sub) => format!("{}:{sub}", r.call_id), None => r.call_id.to_string() }).collect()
+    }
+
+    #[test]
+    fn push_now_only_on_the_out_lap() {
+        let mut s = loaded_race();
+        s.session.session_type = SessionType::Qualifying;
+        s.session.phase = SessionPhase::Session;
+        s.frame.session_time_left_ms = 600_000.0;
+        for w in &mut s.frame.wheels {
+            w.core_temp_c = 90.0;
+        }
+        let mut mem = Memory::new();
+        let ev = |s: &RaceState, mem: &mut Memory, e: RaceEvent| calls(s, mem, |c, m| quali::on_event(c, m, &e));
+        let tick = |s: &RaceState, mem: &mut Memory| calls(s, mem, quali::tick);
+        // Out of the pits, end of the out-lap: push.
+        ev(&s, &mut mem, RaceEvent::PitExit { loss_s: None });
+        s.frame.spline = 0.5;
+        assert!(tick(&s, &mut mem).is_empty());
+        s.frame.spline = 0.9;
+        assert_eq!(tick(&s, &mut mem), vec!["quali.push_now"]);
+        // Over the line without a lap counted (iRacing -1 → 0): the flying lap gets no push.
+        s.frame.spline = 0.95;
+        tick(&s, &mut mem);
+        s.frame.spline = 0.02;
+        tick(&s, &mut mem);
+        s.frame.spline = 0.9;
+        assert!(!tick(&s, &mut mem).contains(&"quali.push_now".to_string()));
     }
 
     #[test]

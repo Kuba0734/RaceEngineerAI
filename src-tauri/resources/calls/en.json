@@ -695,5 +695,9 @@
  ],
  "race.incidents_part:some": [
   " {n} incidents."
+ ],
+ "flag.debris": [
+  "Debris flag, watch out for debris on track.",
+  "Debris flag out, slippery surface ahead."
  ]
 }

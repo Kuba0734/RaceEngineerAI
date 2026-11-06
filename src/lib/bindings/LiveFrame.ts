@@ -2,6 +2,7 @@
 import type { CarAlert } from "./CarAlert";
 import type { ClassSummary } from "./ClassSummary";
 import type { Flag } from "./Flag";
+import type { FuelPlanView } from "./FuelPlanView";
 import type { FuelStrategy } from "./FuelStrategy";
 import type { ListenState } from "./ListenState";
 import type { MapCar } from "./MapCar";
@@ -10,7 +11,6 @@ import type { PitEntryView } from "./PitEntryView";
 import type { PitView } from "./PitView";
 import type { RadarCar } from "./RadarCar";
 import type { RecentLap } from "./RecentLap";
-import type { RejoinView } from "./RejoinView";
 import type { RelativeRow } from "./RelativeRow";
 import type { SessionType } from "./SessionType";
 import type { Side } from "./Side";
@@ -30,7 +30,11 @@ clock_s: number,
 /**
  * Laps of the whole session incl. the ones driven (estimate for timed races).
  */
-laps_total_est?: number, session_total_ms: number, track_temp_c: number, clutch: number, start_light: StartLight, weather: WeatherView, fuel_last_lap_l?: number, fuel_max_l: number, offtrack?: CarAlert, faster_class?: CarAlert, rejoin?: RejoinView, pit_entry?: PitEntryView, 
+laps_total_est?: number, session_total_ms: number, track_temp_c: number, clutch: number, start_light: StartLight, weather: WeatherView, fuel_last_lap_l?: number, fuel_max_l: number, offtrack?: CarAlert, faster_class?: CarAlert, pit_entry?: PitEntryView, fuel_plan?: FuelPlanView, 
+/**
+ * A game is detected (the fuel planner also shows outside the car).
+ */
+game_running: boolean, 
 /**
  * The game decides the spotter sides itself (radar shows sides, not exact positions).
  */

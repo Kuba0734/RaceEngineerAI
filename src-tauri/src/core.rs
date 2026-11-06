@@ -57,9 +57,15 @@ pub struct Core {
     pub wheel_learn: Arc<Mutex<bool>>,
     pub db: DbHandle,
     pub ai_busy: AtomicBool,
-    pub live_subs: Mutex<Vec<crate::runtime::LiveSub>>,
+    pub live_subs: Mutex<Vec<crate::live::LiveSub>>,
     pub overlay_edit: AtomicBool,
     pub downloads: Mutex<BTreeSet<String>>,
+    /// Test mode: record the running session now.
+    pub record_request: AtomicBool,
+    /// File of the recording in progress.
+    pub recording: Mutex<Option<String>>,
+    /// Last sample of the data rates (time, frames, cars) for the data check.
+    pub rate_sample: Mutex<Option<(std::time::Instant, u64, u64)>>,
 }
 
 impl Core {
@@ -126,10 +132,10 @@ impl Core {
         let before = self.voice.ptt.swap(pressed, std::sync::atomic::Ordering::Relaxed);
         let (on, style) = {
             let s = self.settings.read();
-            (s.listening.ptt_sound, s.listening.ptt_sound_style)
+            (s.listening.ptt_sound, (s.listening.ptt_sound_style, s.listening.ptt_sound_volume))
         };
         if before != pressed && on {
-            let _ = self.mixer.try_send(MixerCmd::Spotter(crate::audio::radio_fx::ptt_clip(pressed, style, self.out_sr).into()));
+            let _ = self.mixer.try_send(MixerCmd::Spotter(crate::audio::radio_fx::ptt_clip_vol(pressed, style.0, self.out_sr, style.1).into()));
         }
     }
 

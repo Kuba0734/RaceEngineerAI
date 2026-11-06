@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api, type LapRow, type RadioLogEntry, type SessionRow } from "@/lib/ipc";
 import { useApp } from "@/stores/app";
 import type { CornerDelta } from "@/lib/bindings/CornerDelta";
-import { Badge, Button, Card, Empty, cx, useAsync } from "@/components/ui";
+import { Badge, Button, Card, Empty, PageHeader, cx, useAsync } from "@/components/ui";
 import { date, lapTime } from "@/lib/format";
 import type { RaceReport } from "@/lib/bindings/RaceReport";
 import { LineChart } from "./analysis/Charts";
@@ -211,7 +211,7 @@ export default function Analysis() {
   const current = sessions?.find((s) => s.id === sel) ?? sessions?.[0];
   return (
     <div>
-      <h1 className="mb-5 text-2xl font-semibold">{t("analysis.title")}</h1>
+      <PageHeader title={t("analysis.title")} />
       {!sessions || sessions.length === 0 ? (
         <Empty>{t("analysis.empty", { game: gameName })}</Empty>
       ) : (

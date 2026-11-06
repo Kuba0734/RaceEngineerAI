@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, on } from "@/lib/ipc";
 import type { ButtonBinding } from "@/lib/bindings/ButtonBinding";
-import { Badge, Button, Card, Field, useAsync } from "@/components/ui";
+import { Badge, Button, Card, Field, Toggle, useAsync } from "@/components/ui";
 import { checkForUpdate } from "@/app/UpdateBanner";
 import { useSettings } from "./basic";
 import { useExpert } from "./expert";
@@ -82,9 +82,21 @@ export function AboutSection() {
           {upd && <span className="text-sm text-dim">{upd}</span>}
         </div>
       </Card>
+      <TestModeCard />
       <Card title={t("about.credits")}>
         <p className="text-sm text-dim">{t("about.creditsText")}</p>
       </Card>
     </>
+  );
+}
+
+/** Test mode: data check page and recordings of real sessions (for finding bugs). */
+function TestModeCard() {
+  const { t } = useTranslation();
+  const [s, up] = useSettings();
+  return (
+    <Card title={t("about.testMode")} subtitle={t("about.testModeHint")}>
+      <Toggle checked={s.app.test_mode} onChange={(v) => up((x) => ({ ...x, app: { ...x.app, test_mode: v } }))} label={t("about.testModeToggle")} />
+    </Card>
   );
 }
